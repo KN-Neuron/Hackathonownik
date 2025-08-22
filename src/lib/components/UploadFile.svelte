@@ -1,156 +1,300 @@
-<script>
-	// ************************ Drag and drop ***************** //
-	let dropArea = document.getElementById('drop-area');
+<script lang="ts">
+	import { onMount } from 'svelte';
 
-	// Prevent default drag behaviors
-	['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
-		dropArea.addEventListener(eventName, preventDefaults, false);
-		document.body.addEventListener(eventName, preventDefaults, false);
+	let fileUpload: HTMLInputElement;
+	let fileDrag: HTMLLabelElement;
+	let fileImage: HTMLImageElement;
+	let fileProgress: HTMLProgressElement;
+
+	let showStart = true;
+	let showResponse = false;
+	let showNotImage = false;
+	let showFileImage = false;
+	let isHover = false;
+	let messages = '';
+	let progressValue = 0;
+	let progressMax = 1;
+
+	onMount(() => {
+		// Initialize event listeners
+		fileUpload.addEventListener('change', fileSelectHandler as EventListener);
+		if (window.File && window.FileList && window.FileReader) {
+			fileDrag.addEventListener('dragover', fileDragHover);
+			fileDrag.addEventListener('dragleave', fileDragHover);
+			fileDrag.addEventListener('drop', fileSelectHandler as EventListener);
+		} else {
+			fileDrag.style.display = 'none';
+		}
 	});
 
-	// Highlight drop area when item is dragged over it
-	['dragenter', 'dragover'].forEach((eventName) => {
-		dropArea.addEventListener(eventName, highlight, false);
-	});
-	['dragleave', 'drop'].forEach((eventName) => {
-		dropArea.addEventListener(eventName, unhighlight, false);
-	});
-
-	// Handle dropped files
-	dropArea.addEventListener('drop', handleDrop, false);
-
-	function preventDefaults(e) {
-		e.preventDefault();
+	function fileDragHover(e: DragEvent) {
 		e.stopPropagation();
+		e.preventDefault();
+		isHover = e.type === 'dragover';
 	}
 
-	function highlight(e) {
-		dropArea.classList.add('highlight');
-	}
+	function fileSelectHandler(e: Event | DragEvent) {
+		const files = (e.target as HTMLInputElement)?.files || (e as DragEvent).dataTransfer?.files;
+		if (!files) return;
 
-	function unhighlight(e) {
-		dropArea.classList.remove('active');
-	}
+		// Reset hover
+		isHover = false;
 
-	function handleDrop(e) {
-		var dt = e.dataTransfer;
-		var files = dt.files;
-
-		handleFiles(files);
-	}
-
-	let uploadProgress = [];
-	let progressBar = document.getElementById('progress-bar');
-
-	function initializeProgress(numFiles) {
-		progressBar.value = 0;
-		uploadProgress = [];
-
-		for (let i = numFiles; i > 0; i--) {
-			uploadProgress.push(0);
+		for (let i = 0; i < files.length; i++) {
+			const file = files[i];
+			parseFile(file);
+			uploadFile(file);
 		}
 	}
 
-	function updateProgress(fileNumber, percent) {
-		uploadProgress[fileNumber] = percent;
-		let total = uploadProgress.reduce((tot, curr) => tot + curr, 0) / uploadProgress.length;
-		progressBar.value = total;
+	function output(msg: string) {
+		messages = msg;
 	}
 
-	function handleFiles(files) {
-		files = [...files];
-		initializeProgress(files.length);
-		files.forEach(uploadFile);
-		files.forEach(previewFile);
+	function parseFile(file: File) {
+		output(`<strong>${encodeURI(file.name)}</strong>`);
+
+		const imageName = file.name;
+		const isGood = /\.(gif|jpg|png|jpeg)$/i.test(imageName);
+
+		if (isGood) {
+			showStart = false;
+			showResponse = true;
+			showNotImage = false;
+			showFileImage = true;
+			fileImage.src = URL.createObjectURL(file);
+		} else {
+			showFileImage = false;
+			showNotImage = true;
+			showStart = true;
+			showResponse = false;
+			fileUpload.value = ''; // Reset form
+		}
 	}
 
-	function previewFile(file) {
-		let reader = new FileReader();
-		reader.readAsDataURL(file);
-		reader.onloadend = function () {
-			let img = document.createElement('img');
-			img.src = reader.result;
-			document.getElementById('gallery').appendChild(img);
-		};
+	function setProgressMaxValue(e: ProgressEvent) {
+		if (e.lengthComputable) {
+			progressMax = e.total;
+		}
 	}
 
-	function uploadFile(file, i) {
-		var url = 'https://api.cloudinary.com/v1_1/joezimim007/image/upload';
-		var xhr = new XMLHttpRequest();
-		var formData = new FormData();
-		xhr.open('POST', url, true);
-		xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+	function updateFileProgress(e: ProgressEvent) {
+		if (e.lengthComputable) {
+			progressValue = e.loaded;
+		}
+	}
 
-		// Update progress (can be used to show progress indicator)
-		xhr.upload.addEventListener('progress', function (e) {
-			updateProgress(i, (e.loaded * 100.0) / e.total || 100);
-		});
+	function uploadFile(file: File) {
+		const xhr = new XMLHttpRequest();
+		const fileSizeLimit = 1024; // In MB
 
-		xhr.addEventListener('readystatechange', function (e) {
-			if (xhr.readyState == 4 && xhr.status == 200) {
-				updateProgress(i, 100); // <- Add this
-			} else if (xhr.readyState == 4 && xhr.status != 200) {
-				// Error. Inform the user
-			}
-		});
+		if (xhr.upload && file.size <= fileSizeLimit * 1024 * 1024) {
+			fileProgress.style.display = 'inline';
+			xhr.upload.addEventListener('loadstart', setProgressMaxValue);
+			xhr.upload.addEventListener('progress', updateFileProgress);
 
-		formData.append('upload_preset', 'ujpu6gyk');
-		formData.append('file', file);
-		xhr.send(formData);
+			xhr.onreadystatechange = () => {
+				if (xhr.readyState === 4) {
+					// Handle success/failure as needed (original code just comments this)
+				}
+			};
+
+			xhr.open('POST', ''); // Set to your SvelteKit action or API route
+			xhr.setRequestHeader('X-File-Name', file.name);
+			xhr.setRequestHeader('X-File-Size', file.size.toString());
+			xhr.setRequestHeader('Content-Type', 'multipart/form-data');
+			xhr.send(file);
+		} else {
+			output(`Please upload a smaller file (< ${fileSizeLimit} MB).`);
+		}
 	}
 </script>
 
-<div class="drop-zone">
-	<span class="drop-zone__prompt">Drop file here or click to upload</span>
-	<input type="file" name="myFile" class="drop-zone__input" />
-</div>
+<h2>File Upload & Image Preview</h2>
+<p class="lead">No Plugins <b>Just Javascript</b></p>
+
+<form id="file-upload-form" class="uploader">
+	<input bind:this={fileUpload} id="file-upload" type="file" name="fileUpload" accept="image/*" />
+
+	<label bind:this={fileDrag} for="file-upload" id="file-drag" class:hover={isHover}>
+		<img
+			bind:this={fileImage}
+			id="file-image"
+			src="#"
+			alt="Preview"
+			class:hidden={!showFileImage}
+		/>
+
+		{#if showStart}
+			<div id="start">
+				<i class="fa fa-download" aria-hidden="true"></i>
+				<div>Select a file or drag here</div>
+				{#if showNotImage}
+					<div id="notimage">Please select an image</div>
+				{/if}
+				<span id="file-upload-btn" class="btn btn-primary">Select a file</span>
+			</div>
+		{/if}
+
+		{#if showResponse}
+			<div id="response">
+				<div id="messages">{@html messages}</div>
+				<progress
+					bind:this={fileProgress}
+					class="progress"
+					id="file-progress"
+					value={progressValue}
+					max={progressMax}
+				>
+					<span>0</span>%
+				</progress>
+			</div>
+		{/if}
+	</label>
+</form>
 
 <style>
-	.drop-zone {
-		max-width: 200px;
-		height: 200px;
-		padding: 25px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
+	@import url(https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css);
+	@import url('https://fonts.googleapis.com/css?family=Roboto');
+
+	h2 {
+		font-family: 'Roboto', sans-serif;
+		font-size: 26px;
+		line-height: 1;
+		color: #454cad;
+		margin-bottom: 0;
+	}
+	p {
+		font-family: 'Roboto', sans-serif;
+		font-size: 18px;
+		color: #5f6982;
+	}
+
+	.uploader {
+		display: block;
+		clear: both;
+		margin: 0 auto;
+		width: 100%;
+		max-width: 600px;
+	}
+	.uploader label {
+		float: left;
+		clear: both;
+		width: 100%;
+		padding: 2rem 1.5rem;
 		text-align: center;
-		font-family: 'Quicksand', sans-serif;
-		font-weight: 500;
-		font-size: 20px;
-		cursor: pointer;
-		color: #cccccc;
-		border: 4px dashed #009578;
-		border-radius: 10px;
+		background: #fff;
+		border-radius: 7px;
+		border: 3px solid #eee;
+		transition: all 0.2s ease;
+		user-select: none;
 	}
-
-	.drop-zone--over {
-		border-style: solid;
+	.uploader label:hover {
+		border-color: #454cad;
 	}
-
-	.drop-zone__input {
+	.uploader label.hover {
+		border: 3px solid #454cad;
+		box-shadow: inset 0 0 0 6px #eee;
+	}
+	.uploader label.hover #start i.fa {
+		transform: scale(0.8);
+		opacity: 0.3;
+	}
+	.uploader #start {
+		float: left;
+		clear: both;
+		width: 100%;
+	}
+	.uploader #start.hidden {
 		display: none;
 	}
-
-	.drop-zone__thumb {
-		width: 100%;
-		height: 100%;
-		border-radius: 10px;
-		overflow: hidden;
-		background-color: #cccccc;
-		background-size: cover;
-		position: relative;
+	.uploader #start i.fa {
+		font-size: 50px;
+		margin-bottom: 1rem;
+		transition: all 0.2s ease-in-out;
 	}
-
-	.drop-zone__thumb::after {
-		content: attr(data-label);
-		position: absolute;
-		bottom: 0;
-		left: 0;
+	.uploader #response {
+		float: left;
+		clear: both;
 		width: 100%;
-		padding: 5px 0;
-		color: #ffffff;
-		background: rgba(0, 0, 0, 0.75);
+	}
+	.uploader #response.hidden {
+		display: none;
+	}
+	.uploader #response #messages {
+		margin-bottom: 0.5rem;
+	}
+	.uploader #file-image {
+		display: inline;
+		margin: 0 auto 0.5rem auto;
+		width: auto;
+		height: auto;
+		max-width: 180px;
+	}
+	.uploader #file-image.hidden {
+		display: none;
+	}
+	.uploader #notimage {
+		display: block;
+		float: left;
+		clear: both;
+		width: 100%;
+	}
+	.uploader #notimage.hidden {
+		display: none;
+	}
+	.uploader progress,
+	.uploader .progress {
+		display: inline;
+		clear: both;
+		margin: 0 auto;
+		width: 100%;
+		max-width: 180px;
+		height: 8px;
+		border: 0;
+		border-radius: 4px;
+		background-color: #eee;
+		overflow: hidden;
+	}
+	.uploader .progress[value]::-webkit-progress-bar {
+		border-radius: 4px;
+		background-color: #eee;
+	}
+	.uploader .progress[value]::-webkit-progress-value {
+		background: linear-gradient(to right, #3f3e9e 0%, #454cad 50%);
+		border-radius: 4px;
+	}
+	.uploader .progress[value]::-moz-progress-bar {
+		background: linear-gradient(to right, #3f3e9e 0%, #454cad 50%);
+		border-radius: 4px;
+	}
+	.uploader input[type='file'] {
+		display: none;
+	}
+	.uploader div {
+		margin: 0 0 0.5rem 0;
+		color: #5f6982;
+	}
+	.uploader .btn {
+		display: inline-block;
+		margin: 0.5rem 0.5rem 1rem 0.5rem;
+		clear: both;
+		font-family: inherit;
+		font-weight: 700;
 		font-size: 14px;
-		text-align: center;
+		text-decoration: none;
+		text-transform: initial;
+		border: none;
+		border-radius: 0.2rem;
+		outline: none;
+		padding: 0 1rem;
+		height: 36px;
+		line-height: 36px;
+		color: #fff;
+		transition: all 0.2s ease-in-out;
+		box-sizing: border-box;
+		background: #454cad;
+		border-color: #454cad;
+		cursor: pointer;
 	}
 </style>
