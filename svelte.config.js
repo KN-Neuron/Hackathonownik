@@ -15,14 +15,14 @@ const config = {
 				'script-src': ['self'],
 				'report-uri': ['/']
 			}
-		},
-		vite: {
-			resolve: {
-				alias: {
-					'@': path.resolve('src')
-				}
-			}
 		}
+		// vite: {
+		// 	resolve: {
+		// 		alias: {
+		// 			'@': path.resolve('src')
+		// 		}
+		// 	}
+		// }
 	}
 };
 
