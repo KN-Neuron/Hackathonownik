@@ -55,13 +55,5 @@ export class Security {
         }
         return this
     }
-
-    // https://www.captaincodeman.com/securing-your-sveltekit-app
-    // isProjectOwner(project: Project) {
-    //   if (!this.user || !project.owners.includes(this.user.uid)) {
-    //     error(403, 'not project owner')
-    //   }
-    //   return this
-    // }
 }
 

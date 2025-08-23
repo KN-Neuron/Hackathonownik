@@ -10,6 +10,7 @@
 	<button onclick={() => setLocale('en')}>en</button>
 	<button onclick={() => setLocale('pl')}>pl</button>
 </div>
+
 <p>
 	If you use VSCode, install the <a
 		href="https://marketplace.visualstudio.com/items?itemName=inlang.vs-code-extension"
