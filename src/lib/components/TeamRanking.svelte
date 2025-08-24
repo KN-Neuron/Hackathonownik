@@ -2,6 +2,9 @@
 	import type { Team } from '$lib/interfaces/Team';
 
 	let { teams }: { teams: Team[] } = $props();
+	teams = teams.sort((a, b) => {
+		return b.rating - a.rating;
+	});
 </script>
 
 <div class="overflow-x-auto">
