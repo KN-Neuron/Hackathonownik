@@ -18,5 +18,6 @@ export const actions = {
         } catch (e) {
             pbError(e)
         }
+        redirect(303, '/')
     },
 } satisfies Actions

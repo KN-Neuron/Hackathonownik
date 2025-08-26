@@ -5,6 +5,7 @@
       "name": "apka-na-hackaton",
       "dependencies": {
         "@inlang/paraglide-js": "^2.0.0",
+        "@svelte-parts/drop-file": "^0.0.23",
         "pocketbase": "^0.26.2",
       },
       "devDependencies": {
@@ -196,6 +197,8 @@
     "@sinclair/typebox": ["@sinclair/typebox@0.31.28", "", {}, "sha512-/s55Jujywdw/Jpan+vsy6JZs1z2ZTGxTmbZTPiuSL2wz9mfzA2gN1zzaqmvfi4pq+uOt7Du85fkiwv5ymW84aQ=="],
 
     "@sqlite.org/sqlite-wasm": ["@sqlite.org/sqlite-wasm@3.48.0-build4", "", { "bin": { "sqlite-wasm": "bin/index.js" } }, "sha512-hI6twvUkzOmyGZhQMza1gpfqErZxXRw6JEsiVjUbo7tFanVD+8Oil0Ih3l2nGzHdxPI41zFmfUQG7GHqhciKZQ=="],
+
+    "@svelte-parts/drop-file": ["@svelte-parts/drop-file@0.0.23", "", { "peerDependencies": { "svelte": "^3.29.7" } }, "sha512-yzpeY/lSmf+NDnMUJKlZip2eqz44GLFQAY+OCw96RXcVtBtgRclcR5Ny0ZN/VZInht0C2K/hIxVa4v4LA6dvPA=="],
 
     "@sveltejs/acorn-typescript": ["@sveltejs/acorn-typescript@1.0.5", "", { "peerDependencies": { "acorn": "^8.9.0" } }, "sha512-IwQk4yfwLdibDlrXVE04jTZYlLnwsTT2PIOQQGNLWfjavGifnk1JD1LcZjZaBTRcxZu2FfPfNLOE04DSu9lqtQ=="],
 
