@@ -9,12 +9,7 @@
 	let error = $state('');
 </script>
 
-<form
-	method="POST"
-	use:enhance
-	class="flex flex-col gap-4 rounded-box bg-base-200 p-6 max-w-md"
-	on:submit|preventDefault={handleRegister}
->
+<form method="POST" use:enhance class="flex flex-col gap-4 rounded-box bg-base-200 p-6 max-w-md">
 	<fieldset>
 		<h1 class="text-3xl font-bold self-center">Create an account</h1>
 
@@ -22,11 +17,6 @@
 			Already have an account?
 			<a class="link link-secondary" href="/login">Log in</a>
 		</span>
-		<!--
-    <a class="btn btn-neutral">
-        <i class="fa-brands fa-google text-primary"></i>
-        Create with Google
-    </a> -->
 
 		<div class="divider my-0">OR</div>
 

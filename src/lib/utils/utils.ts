@@ -1,5 +1,6 @@
 import Home from '$lib/components/icons/Home.svelte';
 import Info from '$lib/components/icons/Info.svelte';
+import Ranking from '$lib/components/icons/Ranking.svelte';
 import Stats from '$lib/components/icons/Stats.svelte';
 
 type ComponentMap = {
@@ -9,13 +10,15 @@ type ComponentMap = {
 export enum IconNames {
 	Home = 'home',
 	Info = 'info',
-	Stats = 'stats'
+	Stats = 'stats',
+	Ranking = 'ranking'
 }
 
-const componentMap: ComponentMap = {
+export const componentMap: ComponentMap = {
 	[IconNames.Home]: Home,
 	[IconNames.Info]: Info,
-	[IconNames.Stats]: Stats
+	[IconNames.Stats]: Stats,
+	[IconNames.Ranking]: Ranking
 };
 
 export function getComponent(componentName: string) {

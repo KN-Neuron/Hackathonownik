@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Sidebar from '$lib/components/Sidebar.svelte';
+	import HeaderText from '$lib/components/HeaderText.svelte';
 	import TeamRanking from '$lib/components/TeamRanking.svelte';
-	import type { Team } from '$lib/interfaces/Team';
+	import { IconNames } from '$lib/utils/utils';
 
 	const yourTeamsVariable = [
 		{ teamName: 'Team A', rating: 85, notes: 'Strong performance this season' },
@@ -9,10 +9,17 @@
 		{ teamName: 'Team C', rating: 90, notes: 'Top contender for the championship' },
 		{ teamName: 'Team D', rating: 70, notes: 'Needs to work on defense' }
 	];
+	let icon = IconNames.Ranking;
+	let text = 'Ranking';
 </script>
 
-<Sidebar />
-<TeamRanking teams={yourTeamsVariable} />
+<div>
+	<HeaderText {icon} {text} />
+	<TeamRanking teams={yourTeamsVariable} />
+</div>
 
 <style>
+	div {
+		padding: 25px;
+	}
 </style>

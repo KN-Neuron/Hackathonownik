@@ -3,7 +3,7 @@
 </script>
 
 <button
-	class="text-gray-500 hover:text-gray-700 cursor-pointer mr-4 border-none focus:outline-none"
+	class="text-gray-500 hover:text-gray-700 cursor-pointer mr-4 border-none focus:outline-none z-50"
 	class:open
 	on:click={() => (open = !open)}
 >
@@ -27,7 +27,7 @@
 	}
 
 	button {
-		z-index: 20;
+		z-index: 51;
 	}
 
 	.open svg {
