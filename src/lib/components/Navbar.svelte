@@ -5,7 +5,7 @@
 	export let sidebar = false;
 </script>
 
-<header class="flex justify-between bg-white p-2 items-center text-gray-600 border-b-2">
+<header class="flex justify-between bg-white p-4 items-center text-gray-600 border-b-2">
 	<nav class="flex">
 		<div class="hamburger-container">
 			<Hamburger bind:open={sidebar} />
@@ -19,7 +19,7 @@
 		position: sticky;
 		top: 0;
 		z-index: 50;
-		background-color: white;
+		background-color: #1D232A;
 		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 	}
 

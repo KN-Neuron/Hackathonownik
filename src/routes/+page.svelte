@@ -35,6 +35,9 @@
 	{:else}
 		<a href="/protected" class="btn">Protected Page</a> |
 		<a href="/upload" class="btn">Upload</a> |
-		<a href="/logout" class="btn">Logout</a>
+        <!-- HACK: to not let the browser eagerly preload the logout page on hover -->
+        <form method="get" action="/logout" style="display:inline">
+			<button type="submit" class="btn">Logout</button>
+		</form>
 	{/if}
 </nav>
