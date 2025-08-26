@@ -34,6 +34,7 @@
 		<a href="/register" class="btn">Register</a>
 	{:else}
 		<a href="/protected" class="btn">Protected Page</a> |
+		<a href="/upload" class="btn">Upload</a> |
 		<a href="/logout" class="btn">Logout</a>
 	{/if}
 </nav>

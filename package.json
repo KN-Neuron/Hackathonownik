@@ -45,6 +45,7 @@
 	"dependencies": {
 		"@inlang/paraglide-js": "^2.0.0",
 		"@svelte-parts/drop-file": "^0.0.23",
+		"pdfjs-dist": "^5.4.54",
 		"pocketbase": "^0.26.2"
 	}
 }
