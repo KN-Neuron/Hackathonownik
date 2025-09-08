@@ -261,7 +261,7 @@
   {/if}
 
   <p class="text-[11px] leading-snug opacity-60 mt-2">
-    Drag & drop a PDF or click. Handles SvelteKit action response format.
+    Drag & drop a PDF or click to select file.
   </p>
 </form>
 
