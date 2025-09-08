@@ -54,6 +54,7 @@
 	}
 
 	.content-wrapper {
+        background-color: black;
 		flex: 1;
 		padding: 1rem;
 	}
