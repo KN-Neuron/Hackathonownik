@@ -1,19 +1,20 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import Modal from './Modal.svelte';
+	import GradeTeamForm from './GradeTeamForm.svelte';
 
 	let { team } = $props();
 	let avatarColors = ['#543bad', '#36a3db', '#e85c90', '#f7a654', '#36c399', '#8957e5'];
 	let avatarBg = '';
 	let avatarShape = '';
+	let showModal = $state(false);
 
-	// Generate consistent but random avatar based on team ID
 	onMount(() => {
 		const hash = hashCode(team.id);
 		const colorIndex = Math.abs(hash) % avatarColors.length;
 		avatarBg = avatarColors[colorIndex];
 
-		// Generate a shape pattern (simplified version of GitHub's identicon logic)
-		const shapes = ['circle', 'hexagon', 'square', 'diamond'];
+		const shapes = ['circle', 'square', 'hexagon', 'diamond'];
 		const shapeIndex = Math.abs(hash >> 4) % shapes.length;
 		avatarShape = shapes[shapeIndex];
 	});
@@ -23,17 +24,16 @@
 		for (let i = 0; i < str.length; i++) {
 			const char = str.charCodeAt(i);
 			hash = (hash << 5) - hash + char;
-			hash = hash & hash; // Convert to 32bit integer
+			hash = hash & hash;
 		}
 		return hash;
 	}
 
-	// Format score bars
-	function getScoreWidth(score) {
+	function getScoreWidth(score: number) {
 		return score ? `${score * 10}%` : '0%';
 	}
 
-	function getScoreColor(score) {
+	function getScoreColor(score: number) {
 		if (!score) return '#555';
 		if (score >= 9) return '#36c399';
 		if (score >= 7) return '#f7a654';
@@ -42,7 +42,13 @@
 	}
 </script>
 
-<div class="team-card">
+<div class="team-card" on:click={() => (showModal = true)}>
+	<div class="modal-container">
+		<Modal bind:showModal>
+			<GradeTeamForm />
+		</Modal>
+	</div>
+
 	<div class="team-avatar" style="background-color: {avatarBg}">
 		<div class="avatar-shape {avatarShape}"></div>
 	</div>
@@ -113,8 +119,9 @@
 				<span class="grade-value">{team.ocena || '-'}</span>
 			</div>
 
-			<div class="status" class:graded={team.was_graded}>
-				{team.was_graded ? 'Graded' : 'Pending'}
+			<div class="status-container">
+				<div class="status" class:graded={team.was_graded}></div>
+				<span>{team.was_graded ? 'Graded' : 'Pending'} </span>
 			</div>
 		</div>
 	</div>
@@ -132,6 +139,16 @@
 		transition:
 			transform 0.2s,
 			box-shadow 0.2s;
+		cursor: pointer;
+		position: relative;
+	}
+	.modal-container {
+		position: absolute;
+		width: 100%;
+		height: 100%;
+		display: flex;
+		justify-content: center;
+		align-items: center;
 	}
 
 	.team-card:hover {
@@ -241,11 +258,14 @@
 
 	.team-footer {
 		display: flex;
+		flex-direction: row;
 		justify-content: space-between;
 		align-items: center;
+		text-align: center;
 		margin-top: auto;
 		padding-top: 12px;
 		border-top: 1px solid #2c2e33;
+		margin-right: 30px;
 	}
 
 	.grade {
@@ -269,6 +289,12 @@
 		font-weight: 600;
 		background-color: #763626;
 		color: #f0f0f0;
+		height: 100%;
+		margin-right: 10px;
+	}
+	.status-container {
+		display: flex;
+		justify-content: center;
 	}
 
 	.status.graded {
