@@ -2,99 +2,120 @@
 	import { onMount } from 'svelte';
 
 	let { team } = $props();
-	let avatarSrc = '';
+	let avatarColors = ['#543bad', '#36a3db', '#e85c90', '#f7a654', '#36c399', '#8957e5'];
+	let avatarBg = '';
+	let avatarShape = '';
 
-	// Generate GitHub-style identicon based on team ID
+	// Generate consistent but random avatar based on team ID
 	onMount(() => {
-		// Use team ID to generate consistent but unique avatar
-		// This creates a deterministic MD5 hash-like string for consistency
-		const hash = cyrb53(team.id).toString(16).padStart(8, '0');
-		avatarSrc = `https://avatars.dicebear.com/api/identicon/${hash}.svg`;
+		const hash = hashCode(team.id);
+		const colorIndex = Math.abs(hash) % avatarColors.length;
+		avatarBg = avatarColors[colorIndex];
+
+		// Generate a shape pattern (simplified version of GitHub's identicon logic)
+		const shapes = ['circle', 'hexagon', 'square', 'diamond'];
+		const shapeIndex = Math.abs(hash >> 4) % shapes.length;
+		avatarShape = shapes[shapeIndex];
 	});
 
-	// Simple hash function for deterministic avatars
-	function cyrb53(str: string, seed = 0) {
-		let h1 = 0xdeadbeef ^ seed,
-			h2 = 0x41c6ce57 ^ seed;
-		for (let i = 0, ch; i < str.length; i++) {
-			ch = str.charCodeAt(i);
-			h1 = Math.imul(h1 ^ ch, 2654435761);
-			h2 = Math.imul(h2 ^ ch, 1597334677);
+	function hashCode(str: string): number {
+		let hash = 0;
+		for (let i = 0; i < str.length; i++) {
+			const char = str.charCodeAt(i);
+			hash = (hash << 5) - hash + char;
+			hash = hash & hash; // Convert to 32bit integer
 		}
-		h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
-		h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-		h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
-		h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-		return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+		return hash;
 	}
 
-	// Calculate score as percentage for progress bars
-	const getScorePercentage = (score) => {
-		return score ? Math.min(Math.max(score * 20, 0), 100) : 0; // Assuming scores are on 0-5 scale
-	};
+	// Format score bars
+	function getScoreWidth(score) {
+		return score ? `${score * 10}%` : '0%';
+	}
+
+	function getScoreColor(score) {
+		if (!score) return '#555';
+		if (score >= 9) return '#36c399';
+		if (score >= 7) return '#f7a654';
+		if (score >= 5) return '#e85c90';
+		return '#555';
+	}
 </script>
 
 <div class="team-card">
-	<div class="avatar-container">
-		<img src={avatarSrc} alt="{team.name} avatar" class="team-avatar" />
+	<div class="team-avatar" style="background-color: {avatarBg}">
+		<div class="avatar-shape {avatarShape}"></div>
 	</div>
 
-	<div class="team-details">
+	<div class="team-info">
 		<div class="team-header">
-			<h2>{team.name}</h2>
-			<div class="team-id">ID: {team.id}</div>
+			<h3>{team.name}</h3>
+			<span class="team-id">ID: {team.id}</span>
 		</div>
 
-		<div class="scores-container">
-			<div class="score-row">
-				<div class="score-label">Innovation</div>
-				<div class="progress-bar-container">
-					<div class="progress-bar" style="width: {getScorePercentage(team.innowacyjnosc)}%"></div>
-				</div>
-				<div class="score-value">{team.innowacyjnosc || 'N/A'}</div>
-			</div>
-
-			<div class="score-row">
-				<div class="score-label">Usefulness</div>
-				<div class="progress-bar-container">
-					<div class="progress-bar" style="width: {getScorePercentage(team.uzytecznosc)}%"></div>
-				</div>
-				<div class="score-value">{team.uzytecznosc || 'N/A'}</div>
-			</div>
-
-			<div class="score-row">
-				<div class="score-label">Presentation</div>
-				<div class="progress-bar-container">
+		<div class="metrics">
+			<div class="metric">
+				<div class="metric-label">Innovation</div>
+				<div class="metric-bar">
 					<div
-						class="progress-bar"
-						style="width: {getScorePercentage(team.prezentacja_koncowa)}%"
+						class="metric-fill"
+						style="width: {getScoreWidth(team.innowacyjnosc)}; background-color: {getScoreColor(
+							team.innowacyjnosc
+						)}"
 					></div>
 				</div>
-				<div class="score-value">{team.prezentacja_koncowa || 'N/A'}</div>
+				<div class="metric-value">{team.innowacyjnosc || '-'}</div>
 			</div>
 
-			<div class="score-row">
-				<div class="score-label">Implementation</div>
-				<div class="progress-bar-container">
+			<div class="metric">
+				<div class="metric-label">Usefulness</div>
+				<div class="metric-bar">
 					<div
-						class="progress-bar"
-						style="width: {getScorePercentage(team.jakosc_implementacji)}%"
+						class="metric-fill"
+						style="width: {getScoreWidth(team.uzytecznosc)}; background-color: {getScoreColor(
+							team.uzytecznosc
+						)}"
 					></div>
 				</div>
-				<div class="score-value">{team.jakosc_implementacji || 'N/A'}</div>
+				<div class="metric-value">{team.uzytecznosc || '-'}</div>
 			</div>
 
-			<div class="score-row final-grade">
-				<div class="score-label">Final Grade</div>
-				<div class="progress-bar-container">
-					<div class="progress-bar" style="width: {getScorePercentage(team.ocena)}%"></div>
+			<div class="metric">
+				<div class="metric-label">Presentation</div>
+				<div class="metric-bar">
+					<div
+						class="metric-fill"
+						style="width: {getScoreWidth(
+							team.prezentacja_koncowa
+						)}; background-color: {getScoreColor(team.prezentacja_koncowa)}"
+					></div>
 				</div>
-				<div class="score-value">{team.ocena || 'N/A'}</div>
+				<div class="metric-value">{team.prezentacja_koncowa || '-'}</div>
+			</div>
+
+			<div class="metric">
+				<div class="metric-label">Implementation</div>
+				<div class="metric-bar">
+					<div
+						class="metric-fill"
+						style="width: {getScoreWidth(
+							team.jakosc_implementacji
+						)}; background-color: {getScoreColor(team.jakosc_implementacji)}"
+					></div>
+				</div>
+				<div class="metric-value">{team.jakosc_implementacji || '-'}</div>
 			</div>
 		</div>
 
-		<div class="grading-status" class:pending={!team.was_graded}>
-			{team.was_graded ? 'Graded' : 'Pending'}
+		<div class="team-footer">
+			<div class="grade">
+				<span class="grade-label">Final Grade:</span>
+				<span class="grade-value">{team.ocena || '-'}</span>
+			</div>
+
+			<div class="status" class:graded={team.was_graded}>
+				{team.was_graded ? 'Graded' : 'Pending'}
+			</div>
 		</div>
 	</div>
 </div>
@@ -102,125 +123,155 @@
 <style>
 	.team-card {
 		display: flex;
-		background-color: #202225;
+		background-color: #1e1f22;
 		border-radius: 8px;
 		padding: 16px;
-		margin-bottom: 20px;
-		color: #e9ecef;
+		margin-bottom: 16px;
+		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+		border: 1px solid #2c2e33;
 		transition:
 			transform 0.2s,
 			box-shadow 0.2s;
-		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-		width: 100%;
 	}
 
 	.team-card:hover {
 		transform: translateY(-2px);
-		box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-	}
-
-	.avatar-container {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 12px;
-		margin-right: 20px;
-		background-color: #17181a;
-		border-radius: 8px;
-		height: 120px;
-		width: 120px;
+		box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
+		border-color: #3b3e46;
 	}
 
 	.team-avatar {
-		max-width: 100%;
-		max-height: 100%;
+		width: 80px;
+		height: 80px;
+		border-radius: 8px;
+		margin-right: 20px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
 	}
 
-	.team-details {
-		flex: 1;
+	.avatar-shape {
+		width: 50px;
+		height: 50px;
+		background-color: rgba(255, 255, 255, 0.15);
+	}
+
+	.avatar-shape.circle {
+		border-radius: 50%;
+	}
+
+	.avatar-shape.hexagon {
+		clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+	}
+
+	.avatar-shape.square {
+		border-radius: 4px;
+	}
+
+	.avatar-shape.diamond {
+		transform: rotate(45deg);
+	}
+
+	.team-info {
+		flex-grow: 1;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.team-header {
-		margin-bottom: 16px;
+		margin-bottom: 12px;
+		border-bottom: 1px solid #2c2e33;
+		padding-bottom: 8px;
 	}
 
-	.team-header h2 {
-		margin: 0;
-		font-size: 1.5rem;
-		color: #ffffff;
+	.team-header h3 {
+		margin: 0 0 4px 0;
+		font-size: 18px;
+		color: #f0f0f0;
+		font-weight: 600;
 	}
 
 	.team-id {
-		font-size: 0.85rem;
-		color: #a0a0a0;
-		margin-top: 2px;
+		font-size: 12px;
+		color: #888;
+		font-family: monospace;
 	}
 
-	.scores-container {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		gap: 10px;
+	.metrics {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 12px 20px;
+		margin-bottom: 12px;
 	}
 
-	.score-row {
+	.metric {
 		display: flex;
 		align-items: center;
-		gap: 10px;
 	}
 
-	.score-label {
-		width: 110px;
-		font-size: 0.9rem;
-		color: #b9bbbe;
+	.metric-label {
+		width: 100px;
+		font-size: 14px;
+		color: #aaa;
 	}
 
-	.progress-bar-container {
-		flex: 1;
+	.metric-bar {
+		flex-grow: 1;
 		height: 8px;
-		background-color: #2e3136;
+		background-color: #2c2e33;
 		border-radius: 4px;
 		overflow: hidden;
+		margin: 0 10px;
 	}
 
-	.progress-bar {
+	.metric-fill {
 		height: 100%;
-		background: linear-gradient(90deg, #5865f2 0%, #8a94ff 100%);
 		border-radius: 4px;
-		transition: width 0.5s ease-out;
+		transition: width 0.5s ease;
 	}
 
-	.score-value {
-		width: 40px;
+	.metric-value {
+		width: 20px;
+		font-size: 14px;
+		font-weight: 600;
+		color: #f0f0f0;
 		text-align: right;
-		font-weight: bold;
 	}
 
-	.final-grade .score-label {
-		font-weight: bold;
-		color: #ffffff;
+	.team-footer {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-top: auto;
+		padding-top: 12px;
+		border-top: 1px solid #2c2e33;
 	}
 
-	.final-grade .progress-bar {
-		background: linear-gradient(90deg, #eb4034 0%, #ff9f5a 100%);
+	.grade {
+		font-size: 15px;
 	}
 
-	.grading-status {
-		margin-top: 14px;
-		padding: 6px 12px;
+	.grade-label {
+		color: #aaa;
+		margin-right: 6px;
+	}
+
+	.grade-value {
+		color: #f0f0f0;
+		font-weight: 600;
+	}
+
+	.status {
+		padding: 4px 12px;
 		border-radius: 16px;
-		font-size: 0.85rem;
-		font-weight: bold;
-		text-transform: uppercase;
-		background-color: #3ba55c;
-		color: white;
-		align-self: flex-start;
-		text-align: center;
+		font-size: 13px;
+		font-weight: 600;
+		background-color: #763626;
+		color: #f0f0f0;
 	}
 
-	.grading-status.pending {
-		background-color: #e74c3c;
+	.status.graded {
+		background-color: #36623d;
 	}
 </style>

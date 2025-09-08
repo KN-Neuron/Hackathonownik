@@ -5,7 +5,11 @@
 </script>
 
 <section class="teams-section">
-	<h1>Project Teams</h1>
+	<div class="section-header">
+		<h2>Project Teams</h2>
+		<div class="header-line"></div>
+	</div>
+
 	<div class="teams-container">
 		{#each teams as team}
 			<TeamCard {team} />
@@ -15,33 +19,33 @@
 
 <style>
 	.teams-section {
-		padding: 20px;
-		max-width: 1000px;
-		margin: 0 auto;
+		padding: 24px 0;
+		width: 100%;
 	}
 
-	h1 {
-		font-size: 2rem;
-		color: #ffffff;
+	.section-header {
 		margin-bottom: 24px;
+		position: relative;
+	}
+
+	h2 {
+		color: #f0f0f0;
+		font-size: 24px;
 		font-weight: 600;
-		padding-bottom: 10px;
-		border-bottom: 1px solid #3a3d43;
+		margin: 0 0 16px 0;
+		letter-spacing: 0.5px;
+	}
+
+	.header-line {
+		height: 3px;
+		width: 60px;
+		background: linear-gradient(90deg, #543bad 0%, #36c399 100%);
+		border-radius: 2px;
 	}
 
 	.teams-container {
 		display: flex;
 		flex-direction: column;
 		gap: 16px;
-	}
-
-	@media (max-width: 768px) {
-		.teams-section {
-			padding: 12px;
-		}
-
-		h1 {
-			font-size: 1.6rem;
-		}
 	}
 </style>
