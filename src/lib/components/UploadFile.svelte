@@ -14,7 +14,7 @@
 
 	type PdfPreview = {
 		file: File;
-		pages: string[];       // data URLs (PNG) for rendered pages
+		pages: string[];
 		pageCount: number;
 		error?: string;
 	};
@@ -22,27 +22,21 @@
 	let pdfPreviews: PdfPreview[] = [];
 	let renderingPreviews = false;
 
-	// Submission state
 	let loading = false;
 	let errorMessage = '';
 	let successMessage = '';
 	const uploadUrl = '?/upload';
 
-	/**
-	 * Lazy-load pdf.js only when needed to keep initial bundle small.
-	 * Using legacy build for broader browser support. Adjust path if you installed a different version.
-	 */
 	let pdfjsLibPromise: Promise<any> | null = null;
 	async function loadPdfJs() {
 		if (!pdfjsLibPromise) {
 			pdfjsLibPromise = import('pdfjs-dist/legacy/build/pdf');
 			const pdfjs = await pdfjsLibPromise;
-			// Worker – use ?url approach if bundler supports, otherwise CDN fallback
+
 			try {
 				const worker = await import('pdfjs-dist/build/pdf.worker?url');
 				pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
 			} catch {
-				// Fallback (make sure version matches your installed package)
 				pdfjs.GlobalWorkerOptions.workerSrc =
 					'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js';
 			}
@@ -108,7 +102,6 @@
 				const page = await pdf.getPage(pageNum);
 				const viewport = page.getViewport({ scale: 1.0 });
 
-				// Scale down large pages to a comfortable width
 				const targetWidth = 480;
 				const scale = Math.min(1.5, targetWidth / viewport.width);
 				const scaledViewport = page.getViewport({ scale });
@@ -181,9 +174,7 @@
 		}
 	}
 
-	onDestroy(() => {
-		// Nothing special to revoke; canvases were converted to data URLs (garbage collected)
-	});
+	onDestroy(() => {});
 </script>
 
 <form
@@ -234,7 +225,6 @@
 		</div>
 	{/if}
 
-	<!-- Integrated PDF previews (no iframes) -->
 	{#if renderingPreviews}
 		<div class="flex flex-col gap-2">
 			<div class="skeleton h-48 w-full rounded-box"></div>
@@ -265,10 +255,10 @@
 									<div class="text-xs opacity-60 flex items-center gap-2">
 										<span class="badge badge-outline badge-xs">Page {i + 1}</span>
 									</div>
-									<!-- Display rendered page as image -->
+
 									<img
 										src={page}
-										alt={"Preview page " + (i + 1) + " of " + preview.file.name}
+										alt={'Preview page ' + (i + 1) + ' of ' + preview.file.name}
 										class="w-full rounded-md border border-base-300 shadow-sm"
 										loading="lazy"
 									/>
@@ -284,12 +274,15 @@
 										type="button"
 										class="btn btn-xs btn-ghost"
 										on:click={async () => {
-											// Render all remaining pages on demand
 											const pdfjs = await loadPdfJs();
 											const buffer = await preview.file.arrayBuffer();
 											const loadingTask = pdfjs.getDocument({ data: buffer });
 											const pdf = await loadingTask.promise;
-											for (let pageNum = preview.pages.length + 1; pageNum <= pdf.numPages; pageNum++) {
+											for (
+												let pageNum = preview.pages.length + 1;
+												pageNum <= pdf.numPages;
+												pageNum++
+											) {
 												const page = await pdf.getPage(pageNum);
 												const viewport = page.getViewport({ scale: 1.0 });
 												const targetWidth = 480;
@@ -348,6 +341,10 @@
 </form>
 
 <style>
+	#form {
+		max-height: 70%;
+		overflow-y: scroll;
+	}
 	#zone {
 		width: 100%;
 		height: 100%;
