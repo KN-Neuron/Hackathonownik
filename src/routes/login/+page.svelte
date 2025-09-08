@@ -2,4 +2,6 @@
 	import Login from '$lib/components/Login.svelte';
 </script>
 
-<Login />
+<div class="h-full content-center">
+    <Login />
+</div>

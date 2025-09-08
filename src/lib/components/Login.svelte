@@ -9,31 +9,22 @@
 	let error = '';
 </script>
 
-<!--
-<h2 class="text-4xl">Login</h2>
-<form on:submit|preventDefault={handleLogin}>
-    <input class="input" type="email" bind:value={email} placeholder="Email" required />
-    <input class="input" type="password" bind:value={password} placeholder="Password" required />
-    <button class="btn" type="submit">Login</button>
-    {#if error}<div style="color:red">{error}</div>{/if}
-</form> -->
-
 <form
 	method="POST"
 	use:enhance
-	class="flex flex-col gap-4 rounded-box bg-base-200 p-6 max-w-md content-center"
+	class="flex flex-col gap-4 rounded-box bg-base-200 p-8 max-w-md content-center m-auto"
 >
 	<fieldset>
-		<h1 class="text-3xl font-bold self-center">Log in</h1>
+		<h1 class="text-3xl font-bold self-center mb-2">Log in</h1>
 
-		<span class="self-center">
+		<span class="self-center text-gray-400 text-sm">
 			Don't have an account?
 			<a class="link link-secondary" href="/register">Register</a>
 		</span>
 
-		<div class="divider">Heroes of the Brain</div>
+		<div class="divider mt-8 mb-8">Heroes of the Brain</div>
 
-		<label class="form-control flex flex-col">
+		<label class="form-control flex flex-col mb-4">
 			<div class="label">
 				<span class="label-text">Email</span>
 			</div>
@@ -49,7 +40,7 @@
 			/>
 		</label>
 
-		<label class="form-control flex flex-col">
+		<label class="form-control flex flex-col mb-4">
 			<div class="label">
 				<span class="label-text">Password</span>
 				<a class="label-text link link-accent" href="/forgot">Forgot password?</a>
@@ -66,7 +57,7 @@
 			/>
 		</label>
 
-		<div class="form-control">
+		<div class="form-control mb-4">
 			<label class="cursor-pointer label self-start gap-2">
 				<input type="checkbox" class="checkbox" />
 				<span class="label-text">Remember me</span>
