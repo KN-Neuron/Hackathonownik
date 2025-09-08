@@ -1,11 +1,12 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { browser } from '$app/environment';
-  import FallbackSvg from '../DropFileFallbackSvg.svelte'; // adjust path as needed
+  import FallbackSvg from '../DropFileFallbackSvg.svelte'; // adjust path if needed
+  import { parse as devalueParse } from 'devalue';
 
   export let multiple: boolean = false;
   export let disabled: boolean = false;
-  export let uploadUrl: string = '?/upload';
+  export let uploadUrl: string = '?/upload'; // SvelteKit action endpoint
 
   const dispatch = createEventDispatcher<{
     files: { files: File[] };
@@ -19,6 +20,8 @@
   let uploading = false;
   let errorMessage = '';
   let successMessage = '';
+
+  /* ---------- Drag & Drop / File Selection ---------- */
 
   function handleEnter() { isOver = true; }
   function handleLeave() { isOver = false; }
@@ -50,11 +53,48 @@
     if (e.key === 'Enter') triggerPick();
   }
 
+  /* ---------- Response Parsing Helpers ---------- */
+
+  function isWrapperShape(v: any): v is { type: string; status: number; data: unknown } {
+    return v && typeof v === 'object' && 'type' in v && 'status' in v && 'data' in v;
+  }
+
+  function looksLikeDevalueArray(arr: any): boolean {
+    return Array.isArray(arr) &&
+      arr.length >= 3 &&
+      typeof arr[0] === 'object' &&
+      arr[0] !== null &&
+      Object.prototype.hasOwnProperty.call(arr[0], 'success') &&
+      Object.prototype.hasOwnProperty.call(arr[0], 'message');
+  }
+
+  function attemptDevalueParse(raw: string): any {
+    try {
+      return devalueParse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  function extractResult(payload: any): { success: boolean; message?: string } {
+    if (payload && typeof payload === 'object' && 'success' in payload) {
+      return {
+        success: Boolean(payload.success),
+        message: typeof payload.message === 'string' ? payload.message : ''
+      };
+    }
+    return { success: false, message: '' };
+  }
+
+  /* ---------- Upload Logic ---------- */
+
   async function handleSubmit() {
     if (uploading || disabled || selectedFiles.length === 0) return;
+
     uploading = true;
     errorMessage = '';
     successMessage = '';
+
     try {
       const formData = new FormData();
       if (multiple) {
@@ -62,15 +102,83 @@
       } else {
         formData.append('file', selectedFiles[0]);
       }
-      const res = await fetch(uploadUrl, { method: 'POST', body: formData });
-      if (!res.ok) {
+
+      const res = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData
+      });
+
+      const contentType = res.headers.get('content-type') || '';
+      let topLevel: any = null;
+
+      if (contentType.includes('application/json')) {
+        topLevel = await res.json().catch(() => null);
+      } else {
         const text = await res.text().catch(() => '');
-        throw new Error(text || `Upload failed (${res.status})`);
+        try { topLevel = JSON.parse(text); }
+        catch { topLevel = text; }
       }
-      successMessage = 'Upload successful.';
+
+      let effective: any = topLevel;
+
+      if (isWrapperShape(topLevel)) {
+        if (typeof topLevel.data === 'string') {
+          let innerParsed: any = null;
+          try { innerParsed = JSON.parse(topLevel.data); } catch {/* ignore */}
+          if (innerParsed && looksLikeDevalueArray(innerParsed)) {
+            const reconstructed = attemptDevalueParse(topLevel.data);
+            if (reconstructed) {
+              effective = reconstructed;
+            } else {
+              try {
+                const arr = innerParsed;
+                effective = {
+                  success: arr[arr[0].success],
+                  message: arr[arr[0].message]
+                };
+              } catch {
+                effective = {};
+              }
+            }
+          } else if (innerParsed && typeof innerParsed === 'object' && 'success' in innerParsed) {
+            effective = innerParsed;
+          } else {
+            const dv = attemptDevalueParse(topLevel.data);
+            if (dv) effective = dv;
+          }
+        } else {
+          effective = topLevel.data;
+        }
+      }
+
+      if (Array.isArray(effective) && looksLikeDevalueArray(effective)) {
+        const re = attemptDevalueParse(JSON.stringify(effective));
+        if (re) effective = re;
+      }
+
+      const serverResult = extractResult(effective);
+
+      if (!res.ok) {
+        errorMessage = serverResult.message || `Upload failed (${res.status})`;
+        dispatch('uploaded', { success: false, message: errorMessage });
+        return;
+      }
+
+      if (!serverResult.success) {
+        errorMessage = serverResult.message || 'Upload failed.';
+        dispatch('uploaded', { success: false, message: errorMessage });
+        return;
+      }
+
+      successMessage = serverResult.message || 'Upload successful.';
       dispatch('uploaded', { success: true, message: successMessage });
+
+      // Optional: clear selected files after success
+      // selectedFiles = [];
+
     } catch (err: any) {
-      errorMessage = err?.message || 'Upload failed.';
+      console.error('Upload exception:', err);
+      errorMessage = err?.message || 'Unexpected error during upload.';
       dispatch('uploaded', { success: false, message: errorMessage });
     } finally {
       uploading = false;
@@ -83,6 +191,7 @@
   on:submit|preventDefault={handleSubmit}
   enctype="multipart/form-data"
 >
+  <!-- Drop Zone -->
   <div
     class="outline-none"
     tabindex="0"
@@ -117,7 +226,10 @@
       <p class="font-medium mb-1 text-sm">Selected files:</p>
       <ul class="text-xs space-y-1">
         {#each selectedFiles as file}
-          <li>{file.name} (<span class="opacity-70">{Math.round(file.size / 1024)} KB</span>)</li>
+          <li>
+            {file.name}
+            (<span class="opacity-70">{Math.round(file.size / 1024)} KB</span>)
+          </li>
         {/each}
       </ul>
     </div>
@@ -129,7 +241,7 @@
     disabled={selectedFiles.length === 0 || uploading || disabled}
   >
     {#if uploading}
-      <span class="loading loading-spinner loading-sm mr-2"></span>
+      <span class="loading loading-spinner loading-sm mr-2" aria-hidden="true"></span>
       Uploading...
     {:else}
       Submit PDF
@@ -137,14 +249,19 @@
   </button>
 
   {#if errorMessage}
-    <div class="alert alert-error mt-2 text-sm">{errorMessage}</div>
+    <div class="alert alert-error mt-2 text-sm">
+      <span>{errorMessage}</span>
+    </div>
   {/if}
+
   {#if successMessage}
-    <div class="alert alert-success mt-2 text-sm">{successMessage}</div>
+    <div class="alert alert-success mt-2 text-sm">
+      <span>{successMessage}</span>
+    </div>
   {/if}
 
   <p class="text-[11px] leading-snug opacity-60 mt-2">
-    Drag & drop a PDF or click. Use arrows to navigate pages. Fullscreen available.
+    Drag & drop a PDF or click. Handles SvelteKit action response format.
   </p>
 </form>
 
