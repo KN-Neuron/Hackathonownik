@@ -240,9 +240,6 @@
               {#if multiple && pdfPreviews.length > 1}
                 <span class="badge badge-outline badge-xs">File {idx + 1}/{pdfPreviews.length}</span>
               {/if}
-              {#if preview.isRendering && preview.currentPage !== preview.displayedPage}
-                <span class="opacity-60 italic">Rendering next page…</span>
-              {/if}
             </div>
           {/if}
         </div>
@@ -293,9 +290,6 @@
 
     <div class="fs-page-indicator">
       Page {preview.displayedPage} / {preview.pageCount}
-      {#if preview.isRendering && preview.currentPage !== preview.displayedPage}
-        <span class="ml-2 opacity-70">(rendering {preview.currentPage})</span>
-      {/if}
     </div>
   </div>
 {/if}
