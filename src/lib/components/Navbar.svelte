@@ -10,7 +10,9 @@
 		<div class="hamburger-container">
 			<Hamburger bind:open={sidebar} />
 		</div>
-		<Logo />
+        <a href="/">
+            <Logo />
+        </a>
 	</nav>
 </header>
 

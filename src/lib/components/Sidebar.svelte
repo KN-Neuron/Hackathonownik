@@ -21,6 +21,9 @@
 		<a class="nav-link" href="/ranking" class:active={$page.url.pathname === '/ranking'}>
 			<SidebarElement icon={IconNames.Ranking} text="Ranking" />
 		</a>
+		<a class="nav-link" href="/upload" class:active={$page.url.pathname === '/upload'}>
+			<SidebarElement icon={IconNames.Upload} text="Upload" />
+		</a>
 	</nav>
 
 	<div class="sidebar-footer">

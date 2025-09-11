@@ -16,7 +16,7 @@
   }
 </script>
 
-<div class="uploader-layout flex flex-col md:flex-row gap-6 items-stretch max-w-[1500px] mx-auto">
+<div class="flex flex-col md:flex-row gap-6 items-stretch max-w-[1500px] mx-auto mt-[25px]">
   <PdfUpload
     {multiple}
     {disabled}
@@ -26,10 +26,3 @@
   />
   <PdfViewer {multiple} files={selectedFiles} />
 </div>
-
-<style>
-  .uploader-layout {
-    padding-inline: 1rem;
-    padding-block: 1.25rem;
-  }
-</style>

@@ -20,7 +20,7 @@
 		align-items: center;
 	}
 	h1 {
-		font-size: 48px;
+		font-size: 2rem;
 	}
 	.icon-container {
 		width: 48px;

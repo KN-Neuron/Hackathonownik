@@ -4,6 +4,7 @@
 	import Home from '$lib/components/icons/Home.svelte';
 	import Info from '$lib/components/icons/Info.svelte';
 	import Ranking from '$lib/components/icons/Ranking.svelte';
+	import Upload from '$lib/components/icons/Upload.svelte';
 
 	let { icon, text } = $props();
 </script>
@@ -16,6 +17,8 @@
 			<Info />
 		{:else if icon === IconNames.Ranking}
 			<Ranking />
+		{:else if icon === IconNames.Upload}
+			<Upload />
 		{/if}
 	</div>
 	<span class="item-text">{text}</span>

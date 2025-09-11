@@ -1,20 +1,10 @@
 <script lang="ts">
 	import '../app.css';
-	import TeamRanking from '$lib/components/TeamRanking.svelte';
-	import type { Team } from '$lib/interfaces/Team';
 	import UploadFile from '$lib/components/UploadFile.svelte';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 
 	let isAuthenticated = $derived($page.data.user?.id);
-
-	let teams: [Team] = [
-		{
-			teamName: 'neuron',
-			rating: 2,
-			notes: 'asdfdg'
-		}
-	];
 
 	// --- Hero / Snake logic ---
 	let titleEl: HTMLHeadingElement;
@@ -244,13 +234,6 @@
 			<path bind:this={pathEl} d="{pathD}" />
 		</svg>
 	</div>
-
-	<!-- Optional: Show team ranking below hero if logged in -->
-	{#if $page.data.user}
-		<div style="margin-top:1rem;">
-			<TeamRanking {teams} />
-		</div>
-	{/if}
 </div>
 
 <nav>

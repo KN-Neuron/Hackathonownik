@@ -1,8 +1,19 @@
 <script>
-  import PdfWorkspace from '$lib/components/pdf/PdfWorkspace.svelte';
+    import PdfWorkspace from '$lib/components/pdf/PdfWorkspace.svelte';
+    import HeaderText from '$lib/components/HeaderText.svelte';
+    import { IconNames } from '$lib/utils/utils';
+
+    let icon = IconNames.Upload;
+    let text = 'PDF Upload & Preview';
 </script>
 
-<section class="py-4">
-  <h1 class="text-2xl font-semibold mb-4">PDF Upload & Preview</h1>
-  <PdfWorkspace />
-</section>
+<div>
+    <HeaderText {icon} {text} />
+    <PdfWorkspace />
+</div>
+
+<style>
+    div {
+        padding: 25px;
+    }
+</style>
