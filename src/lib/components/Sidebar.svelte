@@ -3,7 +3,9 @@
 	import { IconNames } from '$lib/utils/utils';
 	import { page } from '$app/stores';
 
-	export let open = false;
+	let isAuthenticated = $derived($page.data.user?.id);
+
+	let open = false;
 </script>
 
 <aside class:open class="bg-base-100">
@@ -12,18 +14,30 @@
 	</div>
 
 	<nav class="sidebar-nav">
-		<a class="nav-link" href="/" class:active={$page.url.pathname === '/'}>
-			<SidebarElement icon={IconNames.Home} text="Home" />
-		</a>
-		<a class="nav-link" href="/info" class:active={$page.url.pathname === '/info'}>
-			<SidebarElement icon={IconNames.Info} text="Info" />
-		</a>
-		<a class="nav-link" href="/ranking" class:active={$page.url.pathname === '/ranking'}>
-			<SidebarElement icon={IconNames.Ranking} text="Ranking" />
-		</a>
-		<a class="nav-link" href="/upload" class:active={$page.url.pathname === '/upload'}>
-			<SidebarElement icon={IconNames.Upload} text="Upload" />
-		</a>
+        {#if isAuthenticated}
+            <a class="nav-link" href="/" class:active={$page.url.pathname === '/'}>
+                <SidebarElement icon={IconNames.Home} text="Home" />
+            </a>
+            <a class="nav-link" href="/info" class:active={$page.url.pathname === '/info'}>
+                <SidebarElement icon={IconNames.Info} text="Info" />
+            </a>
+            <a class="nav-link" href="/ranking" class:active={$page.url.pathname === '/ranking'}>
+                <SidebarElement icon={IconNames.Ranking} text="Ranking" />
+            </a>
+            <a class="nav-link" href="/upload" class:active={$page.url.pathname === '/upload'}>
+                <SidebarElement icon={IconNames.Upload} text="Upload" />
+            </a>
+            <form method="get" action="/logout" style="display:inline">
+                <button class="btn" type="submit">Logout</button>
+            </form>
+        {:else}
+            <a class="nav-link" href="/login" class:active={$page.url.pathname === '/login'}>
+                <SidebarElement icon={IconNames.Upload} text="Login" />
+            </a>
+            <a class="nav-link" href="/register" class:active={$page.url.pathname === '/register'}>
+                <SidebarElement icon={IconNames.Upload} text="Register" />
+            </a>
+        {/if}
 	</nav>
 
 	<div class="sidebar-footer">

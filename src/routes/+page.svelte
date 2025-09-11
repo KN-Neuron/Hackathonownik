@@ -1,10 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import UploadFile from '$lib/components/UploadFile.svelte';
-	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
-
-	let isAuthenticated = $derived($page.data.user?.id);
 
 	// --- Hero / Snake logic ---
 	let titleEl: HTMLHeadingElement;
@@ -235,16 +232,3 @@
 		</svg>
 	</div>
 </div>
-
-<nav>
-	{#if !isAuthenticated}
-		<a href="/login" class="btn">Login</a> |
-		<a href="/register" class="btn">Register</a>
-	{:else}
-		<a href="/protected" class="btn">Protected Page</a> |
-		<a href="/upload" class="btn">Upload</a> |
-        <form method="get" action="/logout" style="display:inline">
-			<button type="submit" class="btn">Logout</button>
-		</form>
-	{/if}
-</nav>

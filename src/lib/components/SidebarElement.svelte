@@ -10,18 +10,25 @@
 </script>
 
 <li class="menu-item">
-	<div class="icon-container">
-		{#if icon === IconNames.Home}
-			<Home />
-		{:else if icon === IconNames.Info}
-			<Info />
-		{:else if icon === IconNames.Ranking}
-			<Ranking />
-		{:else if icon === IconNames.Upload}
-			<Upload />
-		{/if}
-	</div>
-	<span class="item-text">{text}</span>
+    {#if icon === IconNames.Home}
+        <div class="icon-container"> <Home /> </div>
+        <span class="item-text">{text}</span>
+    {/if}
+
+    {#if icon === IconNames.Info}
+        <div class="icon-container"> <Info /> </div>
+        <span class="item-text">{text}</span>
+    {/if}
+
+    {#if icon === IconNames.Ranking}
+        <div class="icon-container"> <Ranking /> </div>
+        <span class="item-text">{text}</span>
+    {/if}
+
+    {#if icon === IconNames.Upload}
+        <div class="icon-container"> <Upload /> </div>
+        <span class="item-text">{text}</span>
+    {/if}
 </li>
 
 <style>
