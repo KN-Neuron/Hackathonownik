@@ -5,7 +5,7 @@
 
 	let isAuthenticated = $derived($page.data.user?.id);
 
-	let open = false;
+    const { open = false } = $props();
 </script>
 
 <aside class:open class="bg-base-100">
