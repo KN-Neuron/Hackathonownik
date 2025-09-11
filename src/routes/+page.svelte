@@ -8,17 +8,27 @@
 	let titleEl: HTMLHeadingElement | null = null;
 	let pathEl: SVGPathElement | null = null;
 
+	// Wave + SVG sizing
 	let d = '';
 	let amplitude = 34;
 	let segments = 9;
 	let underlineGap = 24;
 	let wavePadding = 0;
-	let measuredWidth = 0;
+
+	// Extra padding to avoid blur / glow clipping
+	let glowPadding = 42; // vertical extra space above & below wave
 	let svgWidth = 0;
+	let viewBox = ''; // dynamic viewBox string
+
+	let measuredWidth = 0;
 
 	let resizeObserver: ResizeObserver | null = null;
 	let rAF: number | null = null;
 	let pending = false;
+
+	// Footer / layout sizing
+	let footerHeight = 0;
+	let mainPaddingY = 0;
 
 	function buildWavePath(w: number, segs: number, amp: number): string {
 		if (w <= 0) return '';
@@ -36,12 +46,35 @@
 		return path;
 	}
 
+	function updateLayoutMeasurements() {
+		if (!browser) return;
+		const footer = document.querySelector('footer');
+		const main = document.querySelector('main.content-wrapper');
+		if (footer) {
+			footerHeight = footer.getBoundingClientRect().height;
+			document.documentElement.style.setProperty('--footer-height', footerHeight + 'px');
+		}
+		if (main) {
+			const styles = getComputedStyle(main);
+			mainPaddingY =
+				parseFloat(styles.paddingTop || '0') + parseFloat(styles.paddingBottom || '0');
+			document.documentElement.style.setProperty('--main-padding-y', mainPaddingY + 'px');
+		}
+	}
+
 	function _updateImmediate() {
 		if (!browser || !titleEl) return;
+		updateLayoutMeasurements();
+
 		const rect = titleEl.getBoundingClientRect();
 		measuredWidth = rect.width;
 		const waveWidth = measuredWidth + wavePadding * 2;
 		svgWidth = waveWidth;
+
+		// Expand vertical range to include blur/glow
+		const vPad = amplitude + glowPadding;
+		viewBox = `0 -${vPad} ${svgWidth} ${vPad * 2}`;
+
 		d = buildWavePath(waveWidth, segments, amplitude);
 
 		// Defer path length calc to next frame
@@ -58,7 +91,6 @@
 	}
 
 	function scheduleUpdate() {
-		// Coalesce multiple rapid resizes
 		if (pending) return;
 		pending = true;
 		rAF = requestAnimationFrame(() => {
@@ -70,22 +102,23 @@
 	onMount(() => {
 		if (!browser) return;
 
-		// Initial
+		// Initial sizing
 		scheduleUpdate();
 
-		// ResizeObserver (feature detect)
+		// Observe title & root changes for responsive updates
 		if ('ResizeObserver' in globalThis && titleEl) {
 			resizeObserver = new ResizeObserver(scheduleUpdate);
 			resizeObserver.observe(titleEl);
-			// Observing root can be expensive; only add if you really need it.
 			resizeObserver.observe(document.documentElement);
 		} else {
-			// Fallback: window resize listener
 			window.addEventListener('resize', scheduleUpdate);
 		}
 
 		const orientationHandler = () => scheduleUpdate();
 		window.addEventListener('orientationchange', orientationHandler);
+
+		// Also recalc if fonts load late
+		document.fonts?.ready?.then(() => scheduleUpdate());
 
 		return () => {
 			if (rAF) cancelAnimationFrame(rAF);
@@ -100,7 +133,7 @@
 		resizeObserver?.disconnect();
 	});
 
-	// (Optional) expose a manual refresh API
+	// Manual refresh API
 	export function refresh() {
 		scheduleUpdate();
 	}
@@ -114,8 +147,15 @@
 		--snake-color-3: #4df2ff;
 	}
 
+	/* Prevent scroll bars on this page */
+	:global(html, body) {
+		overflow: hidden;
+	}
+
 	.hero-stage {
-		min-height: 100vh;
+		/* Exact viewport fit excluding footer + main vertical padding */
+		min-height: calc(100vh - var(--footer-height, 0px) - var(--main-padding-y, 0px));
+		height: calc(100vh - var(--footer-height, 0px) - var(--main-padding-y, 0px));
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -123,7 +163,9 @@
 		gap: clamp(2rem, 4vh, 3.75rem);
 		padding: 2rem 1.25rem;
 		position: relative;
+		/* Keep particles contained but allow internal SVG to render fully (we gave it padding in viewBox) */
 		overflow: hidden;
+		box-sizing: border-box;
 	}
 
 	.hero {
@@ -169,7 +211,8 @@
 	svg.wave {
 		overflow: visible;
 		pointer-events: none;
-		height: 140px;
+		/* Slightly taller native box just in case */
+		height: 180px;
 		display: block;
 	}
 
@@ -192,7 +235,8 @@
 			morph 9s ease-in-out infinite;
 		filter:
 			drop-shadow(0 0 10px rgba(160,220,255,0.55))
-			drop-shadow(0 0 26px rgba(140,160,255,0.35));
+			drop-shadow(0 0 40px rgba(140,160,255,0.35))
+			drop-shadow(0 0 65px rgba(140,160,255,0.18));
 	}
 
 	@keyframes draw {
@@ -204,7 +248,7 @@
 
 	@keyframes glimmer {
 		0% { filter: drop-shadow(0 0 8px rgba(110,180,255,0.35)) brightness(1); }
-		50% { filter: drop-shadow(0 0 18px rgba(150,220,255,0.55)) brightness(1.25); }
+		50% { filter: drop-shadow(0 0 24px rgba(150,220,255,0.65)) brightness(1.25); }
 		100% { filter: drop-shadow(0 0 8px rgba(110,180,255,0.35)) brightness(1); }
 	}
 
@@ -266,7 +310,7 @@
 		<svg
 			class="wave"
 			aria-hidden="true"
-			{...{ width: svgWidth, viewBox: `0 -${amplitude} ${svgWidth} ${amplitude * 2}` }}
+			{...{ width: svgWidth, viewBox }}
 		>
 			<defs>
 				<linearGradient id="grad" x1="0%" y1="0%" x2="130%" y2="0%">
@@ -275,11 +319,12 @@
 					<stop offset="75%" stop-color="var(--snake-color-3)" />
 					<stop offset="100%" stop-color="var(--snake-color-1)" />
 				</linearGradient>
-				<filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
-					<feGaussianBlur stdDeviation="12" result="b"/>
+				<!-- Generous filter region so glow is never clipped -->
+				<filter id="softGlow" x="-50%" y="-120%" width="200%" height="300%">
+					<feGaussianBlur stdDeviation="18" result="b" />
 					<feMerge>
-						<feMergeNode in="b"/>
-						<feMergeNode in="SourceGraphic"/>
+						<feMergeNode in="b" />
+						<feMergeNode in="SourceGraphic" />
 					</feMerge>
 				</filter>
 			</defs>

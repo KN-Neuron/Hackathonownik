@@ -6,6 +6,7 @@
 	footer {
 		display: flex;
 		justify-content: right;
+        background-color: black;
 		color: white;
 	}
 	p {
