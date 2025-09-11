@@ -42,7 +42,7 @@
 <style>
 	.layout-container {
 		display: flex;
-		min-height: 100vh;
+		height: 100vh;
 	}
 
 	.content-container {
@@ -54,9 +54,10 @@
 	}
 
 	.content-wrapper {
-        background-color: black;
+		background-color: black;
 		flex: 1;
 		padding: 1rem;
+		overflow-y: scroll;
 	}
 
 	.desktop-sidebar {

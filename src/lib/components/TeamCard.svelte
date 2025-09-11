@@ -2,12 +2,35 @@
 	import { onMount } from 'svelte';
 	import Modal from './Modal.svelte';
 	import GradeTeamForm from './GradeTeamForm.svelte';
+	import PdfViewer from './pdf/PdfViewer.svelte';
+	import { pb } from '$lib/pocketbase.svelte';
+
+	export async function urlToFile(
+		url: string,
+		filename: string,
+		mimeType = 'application/pdf'
+	): Promise<File> {
+		const response = await fetch(url);
+		const blob = await response.blob();
+		return new File([blob], filename, { type: mimeType });
+	}
+
+	async function getPresentationFiles(team): Promise<File[]> {
+		if (team.presentationUrl) {
+			const filename = team.presentationUrl.split('/').pop() || 'presentation.pdf';
+			const file = await urlToFile(team.presentationUrl, filename);
+			showPresentationModal = true;
+			return [file];
+		}
+		return [];
+	}
 
 	let { team } = $props();
 	let avatarColors = ['#543bad', '#36a3db', '#e85c90', '#f7a654', '#36c399', '#8957e5'];
 	let avatarBg = '';
 	let avatarShape = '';
-	let showModal = $state(false);
+	let showFormModal = $state(false);
+	let showPresentationModal = $state(false);
 
 	onMount(() => {
 		const hash = hashCode(team.id);
@@ -40,14 +63,28 @@
 		if (score >= 5) return '#e85c90';
 		return '#555';
 	}
+	const multiple = false;
+	const teamId: string = team.id;
+	let presentationFiles: File[] = $state([]);
+
+	async function showPresentationModalHandler() {
+		presentationFiles = await getPresentationFiles(team);
+		showPresentationModal = true;
+		console.log(presentationFiles);
+	}
 </script>
 
-<div class="team-card" on:click={() => (showModal = true)}>
-	<div class="modal-container">
-		<Modal bind:showModal>
-			<GradeTeamForm />
-		</Modal>
-	</div>
+<div class="team-card">
+	<Modal bind:show={showFormModal}>
+		<GradeTeamForm {teamId} />
+	</Modal>
+
+	<Modal bind:show={showPresentationModal}>
+		{#snippet header()}
+			<h2>Team Presentation: {team.name}</h2>
+		{/snippet}
+		<PdfViewer files={presentationFiles} />
+	</Modal>
 
 	<div class="team-avatar" style="background-color: {avatarBg}">
 		<div class="avatar-shape {avatarShape}"></div>
@@ -119,15 +156,23 @@
 				<span class="grade-value">{team.ocena || '-'}</span>
 			</div>
 
-			<div class="status-container">
-				<div class="status" class:graded={team.was_graded}></div>
-				<span>{team.was_graded ? 'Graded' : 'Pending'} </span>
+			<div class="flex function-buttons">
+				<div class="status-container" on:click={() => showPresentationModalHandler()}>
+					<span>View Presentation</span>
+				</div>
+
+				<div class="status-container btn-primary" on:click={() => (showFormModal = true)}>
+					<div class="status" class:graded={team.was_graded}></div>
+					<span>{team.was_graded ? 'Graded' : 'Pending'} </span>
+				</div>
 			</div>
 		</div>
 	</div>
 </div>
 
 <style>
+	/* Removed .modal-container styles as the div is gone */
+
 	.team-card {
 		display: flex;
 		background-color: #1e1f22;
@@ -136,27 +181,10 @@
 		margin-bottom: 16px;
 		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 		border: 1px solid #2c2e33;
-		transition:
-			transform 0.2s,
-			box-shadow 0.2s;
-		cursor: pointer;
 		position: relative;
 	}
-	.modal-container {
-		position: absolute;
-		width: 100%;
-		height: 100%;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-	}
 
-	.team-card:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
-		border-color: #3b3e46;
-	}
-
+	/* Rest of the styles remain unchanged */
 	.team-avatar {
 		width: 80px;
 		height: 80px;
@@ -286,8 +314,8 @@
 		padding: 4px 12px;
 		border-radius: 16px;
 		font-size: 13px;
-		font-weight: 600;
 		background-color: #763626;
+		font-weight: 600;
 		color: #f0f0f0;
 		height: 100%;
 		margin-right: 10px;
@@ -295,9 +323,26 @@
 	.status-container {
 		display: flex;
 		justify-content: center;
-	}
 
+		padding: 10px;
+		border: 1px solid;
+		border-radius: 10px;
+		border-color: #c7cbd5;
+		transition:
+			transform 0.2s,
+			box-shadow 0.2s;
+		cursor: pointer;
+		background-color: #2c2e33;
+	}
+	.status-container:hover {
+		transform: translateY(-1px);
+	}
 	.status.graded {
 		background-color: #36623d;
+	}
+	.function-buttons {
+		display: flex;
+		justify-content: space-between;
+		gap: 10px;
 	}
 </style>
