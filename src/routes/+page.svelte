@@ -1,234 +1,300 @@
 <script lang="ts">
 	import '../app.css';
-	import UploadFile from '$lib/components/UploadFile.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
+	import { browser } from '$app/environment';
 
-	// --- Hero / Snake logic ---
-	let titleEl: HTMLHeadingElement;
-	let pathEl: SVGPathElement;
-	let behindPathEl: SVGPathElement;
-	let frontPathEl: SVGPathElement;
+	export let text: string = 'Heroes of the brain 2025';
 
-	let pathD = '';
-	const amplitude = 42;          // vertical excursion of the snake
-	const segments = 12;           // number of undulations
-	const padding = 20;            // padding before/after text
-	const baselineOffset = 0;      // adjust vertical baseline relative to text
-	const strokeWidth = 8;
+	let titleEl: HTMLHeadingElement | null = null;
+	let pathEl: SVGPathElement | null = null;
 
-	function generateSnakePath(width: number, segs: number, amp: number): string {
-		// We create a smooth sinus-like poly-bezier path
-		const segmentWidth = width / segs;
-		let d = `M 0 ${baselineOffset}`;
+	let d = '';
+	let amplitude = 34;
+	let segments = 9;
+	let underlineGap = 24;
+	let wavePadding = 0;
+	let measuredWidth = 0;
+	let svgWidth = 0;
+
+	let resizeObserver: ResizeObserver | null = null;
+	let rAF: number | null = null;
+	let pending = false;
+
+	function buildWavePath(w: number, segs: number, amp: number): string {
+		if (w <= 0) return '';
+		const segmentW = w / segs;
+		const baseline = 0;
+		let path = `M 0 ${baseline}`;
 		for (let i = 0; i < segs; i++) {
-			const x1 = segmentWidth * i + segmentWidth * 0.25;
-			const x2 = segmentWidth * i + segmentWidth * 0.75;
-			const x3 = segmentWidth * (i + 1);
-			const dir = i % 2 === 0 ? -1 : 1; // alternate up/down
-			const yCtrl = baselineOffset + dir * amp;
-			d += ` C ${x1} ${baselineOffset}, ${x2} ${yCtrl}, ${x3} ${baselineOffset}`;
+			const xStart = i * segmentW;
+			const xMid = xStart + segmentW / 2;
+			const xEnd = xStart + segmentW;
+			const dir = i % 2 === 0 ? 1 : -1;
+			const yCtrl = baseline + dir * amp;
+			path += ` Q ${xMid} ${yCtrl}, ${xEnd} ${baseline}`;
 		}
-		return d;
+		return path;
 	}
 
-	function fitPath() {
-		if (!titleEl || !pathEl) return;
+	function _updateImmediate() {
+		if (!browser || !titleEl) return;
 		const rect = titleEl.getBoundingClientRect();
-		const width = rect.width + padding * 2;
-		pathD = generateSnakePath(width, segments, amplitude);
-		// update after tick
-		requestAnimationFrame(() => {
+		measuredWidth = rect.width;
+		const waveWidth = measuredWidth + wavePadding * 2;
+		svgWidth = waveWidth;
+		d = buildWavePath(waveWidth, segments, amplitude);
+
+		// Defer path length calc to next frame
+		rAF = requestAnimationFrame(() => {
 			if (!pathEl) return;
-			pathEl.setAttribute('d', pathD);
-			behindPathEl?.setAttribute('d', pathD);
-			frontPathEl?.setAttribute('d', pathD);
-			// measure length to set CSS variable for animation
-			const len = pathEl.getTotalLength();
-			const root = pathEl.closest('.snake-wrapper') as HTMLElement;
-			if (root) {
-				root.style.setProperty('--path-length', `${len}`);
+			pathEl.setAttribute('d', d);
+			try {
+				const len = pathEl.getTotalLength();
+				pathEl.style.setProperty('--path-len', String(len));
+			} catch {
+				/* ignore */
 			}
 		});
 	}
 
+	function scheduleUpdate() {
+		// Coalesce multiple rapid resizes
+		if (pending) return;
+		pending = true;
+		rAF = requestAnimationFrame(() => {
+			pending = false;
+			_updateImmediate();
+		});
+	}
+
 	onMount(() => {
-		fitPath();
-		window.addEventListener('resize', fitPath);
-		return () => window.removeEventListener('resize', fitPath);
+		if (!browser) return;
+
+		// Initial
+		scheduleUpdate();
+
+		// ResizeObserver (feature detect)
+		if ('ResizeObserver' in globalThis && titleEl) {
+			resizeObserver = new ResizeObserver(scheduleUpdate);
+			resizeObserver.observe(titleEl);
+			// Observing root can be expensive; only add if you really need it.
+			resizeObserver.observe(document.documentElement);
+		} else {
+			// Fallback: window resize listener
+			window.addEventListener('resize', scheduleUpdate);
+		}
+
+		const orientationHandler = () => scheduleUpdate();
+		window.addEventListener('orientationchange', orientationHandler);
+
+		return () => {
+			if (rAF) cancelAnimationFrame(rAF);
+			if (resizeObserver) resizeObserver.disconnect();
+			window.removeEventListener('orientationchange', orientationHandler);
+			window.removeEventListener('resize', scheduleUpdate);
+		};
 	});
+
+	onDestroy(() => {
+		if (rAF) cancelAnimationFrame(rAF);
+		resizeObserver?.disconnect();
+	});
+
+	// (Optional) expose a manual refresh API
+	export function refresh() {
+		scheduleUpdate();
+	}
 </script>
 
 <style>
 	:root {
-		--snake-duration: 7s;
+		--snake-duration: 7.5s;
+		--snake-color-1: #ff6ec7;
+		--snake-color-2: #7f7bff;
+		--snake-color-3: #4df2ff;
 	}
 
 	.hero-stage {
-		min-height: 70vh;
+		min-height: 100vh;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		position: relative;
 		flex-direction: column;
-		gap: 2rem;
-	}
-
-	.snake-wrapper {
+		gap: clamp(2rem, 4vh, 3.75rem);
+		padding: 2rem 1.25rem;
 		position: relative;
-		display: inline-block;
-		--path-length: 1000;
+		overflow: hidden;
 	}
 
-	h1.hero {
-		font-size: clamp(2.5rem, 6vw, 5.5rem);
+	.hero {
+		font-size: clamp(2.8rem, 8vw, 5.8rem);
 		font-weight: 800;
 		font-family: 'Inter', system-ui, sans-serif;
-		line-height: 1;
-		margin: 0;
-		padding: 0 20px; /* match padding used in path width calc */
-		position: relative;
+		line-height: 1.02;
 		text-align: center;
-		background: linear-gradient(120deg,#fff,#ddddff);
+		margin: 0;
+		background: linear-gradient(
+			105deg,
+			#ffffff 0%,
+			#eaeaff 35%,
+			#d9f6ff 55%,
+			#ffffff 85%
+		);
 		-webkit-background-clip: text;
-		color: #fff;
-		text-shadow:
-			0 0 6px rgba(255,255,255,0.15),
-			0 2px 12px rgba(0,0,0,0.35);
+		color: transparent;
+		filter: drop-shadow(0 4px 14px rgba(0,0,30,0.25));
+		position: relative;
 	}
 
-	/* Container for layering the SVG(s) */
-	.snake-layer {
+	.hero::before {
+		content: '';
 		position: absolute;
-		left: 0;
-		top: 100%;
-		transform: translateY(-50%);
-		overflow: visible;
+		inset: -14% -18%;
+		background:
+			radial-gradient(circle at 35% 40%, rgba(110,156,255,0.25), transparent 60%),
+			radial-gradient(circle at 70% 65%, rgba(255,140,230,0.22), transparent 62%);
+		filter: blur(42px) saturate(140%);
+		opacity: 0.8;
+		z-index: -1;
 		pointer-events: none;
 	}
 
-	/* We split front/behind concept using z-index + clipping.
-	   Behind path sits below text; front shows only the "upper" arches. */
-	.snake-layer.behind {
-		z-index: 0;
-		filter: drop-shadow(0 0 6px rgba(0,0,0,0.5));
-		mix-blend-mode: screen;
-	}
-
-	.snake-layer.front {
-		z-index: 2;
-		/* Show only upper half => gives illusion of weaving (up=front, down=behind) */
-		clip-path: inset(-40% -10% 50% -10%);
-		mix-blend-mode: screen;
-	}
-
-	.hero-stage h1.hero {
-		z-index: 1;
+	.wave-wrapper {
 		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
-	.snake-path {
+	svg.wave {
+		overflow: visible;
+		pointer-events: none;
+		height: 140px;
+		display: block;
+	}
+
+	.inner-wave {
+		transform: translateY(var(--underline-gap));
+	}
+
+	path.snake {
 		fill: none;
-		stroke-width: var(--stroke-width, 8);
+		stroke-width: 6;
 		stroke-linecap: round;
 		stroke-linejoin: round;
-		/* initial dash so we can animate drawing + reversal */
-		stroke-dasharray: var(--path-length) var(--path-length);
+		stroke: url(#grad);
+		--path-len: 1000;
+		stroke-dasharray: var(--path-len);
+		stroke-dashoffset: var(--path-len);
 		animation:
-			drawLine var(--snake-duration) ease-in-out infinite,
-			hueShift 6s linear infinite;
+			draw var(--snake-duration) cubic-bezier(.77,.22,.29,.84) infinite,
+			glimmer 6.5s linear infinite,
+			morph 9s ease-in-out infinite;
+		filter:
+			drop-shadow(0 0 10px rgba(160,220,255,0.55))
+			drop-shadow(0 0 26px rgba(140,160,255,0.35));
 	}
 
-	/* Back layer slightly dimmer */
-	.snake-path.behind {
-		opacity: 0.55;
-		filter: brightness(1.1) saturate(1.4);
+	@keyframes draw {
+		0% { stroke-dashoffset: var(--path-len); }
+		28% { stroke-dashoffset: 0; }
+		55% { stroke-dashoffset: 0; }
+		100% { stroke-dashoffset: -var(--path-len); }
 	}
 
-	/* Front layer brighter */
-	.snake-path.front {
-		opacity: 0.95;
-		filter: brightness(1.4) saturate(2);
-        filter: blur(20px);
+	@keyframes glimmer {
+		0% { filter: drop-shadow(0 0 8px rgba(110,180,255,0.35)) brightness(1); }
+		50% { filter: drop-shadow(0 0 18px rgba(150,220,255,0.55)) brightness(1.25); }
+		100% { filter: drop-shadow(0 0 8px rgba(110,180,255,0.35)) brightness(1); }
 	}
 
-	/* Animated gradient stroke via stroke & gradientTransform animation */
-	#rainbowGradient {
-		animation: gradientMove 5s linear infinite;
+	@keyframes morph {
+		0%, 100% { transform: scaleY(1); }
+		50% { transform: scaleY(1.08); }
 	}
 
-	@keyframes gradientMove {
-		0% { gradientTransform: translateX(0); }
-		50% { gradientTransform: translateX(50%); }
-		100% { gradientTransform: translateX(0); }
+	.floating-particles {
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		overflow: hidden;
+		mix-blend-mode: screen;
 	}
 
-	@keyframes hueShift {
-		0% { filter: hue-rotate(0deg); }
-		50% { filter: hue-rotate(180deg); }
-		100% { filter: hue-rotate(360deg); }
+	.floating-particles span {
+		position: absolute;
+		width: 10px;
+		height: 10px;
+		background: radial-gradient(circle, #ffffff, rgba(255,255,255,0) 70%);
+		border-radius: 50%;
+		animation: floatS 12s linear infinite;
+		opacity: 0.5;
 	}
 
-	@keyframes drawLine {
-		0% {
-			stroke-dashoffset: var(--path-length);
-		}
-		35% {
-			stroke-dashoffset: 0;
-		}
-		65% {
-			stroke-dashoffset: 0;
-		}
-		100% {
-			stroke-dashoffset: -var(--path-length);
-		}
+	.floating-particles span:nth-child(2) { width: 14px; height: 14px; animation-duration: 15s; animation-delay: -4s; left: 18%; top: 68%; }
+	.floating-particles span:nth-child(3) { width: 8px; animation-duration: 10s; animation-delay: -6s; left: 72%; top: 22%; }
+	.floating-particles span:nth-child(4) { width: 12px; animation-duration: 17s; animation-delay: -2s; left: 55%; top: 75%; }
+	.floating-particles span:nth-child(5) { width: 9px; animation-duration: 14s; animation-delay: -8s; left: 40%; top: 28%; }
+
+	@keyframes floatS {
+		0% { transform: translateY(0) translateX(0); opacity: 0; }
+		10% { opacity: 0.6; }
+		50% { transform: translateY(-40px) translateX(20px); opacity: 0.4; }
+		90% { opacity: 0; }
+		100% { transform: translateY(-80px) translateX(40px); opacity: 0; }
 	}
 
-	nav {
-		text-align: center;
-		margin-top: 2rem;
+	@media (max-width: 640px) {
+		path.snake { stroke-width: 5; }
+	}
+
+	:global(body) {
+		background:
+			radial-gradient(circle at 70% 15%, #1d2340, #0e121f 60%),
+			radial-gradient(circle at 15% 85%, #191f34, transparent 70%),
+			#0f1322;
+		color: #ffffff;
 	}
 </style>
 
 <div class="hero-stage">
-	<div class="snake-wrapper" style="--stroke-width: {strokeWidth}">
+	<h1 class="hero" bind:this={titleEl}>
+		{text}
+	</h1>
 
-		<h1 class="hero" bind:this={titleEl}>
-			Heroes of the brain 2025
-		</h1>
-
-		<!-- Behind layer SVG -->
-		<svg class="snake-layer behind" height="{amplitude * 2}" style="width:100%;">
+	<div class="wave-wrapper" style="--underline-gap: {underlineGap}px">
+		<svg
+			class="wave"
+			aria-hidden="true"
+			{...{ width: svgWidth, viewBox: `0 -${amplitude} ${svgWidth} ${amplitude * 2}` }}
+		>
 			<defs>
-				<linearGradient id="rainbowGradient" x1="0%" y1="0%" x2="200%" y2="0%">
-					<stop offset="0%" stop-color="#ff0077"/>
-					<stop offset="15%" stop-color="#ff8a00"/>
-					<stop offset="30%" stop-color="#ffe600"/>
-					<stop offset="45%" stop-color="#3bff00"/>
-					<stop offset="60%" stop-color="#00ffd5"/>
-					<stop offset="75%" stop-color="#0077ff"/>
-					<stop offset="90%" stop-color="#9d00ff"/>
-					<stop offset="100%" stop-color="#ff0077"/>
+				<linearGradient id="grad" x1="0%" y1="0%" x2="130%" y2="0%">
+					<stop offset="0%" stop-color="var(--snake-color-1)" />
+					<stop offset="38%" stop-color="var(--snake-color-2)" />
+					<stop offset="75%" stop-color="var(--snake-color-3)" />
+					<stop offset="100%" stop-color="var(--snake-color-1)" />
 				</linearGradient>
+				<filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+					<feGaussianBlur stdDeviation="12" result="b"/>
+					<feMerge>
+						<feMergeNode in="b"/>
+						<feMergeNode in="SourceGraphic"/>
+					</feMerge>
+				</filter>
 			</defs>
-			<path
-				bind:this={behindPathEl}
-				class="snake-path behind"
-				stroke="url(#rainbowGradient)"
-				d="{pathD}" />
+			<g class="inner-wave" filter="url(#softGlow)">
+				<path
+					bind:this={pathEl}
+					class="snake"
+					d={d}
+					vector-effect="non-scaling-stroke"
+				/>
+			</g>
 		</svg>
+	</div>
 
-		<!-- Front layer SVG (upper arches appear in front) -->
-		<svg class="snake-layer front" height="{amplitude * 2}" style="width:100%;">
-			<path
-				bind:this={frontPathEl}
-				class="snake-path front"
-				stroke="url(#rainbowGradient)"
-				d="{pathD}" />
-		</svg>
-
-		<!-- Hidden master path for measurement (optional if you want separate) -->
-		<svg style="position:absolute; width:0; height:0; overflow:hidden;">
-			<path bind:this={pathEl} d="{pathD}" />
-		</svg>
+	<div class="floating-particles" aria-hidden="true">
+		<span></span><span></span><span></span><span></span><span></span>
 	</div>
 </div>
