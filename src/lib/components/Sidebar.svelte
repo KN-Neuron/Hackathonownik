@@ -10,7 +10,7 @@
 
 <aside class:open class="bg-base-100">
 	<div class="sidebar-header">
-		<h2 class="text-2xl font-bold text-primary mb-6">Heroes of the Brain 2025</h2>
+		<a href="/"><h2 class="text-2xl font-bold text-primary mb-6 text-center">Heroes of the Brain 2025</h2></a>
 	</div>
 
 	<nav class="sidebar-nav">
