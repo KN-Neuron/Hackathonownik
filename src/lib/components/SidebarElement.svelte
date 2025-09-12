@@ -5,30 +5,29 @@
 	import Info from '$lib/components/icons/Info.svelte';
 	import Ranking from '$lib/components/icons/Ranking.svelte';
 	import Upload from '$lib/components/icons/Upload.svelte';
+	import Login from '$lib/components/icons/Login.svelte';
+	import Register from '$lib/components/icons/Register.svelte';
 
 	let { icon, text } = $props();
 </script>
 
 <li class="menu-item">
-    {#if icon === IconNames.Home}
-        <div class="icon-container"> <Home /> </div>
-        <span class="item-text">{text}</span>
-    {/if}
-
-    {#if icon === IconNames.Info}
-        <div class="icon-container"> <Info /> </div>
-        <span class="item-text">{text}</span>
-    {/if}
-
-    {#if icon === IconNames.Ranking}
-        <div class="icon-container"> <Ranking /> </div>
-        <span class="item-text">{text}</span>
-    {/if}
-
-    {#if icon === IconNames.Upload}
-        <div class="icon-container"> <Upload /> </div>
-        <span class="item-text">{text}</span>
-    {/if}
+	<div class="icon-container">
+		{#if icon === IconNames.Home}
+			<Home />
+		{:else if icon === IconNames.Info}
+			<Info />
+		{:else if icon === IconNames.Ranking}
+			<Ranking />
+		{:else if icon === IconNames.Upload}
+			<Upload />
+		{:else if icon === IconNames.Login}
+			<Login />
+		{:else if icon === IconNames.Register}
+			<Register />
+		{/if}
+	</div>
+	<span class="item-text">{text}</span>
 </li>
 
 <style>
