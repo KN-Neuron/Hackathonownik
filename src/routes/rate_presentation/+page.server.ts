@@ -1,6 +1,8 @@
-import { env } from '$env/dynamic/private';
-
-import { redirect } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
+import type { Actions } from './$types';
+import { pbError } from '$lib/pocketbase.svelte';
+import { HttpStatusCode, Role } from '$lib/utils/utils';
+import type { Rating, User } from '$lib/types';
 
 export interface TeamWithPresentationUrl {
 	collectionId: string;
@@ -46,5 +48,53 @@ export const load = async ({ locals }) => {
 	} catch (error) {
 		console.error('Error fetching data:', error);
 		return { teams: [] };
+	}
+};
+
+export const actions: Actions = {
+	default: async ({ locals, request }) => {
+		const user: User = locals.user;
+
+		if (user.role !== Role.Jury && user.role !== Role.Admin) {
+			throw error(403, 'Insufficient permissions to perform operation');
+		}
+
+		const form = Object.fromEntries(await request.formData()) as {
+			innovation: number;
+			usefulness: number;
+			finalPresentation: number;
+			implementation: number;
+			comments: string;
+			teamId: string;
+		};
+
+		const rating: Rating = {
+			innovation: Number(form.innovation),
+			usefulness: Number(form.usefulness),
+			finalPresentation: Number(form.finalPresentation),
+			implementation: Number(form.implementation),
+			notes: form.comments,
+			jury: user.id,
+			team: form.teamId
+		};
+
+		// TODO handle updating the was_graded for all jury
+		function allFieldsValid(obj: Rating) {
+			return Object.values(obj).every((value) => {
+				return value !== null && value !== undefined;
+			});
+		}
+
+		try {
+			if (allFieldsValid(rating)) {
+				await locals.pb.collection('ratings').create(rating);
+			}
+		} catch (err: unknown) {
+			console.error('Error in action:', err);
+			pbError(err);
+			throw error(HttpStatusCode.InternalServerError, 'Failed to create rating');
+		}
+
+		throw redirect(HttpStatusCode.SeeOther, '/');
 	}
 };

@@ -1,14 +1,15 @@
 <script>
 	import '../../app.css';
 	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 
 	const { teamId } = $props();
 	console.log(JSON.stringify(teamId), null, 2);
 
-	let innowacyjnosc = 3;
-	let uzytecznosc = 3;
-	let prezentacja_koncowa = 3;
-	let jakosc_implementacji = 3;
+	let innovation = 3;
+	let usefulness = 3;
+	let finalPresentation = 3;
+	let implementation = 3;
 
 	let comments = '';
 	let error = '';
@@ -19,7 +20,14 @@
 
 <form
 	method="POST"
-	use:enhance
+	use:enhance={() => {
+		return async ({ result }) => {
+			if (result.type === 'redirect') {
+				await invalidateAll();
+				window.location.reload();
+			}
+		};
+	}}
 	class="flex flex-col gap-4 rounded-box bg-base-200 p-8 max-w-md mx-auto my-8"
 >
 	<fieldset>
@@ -42,16 +50,18 @@
 				name="teamId"
 				type="text"
 				value={teamId}
-				placeholder="Project ID"
-				disabled
+				placeholder="Team ID"
+				readonly
 				required
 			/>
+
+			<input type="hidden" name="teamId" value={teamId} />
 		</label>
 
 		<div class="form-control mb-4">
 			<div class="label">
 				<span class="label-text font-bold">Innovation (Innowacyjność)</span>
-				<span class="label-text-alt">{innowacyjnosc}/{maxScore}</span>
+				<span class="label-text-alt">{innovation}/{maxScore}</span>
 			</div>
 			<input
 				type="range"
@@ -59,8 +69,8 @@
 				max={maxScore}
 				step="1"
 				class="range range-primary"
-				bind:value={innowacyjnosc}
-				name="innowacyjnosc"
+				bind:value={innovation}
+				name="innovation"
 				style="width: 100%;"
 			/>
 			<div class="w-full flex justify-between text-xs px-0">
@@ -75,7 +85,7 @@
 		<div class="form-control mb-4">
 			<div class="label">
 				<span class="label-text font-bold">Usefulness (Użyteczność)</span>
-				<span class="label-text-alt">{uzytecznosc}/{maxScore}</span>
+				<span class="label-text-alt">{usefulness}/{maxScore}</span>
 			</div>
 
 			<input
@@ -84,8 +94,8 @@
 				max={maxScore}
 				step="1"
 				class="range range-primary"
-				bind:value={innowacyjnosc}
-				name="uzytecznosc"
+				bind:value={usefulness}
+				name="usefulness"
 				style="width: 100%;"
 			/>
 			<div class="w-full flex justify-between text-xs px-0">
@@ -100,7 +110,7 @@
 		<div class="form-control mb-4">
 			<div class="label">
 				<span class="label-text font-bold">Final Presentation (Prezentacja Końcowa)</span>
-				<span class="label-text-alt">{prezentacja_koncowa}/{maxScore}</span>
+				<span class="label-text-alt">{finalPresentation}/{maxScore}</span>
 			</div>
 
 			<input
@@ -109,8 +119,8 @@
 				max={maxScore}
 				step="1"
 				class="range range-primary"
-				bind:value={innowacyjnosc}
-				name="prezentacja_koncowa"
+				bind:value={finalPresentation}
+				name="finalPresentation"
 				style="width: 100%;"
 			/>
 			<div class="w-full flex justify-between text-xs px-0">
@@ -125,7 +135,7 @@
 		<div class="form-control mb-4">
 			<div class="label">
 				<span class="label-text font-bold">Implementation Quality (Jakość Implementacji)</span>
-				<span class="label-text-alt">{jakosc_implementacji}/{maxScore}</span>
+				<span class="label-text-alt">{implementation}/{maxScore}</span>
 			</div>
 
 			<input
@@ -134,8 +144,8 @@
 				max={maxScore}
 				step="1"
 				class="range range-primary"
-				bind:value={innowacyjnosc}
-				name="jakosc_implementacji"
+				bind:value={implementation}
+				name="implementation"
 				style="width: 100%;"
 			/>
 			<div class="w-full flex justify-between text-xs px-0">
