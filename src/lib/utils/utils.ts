@@ -3,9 +3,18 @@ import Info from '$lib/components/icons/Info.svelte';
 import Ranking from '$lib/components/icons/Ranking.svelte';
 import Stats from '$lib/components/icons/Stats.svelte';
 import Upload from '$lib/components/icons/Upload.svelte';
+import Login from '$lib/components/icons/Login.svelte';
+import Register from '$lib/components/icons/Register.svelte';
 
 type ComponentMap = {
-	[key: string]: typeof Home | typeof Info | typeof Stats;
+	[key: string]:
+		| typeof Home
+		| typeof Info
+		| typeof Stats
+		| typeof Ranking
+		| typeof Upload
+		| typeof Login
+		| typeof Register;
 };
 
 export enum IconNames {
@@ -13,7 +22,9 @@ export enum IconNames {
 	Info = 'info',
 	Stats = 'stats',
 	Ranking = 'ranking',
-	Upload = 'upload'
+	Upload = 'upload',
+	Login = 'login',
+	Register = 'register'
 }
 
 export const componentMap: ComponentMap = {
@@ -21,7 +32,9 @@ export const componentMap: ComponentMap = {
 	[IconNames.Info]: Info,
 	[IconNames.Stats]: Stats,
 	[IconNames.Ranking]: Ranking,
-	[IconNames.Upload]: Upload
+	[IconNames.Upload]: Upload,
+	[IconNames.Login]: Login,
+	[IconNames.Register]: Register
 };
 
 export function getComponent(componentName: string) {
@@ -37,7 +50,6 @@ export enum HttpStatusCode {
 	SwitchingProtocols = 101,
 	Processing = 102,
 	EarlyHints = 103,
-
 	OK = 200,
 	Created = 201,
 	Accepted = 202,
@@ -48,7 +60,6 @@ export enum HttpStatusCode {
 	MultiStatus = 207,
 	AlreadyReported = 208,
 	IMUsed = 226,
-
 	MultipleChoices = 300,
 	MovedPermanently = 301,
 	Found = 302,
@@ -57,7 +68,6 @@ export enum HttpStatusCode {
 	UseProxy = 305,
 	TemporaryRedirect = 307,
 	PermanentRedirect = 308,
-
 	BadRequest = 400,
 	Unauthorized = 401,
 	PaymentRequired = 402,
@@ -87,7 +97,6 @@ export enum HttpStatusCode {
 	TooManyRequests = 429,
 	RequestHeaderFieldsTooLarge = 431,
 	UnavailableForLegalReasons = 451,
-
 	InternalServerError = 500,
 	NotImplemented = 501,
 	BadGateway = 502,
