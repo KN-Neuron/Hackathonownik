@@ -1,46 +1,46 @@
 <script lang="ts">
-	import type { Team } from '$lib/interfaces/Team';
+	import type { Rating } from '$lib/types';
 
-	let { teams }: { teams: Team[] } = $props();
-	teams = teams.sort((a, b) => {
-		return b.rating - a.rating;
-	});
+	const { ratings }: { ratings: Rating[] } = $props();
+
+	const columns =
+		ratings && ratings.length > 0
+			? Object.keys(ratings[0]).filter(
+					(col) =>
+						col !== 'id' &&
+						col !== 'created' &&
+						col !== 'updated' &&
+						col !== 'collectionId' &&
+						col !== 'collectionName' &&
+						col !== 'id' &&
+						col !== 'updated'
+				)
+			: [];
 </script>
 
 <div class="overflow-x-auto rounded-box border border-base-content/5 bg-base-100">
 	<table class="table">
 		<thead>
 			<tr>
-				<th>Rank</th>
-				<th>Team Name</th>
-				<th>Rating</th>
-				<th>Notes</th>
+				<th>Place</th>
+				{#each columns as col}
+					<th>{col.charAt(0).toUpperCase() + col.slice(1)}</th>
+				{/each}
 			</tr>
 		</thead>
 		<tbody>
-			{#each teams as team, rank}
+			{#each ratings as rating, rank}
 				<tr class="hover:bg-base-300">
 					<th>{rank + 1}</th>
-					<td>{team.teamName}</td>
-					<td>{team.rating}</td>
-					<td>{team.notes}</td>
+					{#each columns as col}
+						<td>{rating[col] ?? 'N/A'}</td>
+					{/each}
 				</tr>
 			{:else}
 				<tr>
-					<td colspan="4">No teams available.</td>
+					<td colspan={columns.length + 1}>No ratings available.</td>
 				</tr>
 			{/each}
 		</tbody>
 	</table>
 </div>
-
-<style>
-	thead {
-		border-bottom: 2px solid gray;
-	}
-	div {
-		margin-top: 30px;
-		border-radius: 20px;
-		min-height: 100%;
-	}
-</style>

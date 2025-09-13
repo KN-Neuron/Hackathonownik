@@ -30,4 +30,5 @@ export interface Rating {
 	notes: string;
 	jury: string;
 	team: string;
+	finalGrade: number | null;
 }

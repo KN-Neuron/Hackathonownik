@@ -15,7 +15,7 @@
 	<div class="icon-container">
 		{#if icon === IconNames.Home}
 			<Home />
-		{:else if icon === IconNames.Info}
+		{:else if icon === IconNames.Rate}
 			<Info />
 		{:else if icon === IconNames.Ranking}
 			<Ranking />

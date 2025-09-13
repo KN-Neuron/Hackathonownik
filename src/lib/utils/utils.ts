@@ -5,6 +5,7 @@ import Stats from '$lib/components/icons/Stats.svelte';
 import Upload from '$lib/components/icons/Upload.svelte';
 import Login from '$lib/components/icons/Login.svelte';
 import Register from '$lib/components/icons/Register.svelte';
+import Rate from '$lib/components/icons/Rate.svelte';
 
 type ComponentMap = {
 	[key: string]:
@@ -14,7 +15,8 @@ type ComponentMap = {
 		| typeof Ranking
 		| typeof Upload
 		| typeof Login
-		| typeof Register;
+		| typeof Register
+		| typeof Rate;
 };
 
 export enum IconNames {
@@ -24,17 +26,18 @@ export enum IconNames {
 	Ranking = 'ranking',
 	Upload = 'upload',
 	Login = 'login',
-	Register = 'register'
+	Register = 'register',
+	Rate = 'rate'
 }
 
 export const componentMap: ComponentMap = {
 	[IconNames.Home]: Home,
-	[IconNames.Info]: Info,
 	[IconNames.Stats]: Stats,
 	[IconNames.Ranking]: Ranking,
 	[IconNames.Upload]: Upload,
 	[IconNames.Login]: Login,
-	[IconNames.Register]: Register
+	[IconNames.Register]: Register,
+	[IconNames.Rate]: Rate
 };
 
 export function getComponent(componentName: string) {
