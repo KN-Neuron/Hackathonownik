@@ -73,7 +73,7 @@ export const actions: Actions = {
 			usefulness: Number(form.usefulness),
 			finalPresentation: Number(form.finalPresentation),
 			implementation: Number(form.implementation),
-			notes: form.comments,
+			comments: form.comments,
 			jury: user.id,
 			team: form.teamId
 		};

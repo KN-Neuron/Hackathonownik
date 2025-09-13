@@ -27,7 +27,7 @@ export interface Rating {
 	usefulness: number;
 	finalPresentation: number;
 	implementation: number;
-	notes: string;
+	comments: string;
 	jury: string;
 	team: string;
 	finalGrade: number | null;

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Rating } from '$lib/types';
+	import Modal from './Modal.svelte';
 
 	const { ratings }: { ratings: Rating[] } = $props();
 
@@ -13,9 +14,15 @@
 						col !== 'collectionId' &&
 						col !== 'collectionName' &&
 						col !== 'id' &&
-						col !== 'updated'
+						col !== 'updated' &&
+						col !== 'comments'
 				)
 			: [];
+
+	let showModal = $state(false);
+	async function showModalHandler() {
+		showModal = true;
+	}
 </script>
 
 <div class="overflow-x-auto rounded-box border border-base-content/5 bg-base-100">
@@ -35,6 +42,15 @@
 					{#each columns as col}
 						<td>{rating[col] ?? 'N/A'}</td>
 					{/each}
+					<td on:click={() => showModalHandler()}>
+						<p class="ellipsis-text">{rating.comments}</p>
+
+						<Modal bind:show={showModal}>
+							<div>
+								{rating.comments}
+							</div>
+						</Modal>
+					</td>
 				</tr>
 			{:else}
 				<tr>
@@ -44,3 +60,12 @@
 		</tbody>
 	</table>
 </div>
+
+<style>
+	.ellipsis-text {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 150px; /* Adjust as needed */
+	}
+</style>
