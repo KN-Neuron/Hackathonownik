@@ -3,7 +3,6 @@
 	import Modal from './Modal.svelte';
 	import GradeTeamForm from './GradeTeamForm.svelte';
 	import PdfViewer from './pdf/PdfViewer.svelte';
-	import { pb } from '$lib/pocketbase.svelte';
 
 	export async function urlToFile(
 		url: string,
@@ -13,6 +12,19 @@
 		const response = await fetch(url);
 		const blob = await response.blob();
 		return new File([blob], filename, { type: mimeType });
+	}
+
+	function getAvatarBlocks(id: string, gridSize = 5) {
+		const hash = hashCode(id);
+		const blocks = [];
+		for (let x = 0; x < gridSize; x++) {
+			for (let y = 0; y < gridSize; y++) {
+				// Use bits from the hash to programmatically decide whether to fill each block
+				const bit = ((hash >> (x * gridSize + y)) & 1) === 1;
+				if (bit) blocks.push({ x, y });
+			}
+		}
+		return blocks;
 	}
 
 	async function getPresentationFiles(team): Promise<File[]> {
@@ -87,7 +99,18 @@
 	</Modal>
 
 	<div class="team-avatar" style="background-color: {avatarBg}">
-		<div class="avatar-shape {avatarShape}"></div>
+		<svg width="50" height="50" viewBox="0 0 50 50">
+			{#each getAvatarBlocks(team.id, 5) as block}
+				<rect
+					width="8"
+					height="8"
+					x={block.x * 10}
+					y={block.y * 10}
+					fill="rgba(255,255,255,0.8)"
+					rx="2"
+				/>
+			{/each}
+		</svg>
 	</div>
 
 	<div class="team-info">
@@ -171,8 +194,6 @@
 </div>
 
 <style>
-	/* Removed .modal-container styles as the div is gone */
-
 	.team-card {
 		display: flex;
 		background-color: #1e1f22;
@@ -184,7 +205,6 @@
 		position: relative;
 	}
 
-	/* Rest of the styles remain unchanged */
 	.team-avatar {
 		width: 80px;
 		height: 80px;

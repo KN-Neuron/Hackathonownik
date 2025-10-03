@@ -42,15 +42,15 @@
 					{#each columns as col}
 						<td>{rating[col] ?? 'N/A'}</td>
 					{/each}
-					<td on:click={() => showModalHandler()} class="cursor-pointer">
-						<p class="ellipsis-text">{rating.comments}</p>
-
-						<Modal bind:show={showModal}>
-							<div>
-								{rating.comments}
-							</div>
-						</Modal>
-					</td>
+					<!-- 	<td on:click={() => showModalHandler()} class="cursor-pointer"> -->
+					<!-- 		<p class="ellipsis-text">{rating.comments}</p> -->
+					<!---->
+					<!-- 		<Modal bind:show={showModal}> -->
+					<!-- 			<div> -->
+					<!-- 				{rating.comments} -->
+					<!-- 			</div> -->
+					<!-- 		</Modal> -->
+					<!-- 	</td> -->
 				</tr>
 			{:else}
 				<tr>

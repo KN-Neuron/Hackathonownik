@@ -15,41 +15,77 @@ export const load: PageServerLoad = async ({ locals }) => {
 	}
 
 	try {
-		const ratings: Rating[] = await locals.pb.collection('ratings').getFullList({
-			sort: '-created'
+		const ratingsFromDB: any[] = await locals.pb.collection('ratings').getFullList({
+			sort: '-created',
+			expand: 'jury,team'
 		});
 
-		console.log('Fetched ratings:', ratings);
-		console.log('Number of ratings:', ratings.length);
+		const ratings: Rating[] = ratingsFromDB.map((r) => ({
+			...r,
+			jury: r.expand.jury.name,
+			team: r.expand.team.name,
+			finalGrade: calculateFinalGrade(r)
+		}));
 
-		if (ratings.length > 0) {
-			console.log('First rating structure:', Object.keys(ratings[0]));
-		}
 		const uniqueTeamRatings: Rating[] = [];
-		const uniqueTeamsAndJury = new Set();
-
+		const uniqueJuryTeamPairs = new Set<string>();
 		for (const rating of ratings) {
-			const juryTeam = `${rating.jury}:${rating.team}`;
-
-			if (!uniqueTeamsAndJury.has(juryTeam)) {
-				rating.finalGrade = calculateFinalGrade(rating);
-				const juryUser = await locals.pb.collection('users').getOne(rating.jury);
-				const teamData = await locals.pb.collection('teams').getOne(rating.team);
-
-				rating.jury = juryUser.name;
-				rating.team = teamData.name;
+			const juryTeamKey = `${rating.jury}:${rating.team}`;
+			if (!uniqueJuryTeamPairs.has(juryTeamKey)) {
+				uniqueJuryTeamPairs.add(juryTeamKey);
 				uniqueTeamRatings.push(rating);
 			}
-
-			uniqueTeamsAndJury.add(juryTeam);
 		}
-		console.log(uniqueTeamsAndJury);
+
+		const ratingsByTeam = new Map<string, Rating[]>();
+		for (const rating of uniqueTeamRatings) {
+			if (!ratingsByTeam.has(rating.team)) {
+				ratingsByTeam.set(rating.team, []);
+			}
+			ratingsByTeam.get(rating.team)!.push(rating);
+		}
+
+		const finalTeamRatings: Rating[] = [];
+		for (const [teamName, teamRatingsList] of ratingsByTeam.entries()) {
+			const numRatingsForThisTeam = teamRatingsList.length;
+
+			const totalRating: Rating = {
+				team: teamName,
+				jury: 'Aggregated',
+				innovation: 0,
+				usefulness: 0,
+				implementation: 0,
+				finalPresentation: 0,
+				finalGrade: 0
+			};
+
+			for (const rating of teamRatingsList) {
+				totalRating.innovation += rating.innovation;
+				totalRating.usefulness += rating.usefulness;
+				totalRating.implementation += rating.implementation;
+				totalRating.finalPresentation += rating.finalPresentation;
+			}
+
+			const finalRating: Rating = {
+				team: teamName,
+				jury: 'Aggregated',
+				innovation: totalRating.innovation / numRatingsForThisTeam,
+				usefulness: totalRating.usefulness / numRatingsForThisTeam,
+				implementation: totalRating.implementation / numRatingsForThisTeam,
+				finalPresentation: totalRating.finalPresentation / numRatingsForThisTeam,
+				finalGrade: 0
+			};
+
+			finalRating.finalGrade = calculateFinalGrade(finalRating);
+
+			finalTeamRatings.push(finalRating);
+		}
 
 		return {
-			ratings: uniqueTeamRatings || []
+			ratings: finalTeamRatings.sort((a, b) => b.finalGrade - a.finalGrade) || []
 		};
 	} catch (err: unknown) {
-		console.error('Error fetching ratings:', err);
+		console.error('Error processing ratings:', err);
 		pbError(err);
 		return {
 			ratings: []
