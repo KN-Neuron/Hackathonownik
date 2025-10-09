@@ -4,81 +4,81 @@ import type { Actions, PageServerLoad } from './$types';
 import PocketBase from 'pocketbase';
 
 export const load: PageServerLoad = async ({ locals }) => {
-    if (!locals.user) {
-        throw redirect(303, '/login');
-    }
+	if (!locals.user) {
+		throw redirect(303, '/login');
+	}
 
-    return {
-        user: locals.user
-    };
+	return {
+		user: locals.user
+	};
 };
 
 export const actions: Actions = {
-    upload: async ({ locals, request }) => {
-        if (!locals.user) {
-            return {
-                success: false,
-                message: 'You must be logged in to upload files'
-            };
-        }
+	upload: async ({ locals, request }) => {
+		if (!locals.user) {
+			return {
+				success: false,
+				message: 'You must be logged in to upload files'
+			};
+		}
 
-        const formData = await request.formData();
-        const file = formData.get('file') as File;
+		const formData = await request.formData();
+		const file = formData.get('file') as File;
 
-        if (!file) {
-            return {
-                success: false,
-                message: 'No file provided'
-            };
-        }
+		if (!file) {
+			return {
+				success: false,
+				message: 'No file provided'
+			};
+		}
 
-        if (!file.name.toLowerCase().endsWith('.pdf')) {
-            return {
-                success: false,
-                message: 'Only PDF files are allowed'
-            };
-        }
+		if (!file.name.toLowerCase().endsWith('.pdf')) {
+			return {
+				success: false,
+				message: 'Only PDF files are allowed'
+			};
+		}
 
-        const maxSize = 10 * 1024 * 1024;
-        if (file.size > maxSize) {
-            return {
-                success: false,
-                message: 'File size exceeds the maximum limit of 10MB'
-            };
-        }
+		const maxSize = 10 * 1024 * 1024;
+		if (file.size > maxSize) {
+			return {
+				success: false,
+				message: 'File size exceeds the maximum limit of 10MB'
+			};
+		}
 
-        try {
-            const teamId = locals.user.team;
+		try {
+			const teamId = locals.user.team;
 
-            if (!teamId) {
-                return {
-                    success: false,
-                    message: 'You are not associated with any team'
-                };
-            }
+			if (!teamId) {
+				return {
+					success: false,
+					message: 'You are not associated with any team'
+				};
+			}
 
-            const uploadData = new FormData();
-            uploadData.append('team', teamId);
-            uploadData.append('presentation', file);
+			const uploadData = new FormData();
+			uploadData.append('team', teamId);
+			uploadData.append('presentation', file);
 
-            // FIXME: don't hardcode admin credentials
-            let adminClient = new PocketBase("https://frog01-32147.wykr.es/");
-            await adminClient.collection("_superusers").authWithPassword("admin@ad.min", "Password123!");
+			// FIXME: don't hardcode admin credentials
+			let adminClient = new PocketBase('https://frog01-32147.wykr.es/');
+			await adminClient.collection('_superusers').authWithPassword('admin@ad.min', 'Password123!');
 
-            await adminClient.collection('presentations').create(uploadData);
+			await adminClient.collection('presentations').create(uploadData);
 
-            return {
-                success: true,
-                message: `File uploaded successfully!`
-            };
-        } catch (err: unknown) {
-            console.error('Upload error:', err);
-            const errorMessage = pbError(err) || 'An error occurred during upload';
+			return {
+				success: true,
+				message: `File uploaded successfully!`
+			};
+		} catch (err: unknown) {
+			console.error('Upload error:', err);
+			const errorMessage = pbError(err) || 'An error occurred during upload';
 
-            return {
-                success: false,
-                message: errorMessage
-            };
-        }
-    }
+			return {
+				success: false,
+				message: errorMessage
+			};
+		}
+	}
 };

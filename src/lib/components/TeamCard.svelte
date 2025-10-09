@@ -79,6 +79,7 @@
 	const teamId: string = team.id;
 	let presentationFiles: File[] = $state([]);
 
+	let loading = false;
 	async function showPresentationModalHandler() {
 		presentationFiles = await getPresentationFiles(team);
 		showPresentationModal = true;

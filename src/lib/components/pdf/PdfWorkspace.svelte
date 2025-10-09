@@ -1,28 +1,53 @@
 <script lang="ts">
-  import PdfUpload from './PdfUpload.svelte';
-  import PdfViewer from './PdfViewer.svelte';
+	import Modal from '../Modal.svelte';
+	import PdfUpload from './PdfUpload.svelte';
+	import PdfViewer from './PdfViewer.svelte';
 
-  let selectedFiles: File[] = [];
-  let multiple = false; // toggle if desired
-  let disabled = false;
-  const uploadUrl = '?/upload';
+	let selectedFiles: File[] = [];
+	let multiple = false;
+	let disabled = false;
+	const uploadUrl = '?/upload';
+	let showPresentationModal = false;
 
-  function handleFiles(e: CustomEvent<{ files: File[] }>) {
-    selectedFiles = e.detail.files;
-  }
-  function handleUploaded(e: CustomEvent<{ success: boolean; message?: string }>) {
-    // Could display a toast or log:
-    // console.log('Upload result:', e.detail);
-  }
+	function handleFiles(e: CustomEvent<{ files: File[] }>) {
+		selectedFiles = e.detail.files;
+		showPresentationModal = true;
+	}
+	function handleUploaded(e: CustomEvent<{ success: boolean; message?: string }>) {}
 </script>
 
-<div class="flex flex-col md:flex-row gap-6 items-stretch max-w-[1500px] mx-auto mt-[25px]">
-  <PdfUpload
-    {multiple}
-    {disabled}
-    {uploadUrl}
-    on:files={handleFiles}
-    on:uploaded={handleUploaded}
-  />
-  <PdfViewer {multiple} files={selectedFiles} />
+<div id="box">
+	<div id="pdf-upload">
+		<PdfUpload
+			{multiple}
+			{disabled}
+			{uploadUrl}
+			on:files={handleFiles}
+			on:uploaded={handleUploaded}
+		/>
+	</div>
+	<div id="pdf-viewer">
+		<Modal bind:show={showPresentationModal}>
+			<PdfViewer {multiple} files={selectedFiles} />
+		</Modal>
+	</div>
 </div>
+
+<style>
+	#box {
+		display: flex;
+		max-width: 100%;
+		height: 100%;
+		justify-content: center;
+		gap: 50px;
+		align-items: center;
+		background: #f3f3f3;
+	}
+	#pdf-upload {
+		height: 100%;
+	}
+	#pdf-viewer {
+		max-width: 400px;
+		background: #f00;
+	}
+</style>

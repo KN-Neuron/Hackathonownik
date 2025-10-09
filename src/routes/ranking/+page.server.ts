@@ -51,7 +51,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 			const totalRating: Rating = {
 				team: teamName,
-				jury: 'Aggregated',
+				// jury: 'Aggregated',
 				innovation: 0,
 				usefulness: 0,
 				implementation: 0,
@@ -68,7 +68,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 			const finalRating: Rating = {
 				team: teamName,
-				jury: 'Aggregated',
+				// jury: 'Aggregated',
 				innovation: totalRating.innovation / numRatingsForThisTeam,
 				usefulness: totalRating.usefulness / numRatingsForThisTeam,
 				implementation: totalRating.implementation / numRatingsForThisTeam,

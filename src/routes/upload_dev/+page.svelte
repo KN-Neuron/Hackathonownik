@@ -7,7 +7,7 @@
 	let text = 'PDF Upload & Preview';
 </script>
 
-<div>
+<div class="box">
 	<HeaderText {icon} {text} />
 	<div>
 		<PdfWorkspace />
@@ -17,5 +17,10 @@
 <style>
 	div {
 		padding: 25px;
+	}
+	.box {
+		max-width: 100%;
+
+		max-height: 100%;
 	}
 </style>
