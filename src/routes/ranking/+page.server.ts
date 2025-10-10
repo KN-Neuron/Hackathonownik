@@ -3,92 +3,118 @@ import type { Rating } from '$lib/types';
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 
-function calculateFinalGrade(rating: Rating): number {
-	const result =
-		(rating.usefulness + rating.finalPresentation + rating.implementation + rating.innovation) / 4;
-	return result;
-}
-
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
 		throw redirect(303, '/login');
 	}
 
 	try {
-		const ratingsFromDB: any[] = await locals.pb.collection('ratings').getFullList({
+		// Get all juries in the system to calculate total expected ratings
+		const juriesResult = await locals.pb.collection('users').getList(1, 100, {
+			filter: 'role = "jury"'
+		});
+		const totalJuries = juriesResult.totalItems;
+
+		// Create a set of valid jury IDs for reference
+		const validJuryIds = new Set();
+		juriesResult.items.forEach((user) => {
+			validJuryIds.add(user.id);
+		});
+
+		// Get all ratings grouped by team
+		const ratingsFromDB = await locals.pb.collection('ratings').getFullList({
 			sort: '-created',
 			expand: 'jury,team'
 		});
 
-		const ratings: Rating[] = ratingsFromDB.map((r) => ({
+		// Process ratings to include jury information
+		const processedRatings = ratingsFromDB.map((r) => ({
 			...r,
-			jury: r.expand.jury.name,
-			team: r.expand.team.name,
-			finalGrade: calculateFinalGrade(r)
+			jury: r.expand?.jury?.name || 'Unknown Jury',
+			juryId: r.jury,
+			team: r.expand?.team?.name || 'Unknown Team',
+			teamId: r.expand?.team?.id || '',
+			finalGrade: (r.innovation + r.usefulness + r.finalPresentation + r.implementation) / 4
 		}));
 
-		const uniqueTeamRatings: Rating[] = [];
-		const uniqueJuryTeamPairs = new Set<string>();
-		for (const rating of ratings) {
-			const juryTeamKey = `${rating.jury}:${rating.team}`;
-			if (!uniqueJuryTeamPairs.has(juryTeamKey)) {
-				uniqueJuryTeamPairs.add(juryTeamKey);
-				uniqueTeamRatings.push(rating);
+		// Organize ratings by team
+		const teamRatingsMap = new Map();
+
+		for (const rating of processedRatings) {
+			// Skip ratings from non-jury users
+			if (!validJuryIds.has(rating.juryId)) {
+				continue;
+			}
+
+			if (!teamRatingsMap.has(rating.teamId)) {
+				teamRatingsMap.set(rating.teamId, {
+					team: rating.team,
+					teamId: rating.teamId,
+					innovation: 0,
+					usefulness: 0,
+					implementation: 0,
+					finalPresentation: 0,
+					finalGrade: 0,
+					ratingCount: 0,
+					juryIds: new Set()
+				});
+			}
+
+			const team = teamRatingsMap.get(rating.teamId);
+
+			// If we haven't counted this jury yet for this team
+			if (!team.juryIds.has(rating.juryId)) {
+				team.juryIds.add(rating.juryId);
+				team.ratingCount++;
+
+				// Only accumulate scores from unique juries
+				team.innovation += rating.innovation;
+				team.usefulness += rating.usefulness;
+				team.implementation += rating.implementation;
+				team.finalPresentation += rating.finalPresentation;
 			}
 		}
 
-		const ratingsByTeam = new Map<string, Rating[]>();
-		for (const rating of uniqueTeamRatings) {
-			if (!ratingsByTeam.has(rating.team)) {
-				ratingsByTeam.set(rating.team, []);
-			}
-			ratingsByTeam.get(rating.team)!.push(rating);
-		}
+		// Calculate averages and add status
+		const finalRankings = Array.from(teamRatingsMap.values()).map((team) => {
+			const count = team.ratingCount;
 
-		const finalTeamRatings: Rating[] = [];
-		for (const [teamName, teamRatingsList] of ratingsByTeam.entries()) {
-			const numRatingsForThisTeam = teamRatingsList.length;
-
-			const totalRating: Rating = {
-				team: teamName,
-				// jury: 'Aggregated',
-				innovation: 0,
-				usefulness: 0,
-				implementation: 0,
-				finalPresentation: 0,
-				finalGrade: 0
-			};
-
-			for (const rating of teamRatingsList) {
-				totalRating.innovation += rating.innovation;
-				totalRating.usefulness += rating.usefulness;
-				totalRating.implementation += rating.implementation;
-				totalRating.finalPresentation += rating.finalPresentation;
+			if (count === 0) {
+				return {
+					...team,
+					status: 'provisional',
+					completionPercent: 0
+				};
 			}
 
-			const finalRating: Rating = {
-				team: teamName,
-				// jury: 'Aggregated',
-				innovation: totalRating.innovation / numRatingsForThisTeam,
-				usefulness: totalRating.usefulness / numRatingsForThisTeam,
-				implementation: totalRating.implementation / numRatingsForThisTeam,
-				finalPresentation: totalRating.finalPresentation / numRatingsForThisTeam,
-				finalGrade: 0
-			};
+			// Calculate averages
+			team.innovation /= count;
+			team.usefulness /= count;
+			team.implementation /= count;
+			team.finalPresentation /= count;
+			team.finalGrade =
+				(team.innovation + team.usefulness + team.implementation + team.finalPresentation) / 4;
 
-			finalRating.finalGrade = calculateFinalGrade(finalRating);
+			// Add status information
+			team.status = count >= totalJuries ? 'final' : 'provisional';
+			team.completionPercent = Math.round((count / totalJuries) * 100);
 
-			finalTeamRatings.push(finalRating);
-		}
+			return team;
+		});
+
+		// Sort by final grade (highest first)
+		finalRankings.sort((a, b) => b.finalGrade - a.finalGrade);
 
 		return {
-			ratings: finalTeamRatings.sort((a, b) => b.finalGrade - a.finalGrade) || []
+			rankings: finalRankings,
+			totalJuries
 		};
-	} catch (err: unknown) {
+	} catch (err) {
 		console.error('Error processing ratings:', err);
 		pbError(err);
 		return {
-			ratings: []
+			rankings: [],
+			totalJuries: 0
 		};
 	}
 };

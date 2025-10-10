@@ -4,45 +4,18 @@
 	import GradeTeamForm from './GradeTeamForm.svelte';
 	import PdfViewer from './pdf/PdfViewer.svelte';
 
-	export async function urlToFile(
-		url: string,
-		filename: string,
-		mimeType = 'application/pdf'
-	): Promise<File> {
-		const response = await fetch(url);
-		const blob = await response.blob();
-		return new File([blob], filename, { type: mimeType });
-	}
+	export let team;
 
-	function getAvatarBlocks(id: string, gridSize = 5) {
-		const hash = hashCode(id);
-		const blocks = [];
-		for (let x = 0; x < gridSize; x++) {
-			for (let y = 0; y < gridSize; y++) {
-				// Use bits from the hash to programmatically decide whether to fill each block
-				const bit = ((hash >> (x * gridSize + y)) & 1) === 1;
-				if (bit) blocks.push({ x, y });
-			}
-		}
-		return blocks;
-	}
-
-	async function getPresentationFiles(team): Promise<File[]> {
-		if (team.presentationUrl) {
-			const filename = team.presentationUrl.split('/').pop() || 'presentation.pdf';
-			const file = await urlToFile(team.presentationUrl, filename);
-			showPresentationModal = true;
-			return [file];
-		}
-		return [];
-	}
-
-	let { team } = $props();
-	let avatarColors = ['#543bad', '#36a3db', '#e85c90', '#f7a654', '#36c399', '#8957e5'];
+	// Component state
 	let avatarBg = '';
 	let avatarShape = '';
-	let showFormModal = $state(false);
-	let showPresentationModal = $state(false);
+	let showFormModal = false;
+	let showPresentationModal = false;
+	let loadingPresentation = false;
+	let presentationFiles = [];
+
+	// Constants
+	const avatarColors = ['#543bad', '#36a3db', '#e85c90', '#f7a654', '#36c399', '#8957e5'];
 
 	onMount(() => {
 		const hash = hashCode(team.id);
@@ -54,7 +27,13 @@
 		avatarShape = shapes[shapeIndex];
 	});
 
-	function hashCode(str: string): number {
+	async function urlToFile(url, filename, mimeType = 'application/pdf') {
+		const response = await fetch(url);
+		const blob = await response.blob();
+		return new File([blob], filename, { type: mimeType });
+	}
+
+	function hashCode(str) {
 		let hash = 0;
 		for (let i = 0; i < str.length; i++) {
 			const char = str.charCodeAt(i);
@@ -64,32 +43,55 @@
 		return hash;
 	}
 
-	function getScoreWidth(score: number) {
+	function getAvatarBlocks(id, gridSize = 5) {
+		const hash = hashCode(id);
+		const blocks = [];
+		for (let x = 0; x < gridSize; x++) {
+			for (let y = 0; y < gridSize; y++) {
+				const bit = ((hash >> (x * gridSize + y)) & 1) === 1;
+				if (bit) blocks.push({ x, y });
+			}
+		}
+		return blocks;
+	}
+
+	function getScoreWidth(score) {
 		return score ? `${score * 10}%` : '0%';
 	}
 
-	function getScoreColor(score: number) {
+	function getScoreColor(score) {
 		if (!score) return '#555';
 		if (score >= 9) return '#36c399';
 		if (score >= 7) return '#f7a654';
 		if (score >= 5) return '#e85c90';
 		return '#555';
 	}
-	const multiple = false;
-	const teamId: string = team.id;
-	let presentationFiles: File[] = $state([]);
 
-	let loading = false;
+	async function getPresentationFiles(team) {
+		if (team.presentationUrl) {
+			const filename = team.presentationUrl.split('/').pop() || 'presentation.pdf';
+			const file = await urlToFile(team.presentationUrl, filename);
+			return [file];
+		}
+		return [];
+	}
+
 	async function showPresentationModalHandler() {
-		presentationFiles = await getPresentationFiles(team);
-		showPresentationModal = true;
-		console.log(presentationFiles);
+		loadingPresentation = true;
+		try {
+			presentationFiles = await getPresentationFiles(team);
+			showPresentationModal = true;
+		} catch (err) {
+			console.error('Error loading presentation:', err);
+		} finally {
+			loadingPresentation = false;
+		}
 	}
 </script>
 
 <div class="team-card">
 	<Modal bind:show={showFormModal}>
-		<GradeTeamForm {teamId} />
+		<GradeTeamForm teamId={team.id} />
 	</Modal>
 
 	<Modal bind:show={showPresentationModal}>
@@ -175,20 +177,45 @@
 		</div>
 
 		<div class="team-footer">
-			<div class="grade">
-				<span class="grade-label">Final Grade:</span>
-				<span class="grade-value">{team.ocena || '-'}</span>
+			<div class="grade-section">
+				<div class="grade">
+					<span class="grade-label">Final Grade:</span>
+					<span class="grade-value">{team.ocena || '-'}</span>
+				</div>
+
+				<!-- Rating Status Section -->
+				<div class="rating-status">
+					<div class="rating-badge {team.isRatedByCurrentJury ? 'rated' : 'not-rated'}">
+						{team.isRatedByCurrentJury ? 'You rated' : 'Not rated by you'}
+					</div>
+					<div class="rating-count">
+						<span class="count">{team.ratingsCount || 0}</span>
+						<span class="count-label">/ {team.totalJuries} juries</span>
+					</div>
+				</div>
 			</div>
 
-			<div class="flex function-buttons">
-				<div class="status-container" on:click={() => showPresentationModalHandler()}>
-					<span>View Presentation</span>
-				</div>
+			<div class="function-buttons">
+				<button
+					class="btn btn-secondary"
+					on:click={showPresentationModalHandler}
+					disabled={loadingPresentation}
+				>
+					{#if loadingPresentation}
+						<span class="loading loading-spinner loading-xs mr-2"></span>
+						Loading...
+					{:else}
+						View Presentation
+					{/if}
+				</button>
 
-				<div class="status-container btn-primary" on:click={() => (showFormModal = true)}>
-					<div class="status" class:graded={team.was_graded}></div>
-					<span>{team.was_graded ? 'Graded' : 'Pending'} </span>
-				</div>
+				<button
+					class="btn btn-primary"
+					on:click={() => (showFormModal = true)}
+					class:already-rated={team.isRatedByCurrentJury}
+				>
+					{team.isRatedByCurrentJury ? 'Edit Rating' : 'Rate Team'}
+				</button>
 			</div>
 		</div>
 	</div>
@@ -215,28 +242,6 @@
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
-	}
-
-	.avatar-shape {
-		width: 50px;
-		height: 50px;
-		background-color: rgba(255, 255, 255, 0.15);
-	}
-
-	.avatar-shape.circle {
-		border-radius: 50%;
-	}
-
-	.avatar-shape.hexagon {
-		clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-	}
-
-	.avatar-shape.square {
-		border-radius: 4px;
-	}
-
-	.avatar-shape.diamond {
-		transform: rotate(45deg);
 	}
 
 	.team-info {
@@ -307,14 +312,17 @@
 
 	.team-footer {
 		display: flex;
-		flex-direction: row;
-		justify-content: space-between;
-		align-items: center;
-		text-align: center;
+		flex-direction: column;
+		gap: 16px;
 		margin-top: auto;
 		padding-top: 12px;
 		border-top: 1px solid #2c2e33;
-		margin-right: 30px;
+	}
+
+	.grade-section {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
 	}
 
 	.grade {
@@ -331,39 +339,98 @@
 		font-weight: 600;
 	}
 
-	.status {
-		padding: 4px 12px;
-		border-radius: 16px;
-		font-size: 13px;
+	/* Rating Status Styles */
+	.rating-status {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 4px;
+	}
+
+	.rating-badge {
+		padding: 4px 8px;
+		border-radius: 4px;
+		font-size: 12px;
+		font-weight: 500;
+	}
+
+	.rating-badge.rated {
+		background-color: #36623d;
+		color: #a3f0b5;
+	}
+
+	.rating-badge.not-rated {
 		background-color: #763626;
+		color: #ffcbc0;
+	}
+
+	.rating-count {
+		font-size: 12px;
+		color: #aaa;
+	}
+
+	.count {
 		font-weight: 600;
 		color: #f0f0f0;
-		height: 100%;
-		margin-right: 10px;
 	}
-	.status-container {
-		display: flex;
-		justify-content: center;
 
-		padding: 10px;
-		border: 1px solid;
-		border-radius: 10px;
-		border-color: #c7cbd5;
-		transition:
-			transform 0.2s,
-			box-shadow 0.2s;
-		cursor: pointer;
-		background-color: #2c2e33;
-	}
-	.status-container:hover {
-		transform: translateY(-1px);
-	}
-	.status.graded {
-		background-color: #36623d;
-	}
+	/* Button Styles */
 	.function-buttons {
 		display: flex;
 		justify-content: space-between;
 		gap: 10px;
+	}
+
+	.btn {
+		padding: 8px 12px;
+		border-radius: 6px;
+		font-size: 14px;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		border: none;
+		flex: 1;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.btn:hover {
+		transform: translateY(-1px);
+	}
+
+	.btn-secondary {
+		background-color: #2c2e33;
+		color: #f0f0f0;
+	}
+
+	.btn-primary {
+		background-color: #3b82f6;
+		color: white;
+	}
+
+	.btn-primary.already-rated {
+		background-color: #36623d;
+	}
+
+	.btn:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.loading {
+		display: inline-block;
+		width: 16px;
+		height: 16px;
+		border: 2px solid rgba(255, 255, 255, 0.2);
+		border-left-color: white;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
 	}
 </style>

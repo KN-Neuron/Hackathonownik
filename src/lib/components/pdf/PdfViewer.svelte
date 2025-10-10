@@ -1,386 +1,900 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
-  import { browser } from '$app/environment';
-  import type { PdfPreview } from './pdfTypes';
-  import { loadPdfJs } from './pdfUtils';
+	import { onDestroy, onMount } from 'svelte';
+	import { browser } from '$app/environment';
+	import type { PdfPreview } from './pdfTypes';
+	import { loadPdfJs } from './pdfUtils';
 
-  export let files: File[] = [];          // passed in by parent
-  export let multiple: boolean = false;   // for UI hints only (optional)
+	export let files: File[] = [];
+	export let multiple: boolean = false;
 
-  // Internal state
-  let pdfPreviews: PdfPreview[] = [];
-  let initializingPreviews = false;
-  let fullScreenIndex: number | null = null;
+	// Internal state
+	let pdfPreviews: PdfPreview[] = [];
+	let initializingPreviews = false;
+	let fullScreenIndex: number | null = null;
+	let currentPage = 1;
+	let totalPages = 0;
 
-  function touch() {
-    pdfPreviews = [...pdfPreviews];
-  }
+	function touch() {
+		pdfPreviews = [...pdfPreviews];
+	}
 
-  // Watch for new 'files'
-  $: if (files) {
-    initFromFiles(files);
-  }
+	// Watch for new 'files'
+	$: if (files) {
+		initFromFiles(files);
+	}
 
-  async function initFromFiles(list: File[]) {
-    initializingPreviews = true;
-    pdfPreviews = [];
-    if (!list.length) {
-      initializingPreviews = false;
-      return;
-    }
-    try {
-      const pdfjs = await loadPdfJs();
-      const pre: PdfPreview[] = [];
-      for (const file of list) {
-        try {
-          const buffer = await file.arrayBuffer();
-          const task = pdfjs.getDocument({ data: buffer });
-          const pdf = await task.promise;
-            pre.push({
-            file,
-            pdf,
-            pageCount: pdf.numPages,
-            currentPage: 1,
-            displayedPage: 1,
-            pageCache: Array(pdf.numPages + 1).fill(null),
-            isRendering: false,
-            buffer
-          });
-        } catch (err: any) {
-          pre.push({
-            file,
-            pdf: null,
-            pageCount: 0,
-            currentPage: 0,
-            displayedPage: 0,
-            pageCache: [],
-            isRendering: false,
-            error: err?.message || 'Failed to load PDF'
-          });
-        }
-      }
-      pdfPreviews = pre;
-      if (browser) {
-        for (const p of pdfPreviews) {
-          if (p.pdf && p.pageCount > 0) void ensureRendered(p, 1);
-        }
-      }
-    } finally {
-      initializingPreviews = false;
-    }
-  }
+	async function initFromFiles(list: File[]) {
+		initializingPreviews = true;
+		pdfPreviews = [];
+		if (!list.length) {
+			initializingPreviews = false;
+			return;
+		}
+		try {
+			const pdfjs = await loadPdfJs();
+			const pre: PdfPreview[] = [];
+			for (const file of list) {
+				try {
+					const buffer = await file.arrayBuffer();
+					const task = pdfjs.getDocument({ data: buffer });
+					const pdf = await task.promise;
+					totalPages = pdf.numPages;
+					pre.push({
+						file,
+						pdf,
+						pageCount: pdf.numPages,
+						currentPage: 1,
+						displayedPage: 1,
+						pageCache: Array(pdf.numPages + 1).fill(null),
+						isRendering: false,
+						buffer
+					});
+				} catch (err: any) {
+					pre.push({
+						file,
+						pdf: null,
+						pageCount: 0,
+						currentPage: 0,
+						displayedPage: 0,
+						pageCache: [],
+						isRendering: false,
+						error: err?.message || 'Failed to load PDF'
+					});
+				}
+			}
+			pdfPreviews = pre;
+			if (browser) {
+				for (const p of pdfPreviews) {
+					if (p.pdf && p.pageCount > 0) void ensureRendered(p, 1);
+				}
+			}
+		} finally {
+			initializingPreviews = false;
+		}
+	}
 
-  async function ensureRendered(preview: PdfPreview, pageNumber: number) {
-    if (!browser || !preview.pdf) return;
-    if (preview.pageCache[pageNumber]) {
-      if (preview.currentPage === pageNumber && preview.displayedPage !== pageNumber) {
-        preview.displayedPage = pageNumber;
-        touch();
-      }
-      return;
-    }
-    if (preview.isRendering) return;
+	async function ensureRendered(preview: PdfPreview, pageNumber: number) {
+		if (!browser || !preview.pdf) return;
+		if (preview.pageCache[pageNumber]) {
+			if (preview.currentPage === pageNumber && preview.displayedPage !== pageNumber) {
+				preview.displayedPage = pageNumber;
+				currentPage = pageNumber;
+				touch();
+			}
+			return;
+		}
+		if (preview.isRendering) return;
 
-    preview.isRendering = true;
-    touch();
+		preview.isRendering = true;
+		touch();
 
-    try {
-      const page = await preview.pdf.getPage(pageNumber);
-      const baseViewport = page.getViewport({ scale: 1 });
-      const targetWidth = Math.min(window.innerWidth * 0.9, 1100);
-      const scale = Math.min(2.0, targetWidth / baseViewport.width);
-      const viewport = page.getViewport({ scale });
+		try {
+			const page = await preview.pdf.getPage(pageNumber);
+			const baseViewport = page.getViewport({ scale: 1 });
+			const targetWidth = Math.min(window.innerWidth * 0.9, 1100);
+			const scale = Math.min(2.0, targetWidth / baseViewport.width);
+			const viewport = page.getViewport({ scale });
 
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      await page.render({ canvasContext: ctx!, viewport }).promise;
+			const canvas = document.createElement('canvas');
+			const ctx = canvas.getContext('2d');
+			canvas.width = viewport.width;
+			canvas.height = viewport.height;
+			await page.render({ canvasContext: ctx!, viewport }).promise;
 
-      preview.pageCache[pageNumber] = canvas.toDataURL('image/png');
-      if (preview.currentPage === pageNumber) {
-        preview.displayedPage = pageNumber;
-      }
-      touch();
-    } catch (e) {
-      console.warn('Render error page', pageNumber, e);
-      preview.pageCache[pageNumber] = null;
-      touch();
-    } finally {
-      preview.isRendering = false;
-      touch();
-    }
-  }
+			preview.pageCache[pageNumber] = canvas.toDataURL('image/png');
+			if (preview.currentPage === pageNumber) {
+				preview.displayedPage = pageNumber;
+				currentPage = pageNumber;
+			}
+			touch();
+		} catch (e) {
+			console.warn('Render error page', pageNumber, e);
+			preview.pageCache[pageNumber] = null;
+			touch();
+		} finally {
+			preview.isRendering = false;
+			touch();
+		}
+	}
 
-  function goToPage(preview: PdfPreview, page: number) {
-    if (!preview.pdf) return;
-    if (page < 1 || page > preview.pageCount) return;
-    preview.currentPage = page;
-    touch();
-    if (preview.pageCache[page]) {
-      preview.displayedPage = page;
-      touch();
-    } else {
-      void ensureRendered(preview, page);
-    }
-  }
+	function goToPage(preview: PdfPreview, page: number) {
+		if (!preview.pdf) return;
+		if (page < 1 || page > preview.pageCount) return;
+		preview.currentPage = page;
+		currentPage = page;
+		touch();
+		if (preview.pageCache[page]) {
+			preview.displayedPage = page;
+			touch();
+		} else {
+			void ensureRendered(preview, page);
+		}
+	}
 
-  function toggleFullscreen(index: number) {
-    fullScreenIndex = fullScreenIndex === index ? null : index;
-  }
-  function closeFullscreen() {
-    fullScreenIndex = null;
-  }
+	function toggleFullscreen(index: number) {
+		fullScreenIndex = fullScreenIndex === index ? null : index;
+	}
 
-  function handleKey(e: KeyboardEvent) {
-    if (!browser) return;
-    const activeTag = (document.activeElement?.tagName || '').toLowerCase();
-    if (['input','textarea','select'].includes(activeTag)) return;
+	function closeFullscreen() {
+		fullScreenIndex = null;
+	}
 
-    if (fullScreenIndex !== null) {
-      const p = pdfPreviews[fullScreenIndex];
-      if (!p) return;
-      if (e.key === 'ArrowRight') goToPage(p, p.currentPage + 1);
-      else if (e.key === 'ArrowLeft') goToPage(p, p.currentPage - 1);
-      else if (e.key === 'Escape') closeFullscreen();
-      return;
-    }
-    if (pdfPreviews.length === 0) return;
-    const first = pdfPreviews[0];
-    if (e.key === 'ArrowRight') goToPage(first, first.currentPage + 1);
-    else if (e.key === 'ArrowLeft') goToPage(first, first.currentPage - 1);
-  }
+	function handleKey(e: KeyboardEvent) {
+		if (!browser) return;
+		const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+		if (['input', 'textarea', 'select'].includes(activeTag)) return;
 
-  onMount(() => {
-    window.addEventListener('keydown', handleKey);
-  });
-  onDestroy(() => {
-    if (browser) window.removeEventListener('keydown', handleKey);
-  });
+		if (fullScreenIndex !== null) {
+			const p = pdfPreviews[fullScreenIndex];
+			if (!p) return;
+			if (e.key === 'ArrowRight') goToPage(p, p.currentPage + 1);
+			else if (e.key === 'ArrowLeft') goToPage(p, p.currentPage - 1);
+			else if (e.key === 'Escape') closeFullscreen();
+			return;
+		}
+
+		if (pdfPreviews.length === 0) return;
+		const first = pdfPreviews[0];
+		if (e.key === 'ArrowRight') goToPage(first, first.currentPage + 1);
+		else if (e.key === 'ArrowLeft') goToPage(first, first.currentPage - 1);
+	}
+
+	function handlePageInput(event: Event, preview: PdfPreview) {
+		const input = event.target as HTMLInputElement;
+		const page = parseInt(input.value);
+		if (!isNaN(page) && page >= 1 && page <= preview.pageCount) {
+			goToPage(preview, page);
+		}
+	}
+
+	onMount(() => {
+		window.addEventListener('keydown', handleKey);
+	});
+
+	onDestroy(() => {
+		if (browser) window.removeEventListener('keydown', handleKey);
+	});
 </script>
 
-<div class="preview-panel flex flex-col gap-8 md:pr-2">
-  {#if initializingPreviews}
-    <p class="text-sm opacity-60">Preparing PDFs...</p>
-  {:else if !pdfPreviews.length}
-    <div class="text-sm opacity-60 border border-dashed border-base-300 rounded-box p-6 text-center">
-      No preview yet. Upload a PDF.
-    </div>
-  {/if}
+<div class="preview-container">
+	{#if initializingPreviews}
+		<div class="loading-container">
+			<div class="loading-spinner"></div>
+			<p>Loading presentation...</p>
+		</div>
+	{:else if !pdfPreviews.length}
+		<div class="empty-state">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="64"
+				height="64"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+				<polyline points="14 2 14 8 20 8"></polyline>
+				<line x1="16" y1="13" x2="8" y2="13"></line>
+				<line x1="16" y1="17" x2="8" y2="17"></line>
+				<line x1="10" y1="9" x2="8" y2="9"></line>
+			</svg>
+			<p>No PDF loaded yet</p>
+		</div>
+	{/if}
 
-  {#if pdfPreviews.length > 0}
-    <div class="flex flex-col gap-10">
-      {#each pdfPreviews as preview, idx}
-        <div class="flex flex-col items-center gap-3 w-full">
-          <div class="w-full flex justify-between items-center">
-            <h4 class="font-semibold text-sm truncate pr-2">{preview.file.name}</h4>
-            <div class="flex items-center gap-3 text-xs opacity-70">
-              {#if preview.pageCount > 0}
-                <span>Page {preview.displayedPage}/{preview.pageCount}</span>
-              {/if}
-              <button
-                type="button"
-                class="btn btn-xs btn-ghost"
-                on:click={() => toggleFullscreen(idx)}
-              >
-                {fullScreenIndex === idx ? 'Exit' : 'Fullscreen'}
-              </button>
-            </div>
-          </div>
+	{#if pdfPreviews.length > 0}
+		<div class="pdf-viewer">
+			{#each pdfPreviews as preview, idx}
+				<div class="pdf-document">
+					<div class="pdf-header">
+						<h3 class="pdf-title">{preview.file.name}</h3>
+						<div class="pdf-controls">
+							{#if preview.pageCount > 0}
+								<div class="page-controls">
+									<button
+										class="btn-icon"
+										disabled={currentPage <= 1 || preview.isRendering}
+										on:click={() => goToPage(preview, preview.currentPage - 1)}
+									>
+										<svg
+											width="20"
+											height="20"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+										>
+											<polyline points="15 18 9 12 15 6"></polyline>
+										</svg>
+									</button>
 
-          {#if preview.error}
-            <div class="alert alert-error w-full max-w-[90vw] md:max-w-[1100px]">
-              {preview.error}
-            </div>
-          {:else}
-            <div class="pdf-viewer-wrapper relative flex items-center justify-center w-full">
-              <button
-                type="button"
-                class="nav-arrow left"
-                aria-label="Previous page"
-                disabled={preview.currentPage <= 1 || preview.isRendering}
-                on:click={() => goToPage(preview, preview.currentPage - 1)}
-              >
-                <span>&larr;</span>
-              </button>
+									<div class="page-input">
+										<input
+											type="number"
+											value={currentPage}
+											min="1"
+											max={preview.pageCount}
+											on:change={(e) => handlePageInput(e, preview)}
+										/>
+										<span> / {preview.pageCount}</span>
+									</div>
 
-              <div class="pdf-canvas-container">
-                {#if preview.pageCache[preview.displayedPage]}
-                  <img
-                    src={preview.pageCache[preview.displayedPage] as string}
-                    alt={"Page " + preview.displayedPage + " of " + preview.file.name}
-                    class="pdf-page-image"
-                    draggable="false"
-                  />
-                  {#if preview.isRendering && preview.currentPage !== preview.displayedPage}
-                    <div class="overlay-spinner">
-                      <div class="loading loading-spinner loading-sm"></div>
-                    </div>
-                  {/if}
-                {:else}
-                  <div class="placeholder-box">
-                    <span class="text-[10px] opacity-60 tracking-wide">Loading page...</span>
-                  </div>
-                {/if}
-              </div>
+									<button
+										class="btn-icon"
+										disabled={currentPage >= preview.pageCount || preview.isRendering}
+										on:click={() => goToPage(preview, preview.currentPage + 1)}
+									>
+										<svg
+											width="20"
+											height="20"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+										>
+											<polyline points="9 18 15 12 9 6"></polyline>
+										</svg>
+									</button>
+								</div>
+							{/if}
 
-              <button
-                type="button"
-                class="nav-arrow right"
-                aria-label="Next page"
-                disabled={preview.currentPage >= preview.pageCount || preview.isRendering}
-                on:click={() => goToPage(preview, preview.currentPage + 1)}
-              >
-                <span>&rarr;</span>
-              </button>
-            </div>
+							<button class="btn" on:click={() => toggleFullscreen(idx)}>
+								{fullScreenIndex === idx ? 'Exit Fullscreen' : 'Fullscreen'}
+							</button>
+						</div>
+					</div>
 
-            <div class="flex gap-3 items-center text-xs opacity-70">
-              <span>Use arrows or keyboard ← →</span>
-              {#if multiple && pdfPreviews.length > 1}
-                <span class="badge badge-outline badge-xs">File {idx + 1}/{pdfPreviews.length}</span>
-              {/if}
-            </div>
-          {/if}
-        </div>
-      {/each}
-    </div>
-  {/if}
+					{#if preview.error}
+						<div class="error-message">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="24"
+								height="24"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+							>
+								<circle cx="12" cy="12" r="10"></circle>
+								<line x1="12" y1="8" x2="12" y2="12"></line>
+								<line x1="12" y1="16" x2="12.01" y2="16"></line>
+							</svg>
+							<p>{preview.error}</p>
+						</div>
+					{:else}
+						<div class="pdf-content">
+							<button
+								class="nav-arrow left"
+								disabled={currentPage <= 1 || preview.isRendering}
+								on:click={() => goToPage(preview, preview.currentPage - 1)}
+							>
+								<svg
+									width="24"
+									height="24"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+								>
+									<polyline points="15 18 9 12 15 6"></polyline>
+								</svg>
+							</button>
+
+							<div class="page-container">
+								{#if preview.pageCache[preview.displayedPage]}
+									<img
+										src={preview.pageCache[preview.displayedPage]}
+										alt="PDF page {preview.displayedPage}"
+										class="page-image"
+									/>
+									{#if preview.isRendering && preview.currentPage !== preview.displayedPage}
+										<div class="loading-overlay">
+											<div class="loading-spinner"></div>
+										</div>
+									{/if}
+								{:else}
+									<div class="loading-placeholder">
+										<div class="loading-spinner"></div>
+										<p>Loading page...</p>
+									</div>
+								{/if}
+							</div>
+
+							<button
+								class="nav-arrow right"
+								disabled={currentPage >= preview.pageCount || preview.isRendering}
+								on:click={() => goToPage(preview, preview.currentPage + 1)}
+							>
+								<svg
+									width="24"
+									height="24"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+								>
+									<polyline points="9 18 15 12 9 6"></polyline>
+								</svg>
+							</button>
+						</div>
+					{/if}
+
+					<div class="pdf-footer">
+						<p class="keyboard-hint">
+							Use keyboard arrows ← → or navigation buttons to change pages
+						</p>
+						{#if multiple && pdfPreviews.length > 1}
+							<span class="document-counter">Document {idx + 1} of {pdfPreviews.length}</span>
+						{/if}
+					</div>
+				</div>
+			{/each}
+		</div>
+	{/if}
 </div>
 
 {#if fullScreenIndex !== null}
-  {@const preview = pdfPreviews[fullScreenIndex]}
-  <div class="fullscreen-overlay">
-    <button class="fs-close" aria-label="Close fullscreen" on:click={closeFullscreen}>&times;</button>
-    <button
-      type="button"
-      class="nav-arrow left fs"
-      aria-label="Previous page"
-      disabled={preview.currentPage <= 1 || preview.isRendering}
-      on:click={() => goToPage(preview, preview.currentPage - 1)}
-    ><span>&larr;</span></button>
+	{@const preview = pdfPreviews[fullScreenIndex]}
+	<div class="fullscreen-overlay">
+		<button class="close-button" on:click={closeFullscreen}>
+			<svg
+				width="24"
+				height="24"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+			>
+				<line x1="18" y1="6" x2="6" y2="18"></line>
+				<line x1="6" y1="6" x2="18" y2="18"></line>
+			</svg>
+		</button>
 
-    <div class="fs-stage">
-      {#if preview.pageCache[preview.displayedPage]}
-        <img
-          src={preview.pageCache[preview.displayedPage] as string}
-          alt={"Fullscreen page " + preview.displayedPage}
-          class="fs-image"
-          draggable="false"
-        />
-        {#if preview.isRendering && preview.currentPage !== preview.displayedPage}
-          <div class="fs-overlay-spinner">
-            <div class="loading loading-spinner loading-lg"></div>
-          </div>
-        {/if}
-      {:else}
-        <div class="fs-placeholder">
-          <span class="text-xs opacity-70">Loading...</span>
-        </div>
-      {/if}
-    </div>
+		<div class="fullscreen-content">
+			<button
+				class="fs-nav-arrow left"
+				disabled={preview.currentPage <= 1 || preview.isRendering}
+				on:click={() => goToPage(preview, preview.currentPage - 1)}
+			>
+				<svg
+					width="32"
+					height="32"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<polyline points="15 18 9 12 15 6"></polyline>
+				</svg>
+			</button>
 
-    <button
-      type="button"
-      class="nav-arrow right fs"
-      aria-label="Next page"
-      disabled={preview.currentPage >= preview.pageCount || preview.isRendering}
-      on:click={() => goToPage(preview, preview.currentPage + 1)}
-    ><span>&rarr;</span></button>
+			{#if preview.pageCache[preview.displayedPage]}
+				<img
+					src={preview.pageCache[preview.displayedPage]}
+					alt="PDF page {preview.displayedPage} fullscreen"
+					class="fullscreen-image"
+				/>
+			{:else}
+				<div class="loading-placeholder fullscreen">
+					<div class="loading-spinner"></div>
+					<p>Loading page...</p>
+				</div>
+			{/if}
 
-    <div class="fs-page-indicator">
-      Page {preview.displayedPage} / {preview.pageCount}
-    </div>
-  </div>
+			<button
+				class="fs-nav-arrow right"
+				disabled={preview.currentPage >= preview.pageCount || preview.isRendering}
+				on:click={() => goToPage(preview, preview.currentPage + 1)}
+			>
+				<svg
+					width="32"
+					height="32"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<polyline points="9 18 15 12 9 6"></polyline>
+				</svg>
+			</button>
+		</div>
+
+		<div class="fullscreen-controls">
+			<div class="page-display">
+				Page {preview.displayedPage} of {preview.pageCount}
+			</div>
+
+			<div class="fullscreen-nav">
+				<button
+					class="btn-sm"
+					disabled={preview.currentPage <= 1}
+					on:click={() => goToPage(preview, 1)}
+				>
+					First
+				</button>
+
+				<div class="page-jump">
+					<input
+						type="number"
+						value={currentPage}
+						min="1"
+						max={preview.pageCount}
+						on:change={(e) => handlePageInput(e, preview)}
+					/>
+					<button class="btn-sm" on:click={(e) => handlePageInput(e, preview)}>Go</button>
+				</div>
+
+				<button
+					class="btn-sm"
+					disabled={preview.currentPage >= preview.pageCount}
+					on:click={() => goToPage(preview, preview.pageCount)}
+				>
+					Last
+				</button>
+			</div>
+
+			<p class="keyboard-hint">Press ESC to exit fullscreen</p>
+		</div>
+	</div>
 {/if}
 
 <style>
-  .pdf-canvas-container {
-    position: relative;
-    width: min(90vw, 1100px);
-    aspect-ratio: 0.707;
-    background: var(--fallback-b1, #1f2937);
-    border: 1px solid var(--fallback-b3, #374151);
-    border-radius: 0.75rem;
-    padding: 0.35rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  }
-  .pdf-page-image {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    user-select: none;
-    border-radius: 0.4rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-  }
-  .placeholder-box {
-    width:100%;height:100%;display:flex;align-items:center;justify-content:center;
-    color:#aaa;font-style:italic;font-size:0.7rem;
-  }
-  .overlay-spinner,
-  .fs-overlay-spinner {
-    position:absolute;inset:0;
-    display:flex;align-items:center;justify-content:center;
-    background:rgba(0,0,0,0.25);
-    backdrop-filter:blur(1px);
-  }
-  .nav-arrow {
-    position:absolute;top:50%;transform:translateY(-50%);
-    background:rgba(0,0,0,0.45);color:#fff;border:none;
-    width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    cursor:pointer;font-size:1.1rem;font-weight:600;transition:background .15s,transform .15s;z-index:5;
-  }
-  .nav-arrow:hover:not(:disabled){background:rgba(0,0,0,0.65);}
-  .nav-arrow:active:not(:disabled){transform:translateY(-50%) scale(.9);}
-  .nav-arrow:disabled{opacity:.35;cursor:default;}
-  .nav-arrow.left{left:.5rem;}
-  .nav-arrow.right{right:.5rem;}
+	.preview-container {
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
 
-  .fullscreen-overlay {
-    position:fixed;inset:0;z-index:1000;
-    background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;
-  }
-  .fs-stage {
-    position:relative;width:100%;height:100%;
-    display:flex;align-items:center;justify-content:center;
-  }
-  .fs-image {
-    max-width:calc(100vw - 8rem);
-    max-height:calc(100vh - 4rem);
-    object-fit:contain;user-select:none;
-    border-radius:.4rem;box-shadow:0 4px 28px rgba(0,0,0,.55);
-  }
-  .fs-placeholder {
-    width:60vw;max-width:1000px;min-height:50vh;
-    display:flex;align-items:center;justify-content:center;
-    color:#bbb;background:#222;border:1px solid #444;border-radius:.75rem;
-  }
-  .nav-arrow.fs{position:fixed;}
-  .nav-arrow.fs.left{left:clamp(.5rem,2vw,2rem);}
-  .nav-arrow.fs.right{right:clamp(.5rem,2vw,2rem);}
-  .fs-close {
-    position:fixed;top:.75rem;right:.9rem;
-    background:rgba(0,0,0,.5);color:#fff;border:none;
-    width:40px;height:40px;font-size:1.4rem;line-height:1;
-    border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;
-    box-shadow:0 2px 8px rgba(0,0,0,.4);transition:background .15s;z-index:1010;
-  }
-  .fs-close:hover{background:rgba(0,0,0,.7);}
-  .fs-page-indicator {
-    position:fixed;bottom:.85rem;left:50%;transform:translateX(-50%);
-    background:rgba(0,0,0,.55);color:#fff;font-size:.7rem;
-    padding:.35rem .7rem;border-radius:999px;letter-spacing:.5px;font-weight:500;
-    backdrop-filter:blur(3px);
-  }
+	.loading-container,
+	.empty-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		height: 300px;
+		width: 100%;
+		color: #999;
+	}
 
-  @media (max-width:900px){
-    .pdf-canvas-container{width:94vw;}
-    .nav-arrow{width:38px;height:38px;font-size:1rem;}
-    .fs-image{max-width:calc(100vw - 4rem);max-height:calc(100vh - 3rem);}
-    .fs-close{width:38px;height:38px;font-size:1.25rem;}
-  }
+	.empty-state svg {
+		opacity: 0.6;
+		margin-bottom: 1rem;
+	}
+
+	.pdf-viewer {
+		width: 100%;
+		max-width: 1000px;
+	}
+
+	.pdf-document {
+		display: flex;
+		flex-direction: column;
+		margin-bottom: 2rem;
+	}
+
+	.pdf-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1rem;
+	}
+
+	.pdf-title {
+		margin: 0;
+		font-size: 1.1rem;
+		font-weight: 600;
+		color: #f0f0f0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		max-width: 60%;
+	}
+
+	.pdf-controls {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.page-controls {
+		display: flex;
+		align-items: center;
+		background-color: rgba(255, 255, 255, 0.1);
+		border-radius: 4px;
+		padding: 0.25rem;
+	}
+
+	.btn-icon {
+		background: none;
+		border: none;
+		color: #f0f0f0;
+		cursor: pointer;
+		padding: 0.25rem;
+		border-radius: 4px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.btn-icon:hover:not(:disabled) {
+		background-color: rgba(255, 255, 255, 0.1);
+	}
+
+	.btn-icon:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	.page-input {
+		display: flex;
+		align-items: center;
+		margin: 0 0.5rem;
+		font-size: 0.9rem;
+	}
+
+	.page-input input {
+		width: 40px;
+		background-color: rgba(255, 255, 255, 0.1);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 3px;
+		color: white;
+		padding: 0.25rem;
+		text-align: center;
+		margin-right: 0.25rem;
+	}
+
+	.btn {
+		background-color: rgba(255, 255, 255, 0.1);
+		border: none;
+		color: white;
+		padding: 0.5rem 0.75rem;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.9rem;
+		transition: background-color 0.2s;
+	}
+
+	.btn:hover {
+		background-color: rgba(255, 255, 255, 0.2);
+	}
+
+	.pdf-content {
+		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 1rem;
+	}
+
+	.page-container {
+		position: relative;
+		background-color: #2c2e33;
+		border-radius: 8px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 400px;
+		width: 100%;
+		overflow: hidden;
+		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+	}
+
+	.page-image {
+		max-width: 100%;
+		max-height: 70vh;
+		object-fit: contain;
+	}
+
+	.nav-arrow {
+		position: absolute;
+		background-color: rgba(0, 0, 0, 0.6);
+		color: white;
+		border: none;
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		z-index: 10;
+		transition: background-color 0.2s;
+	}
+
+	.nav-arrow:hover:not(:disabled) {
+		background-color: rgba(0, 0, 0, 0.8);
+	}
+
+	.nav-arrow:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	.nav-arrow.left {
+		left: 1rem;
+	}
+
+	.nav-arrow.right {
+		right: 1rem;
+	}
+
+	.loading-placeholder {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		width: 100%;
+		height: 400px;
+		color: #999;
+	}
+
+	.loading-spinner {
+		width: 40px;
+		height: 40px;
+		border: 3px solid rgba(255, 255, 255, 0.1);
+		border-radius: 50%;
+		border-top-color: #3b82f6;
+		animation: spin 1s ease-in-out infinite;
+		margin-bottom: 1rem;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.loading-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(0, 0, 0, 0.7);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 5;
+	}
+
+	.pdf-footer {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		color: #999;
+		font-size: 0.8rem;
+	}
+
+	.keyboard-hint {
+		margin: 0;
+	}
+
+	.document-counter {
+		padding: 0.25rem 0.5rem;
+		background-color: rgba(255, 255, 255, 0.1);
+		border-radius: 4px;
+	}
+
+	/* Error message */
+	.error-message {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 1rem;
+		background-color: rgba(220, 38, 38, 0.1);
+		border: 1px solid rgba(220, 38, 38, 0.2);
+		border-radius: 8px;
+		color: #ff8080;
+		margin-bottom: 1rem;
+	}
+
+	.error-message svg {
+		margin-right: 0.5rem;
+		color: #ff6060;
+	}
+
+	/* Fullscreen overlay */
+	.fullscreen-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(0, 0, 0, 0.95);
+		z-index: 1000;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.close-button {
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
+		background-color: rgba(255, 255, 255, 0.1);
+		color: white;
+		border: none;
+		width: 40px;
+		height: 40px;
+		border-radius: 4px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		z-index: 1010;
+	}
+
+	.close-button:hover {
+		background-color: rgba(255, 255, 255, 0.2);
+	}
+
+	.fullscreen-content {
+		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 100%;
+		height: 100%;
+		padding: 2rem;
+	}
+
+	.fullscreen-image {
+		max-width: 90%;
+		max-height: 80vh;
+		object-fit: contain;
+		box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+	}
+
+	.fs-nav-arrow {
+		position: absolute;
+		background-color: rgba(0, 0, 0, 0.6);
+		color: white;
+		border: none;
+		width: 50px;
+		height: 50px;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		z-index: 1010;
+		transition: background-color 0.2s;
+	}
+
+	.fs-nav-arrow:hover:not(:disabled) {
+		background-color: rgba(0, 0, 0, 0.8);
+	}
+
+	.fs-nav-arrow:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	.fs-nav-arrow.left {
+		left: 2rem;
+	}
+
+	.fs-nav-arrow.right {
+		right: 2rem;
+	}
+
+	.fullscreen-controls {
+		position: absolute;
+		bottom: 2rem;
+		left: 50%;
+		transform: translateX(-50%);
+		background-color: rgba(0, 0, 0, 0.7);
+		padding: 0.75rem 1.5rem;
+		border-radius: 8px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.page-display {
+		color: white;
+		font-size: 0.9rem;
+	}
+
+	.fullscreen-nav {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.page-jump {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.page-jump input {
+		width: 50px;
+		background-color: rgba(255, 255, 255, 0.1);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 4px;
+		color: white;
+		padding: 0.25rem 0.5rem;
+		text-align: center;
+	}
+
+	.btn-sm {
+		background-color: rgba(255, 255, 255, 0.15);
+		border: none;
+		color: white;
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.8rem;
+	}
+
+	.btn-sm:hover:not(:disabled) {
+		background-color: rgba(255, 255, 255, 0.25);
+	}
+
+	.btn-sm:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	.loading-placeholder.fullscreen {
+		height: 70vh;
+	}
+
+	/* Responsive adjustments */
+	@media (max-width: 768px) {
+		.pdf-header {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0.5rem;
+		}
+
+		.pdf-title {
+			max-width: 100%;
+		}
+
+		.pdf-controls {
+			width: 100%;
+			justify-content: space-between;
+		}
+
+		.fs-nav-arrow {
+			width: 40px;
+			height: 40px;
+		}
+
+		.fs-nav-arrow.left {
+			left: 1rem;
+		}
+
+		.fs-nav-arrow.right {
+			right: 1rem;
+		}
+	}
 </style>

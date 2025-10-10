@@ -4,18 +4,23 @@
 	import { invalidateAll } from '$app/navigation';
 
 	const { teamId } = $props();
-	console.log(JSON.stringify(teamId), null, 2);
 
 	let innovation = 3;
 	let usefulness = 3;
 	let finalPresentation = 3;
-	let implementation = 3;
+	let implementation = 5; // Default to middle of 1-10 scale
 
 	let comments = '';
 	let error = '';
 
+	// Scale constants
 	const minScore = 1;
-	const maxScore = 5;
+	const maxStandardScore = 5; // For innovation, usefulness, presentation
+	const maxImplementationScore = 10;
+
+	// Calculate total score
+	let totalScore = innovation + usefulness + finalPresentation + implementation;
+	let maxTotalScore = maxStandardScore * 3 + maxImplementationScore; // 25
 </script>
 
 <form
@@ -61,12 +66,12 @@
 		<div class="form-control mb-4">
 			<div class="label">
 				<span class="label-text font-bold">Innovation (Innowacyjność)</span>
-				<span class="label-text-alt">{innovation}/{maxScore}</span>
+				<span class="label-text-alt">{innovation}/{maxStandardScore} points</span>
 			</div>
 			<input
 				type="range"
 				min={minScore}
-				max={maxScore}
+				max={maxStandardScore}
 				step="1"
 				class="range range-primary"
 				bind:value={innovation}
@@ -85,13 +90,13 @@
 		<div class="form-control mb-4">
 			<div class="label">
 				<span class="label-text font-bold">Usefulness (Użyteczność)</span>
-				<span class="label-text-alt">{usefulness}/{maxScore}</span>
+				<span class="label-text-alt">{usefulness}/{maxStandardScore} points</span>
 			</div>
 
 			<input
 				type="range"
 				min={minScore}
-				max={maxScore}
+				max={maxStandardScore}
 				step="1"
 				class="range range-primary"
 				bind:value={usefulness}
@@ -110,13 +115,13 @@
 		<div class="form-control mb-4">
 			<div class="label">
 				<span class="label-text font-bold">Final Presentation (Prezentacja Końcowa)</span>
-				<span class="label-text-alt">{finalPresentation}/{maxScore}</span>
+				<span class="label-text-alt">{finalPresentation}/{maxStandardScore} points</span>
 			</div>
 
 			<input
 				type="range"
 				min={minScore}
-				max={maxScore}
+				max={maxStandardScore}
 				step="1"
 				class="range range-primary"
 				bind:value={finalPresentation}
@@ -135,13 +140,13 @@
 		<div class="form-control mb-4">
 			<div class="label">
 				<span class="label-text font-bold">Implementation Quality (Jakość Implementacji)</span>
-				<span class="label-text-alt">{implementation}/{maxScore}</span>
+				<span class="label-text-alt">{implementation}/{maxImplementationScore} points</span>
 			</div>
 
 			<input
 				type="range"
 				min={minScore}
-				max={maxScore}
+				max={maxImplementationScore}
 				step="1"
 				class="range range-primary"
 				bind:value={implementation}
@@ -150,10 +155,10 @@
 			/>
 			<div class="w-full flex justify-between text-xs px-0">
 				<span>1</span>
-				<span>2</span>
 				<span>3</span>
-				<span>4</span>
 				<span>5</span>
+				<span>7</span>
+				<span>10</span>
 			</div>
 		</div>
 
@@ -169,6 +174,10 @@
 				placeholder="Additional comments about the project..."
 			></textarea>
 		</label>
+
+		<div class="alert alert-info mb-4">
+			<span>Total points: {totalScore}/{maxTotalScore}</span>
+		</div>
 
 		<button class="btn btn-primary" type="submit">Submit Grades</button>
 		{#if error}<div class="text-error mt-2">{error}</div>{/if}

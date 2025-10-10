@@ -20,6 +20,18 @@ export const load = async ({ locals }) => {
 	}
 	try {
 		const pb = locals.pb;
+
+		const juriesResult = await pb.collection('users').getList(1, 100, {
+			filter: 'role = "jury"'
+		});
+		const totalJuries = juriesResult.totalItems;
+
+		// Create a set of valid jury IDs for reference
+		const validJuryIds = new Set();
+		juriesResult.items.forEach((user) => {
+			validJuryIds.add(user.id);
+		});
+
 		const teams: TeamWithPresentationUrl[] = [];
 		const presentations = await pb.collection('presentations').getFullList({ sort: '-created' });
 
@@ -39,15 +51,37 @@ export const load = async ({ locals }) => {
 				? `https://frog01-32147.wykr.es/api/files/${pres.collectionName}/${pres.id}/${pres.presentation}`
 				: null;
 
+			// Fetch ratings for this team
+			const ratingsForTeam = await pb.collection('ratings').getList(1, 1000, {
+				filter: `team="${team.id}"`,
+				expand: 'jury' // Expand the jury relation to access role
+			});
+
+			// Count only unique juries with jury/admin roles who have rated this team
+			const uniqueJuries = new Set();
+			ratingsForTeam.items.forEach((rating) => {
+				// Only count ratings from actual juries or admins
+				if (rating.jury && validJuryIds.has(rating.jury)) {
+					uniqueJuries.add(rating.jury);
+				}
+			});
+			const ratingsCount = uniqueJuries.size;
+
+			// Check if the current jury has rated this team
+			const isRatedByCurrentJury = ratingsForTeam.items.some((r) => r.jury === locals.user.id);
+
 			teams.push({
 				...team,
-				presentationUrl
+				presentationUrl,
+				ratingsCount,
+				isRatedByCurrentJury,
+				totalJuries
 			});
 		}
-		return { teams };
+		return { teams, totalJuries };
 	} catch (error) {
 		console.error('Error fetching data:', error);
-		return { teams: [] };
+		return { teams: [], totalJuries: 0 };
 	}
 };
 
@@ -75,10 +109,16 @@ export const actions: Actions = {
 			implementation: Number(form.implementation),
 			comments: form.comments,
 			jury: user.id,
-			team: form.teamId
+			team: form.teamId,
+			finalGrade: null
 		};
 
-		// TODO handle updating the was_graded for all jury
+		rating.finalGrade =
+			Number(rating.innovation) +
+			Number(rating.usefulness) +
+			Number(rating.finalPresentation) +
+			Number(rating.implementation);
+
 		function allFieldsValid(obj: Rating) {
 			return Object.values(obj).every((value) => {
 				return value !== null && value !== undefined;
@@ -87,7 +127,15 @@ export const actions: Actions = {
 
 		try {
 			if (allFieldsValid(rating)) {
-				await locals.pb.collection('ratings').create(rating);
+				const existingRatings = await locals.pb.collection('ratings').getList(1, 1, {
+					filter: `jury = "${user.id}" && team = "${form.teamId}"`
+				});
+
+				if (existingRatings.totalItems > 0) {
+					await locals.pb.collection('ratings').update(existingRatings.items[0].id, rating);
+				} else {
+					await locals.pb.collection('ratings').create(rating);
+				}
 			}
 		} catch (err: unknown) {
 			console.error('Error in action:', err);
@@ -95,6 +143,6 @@ export const actions: Actions = {
 			throw error(HttpStatusCode.InternalServerError, 'Failed to create rating');
 		}
 
-		throw redirect(HttpStatusCode.SeeOther, '/');
+		throw redirect(HttpStatusCode.SeeOther, '/rate_presentation');
 	}
 };

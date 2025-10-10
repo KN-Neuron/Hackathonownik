@@ -5,19 +5,27 @@
 
 	export let data;
 
-	const { ratings } = data;
+	const { rankings, totalJuries } = data;
 
 	let icon = IconNames.Ranking;
-	let text = 'Ranking';
+	let text = 'Team Rankings';
 </script>
 
-<div>
+<div class="page-content">
 	<HeaderText {icon} {text} />
-	<TeamRanking {ratings} />
+	<div class="mb-4">
+		<p class="text-base-content/70">
+			View all team ratings and their completion status. Teams with ratings from all juries are
+			marked as final.
+		</p>
+	</div>
+	<TeamRanking {rankings} {totalJuries} />
 </div>
 
 <style>
-	div {
-		padding: 25px;
+	.page-content {
+		padding: 1.5rem;
+		max-width: 1400px;
+		margin: 0 auto;
 	}
 </style>

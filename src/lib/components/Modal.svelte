@@ -1,62 +1,174 @@
 <script>
-	let { show = $bindable(), header, children } = $props(); // Renamed showModal to show for simplicity; update bindings accordingly
+	export let show = false;
+	export let header = null;
+	export let children = null;
+	export let wide = false; // For wider modals like the rating form
+	export let fullHeight = false; // For presentation viewer
 
-	let dialog = $state(); // HTMLDialogElement
+	let dialog;
 
-	$effect(() => {
-		if (show) {
-			dialog?.showModal(); // Added optional chaining to ensure dialog exists
-		} else if (dialog?.open) {
-			dialog.close(); // Added this for bidirectional control (closes if show is set to false externally)
+	$: if (show && dialog) {
+		dialog.showModal();
+	} else if (dialog && dialog.open) {
+		dialog.close();
+	}
+
+	function handleClose() {
+		show = false;
+	}
+
+	function handleClick(e) {
+		// Close when clicking outside the modal content
+		if (e.target === dialog) dialog.close();
+	}
+
+	// Enable ESC to close the modal
+	function handleKeydown(e) {
+		if (e.key === 'Escape' && dialog && dialog.open) {
+			handleClose();
 		}
-	});
+	}
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+<svelte:window on:keydown={handleKeydown} />
+
+<!-- svelte-ignore a11y_click_events_have_key_events -->
 <dialog
 	bind:this={dialog}
-	onclose={() => (show = false)}
-	onclick={(e) => {
-		if (e.target === dialog) dialog.close();
-	}}
+	on:close={() => (show = false)}
+	on:click={handleClick}
+	class:wide-modal={wide}
+	class:full-height={fullHeight}
 >
-	<div>
-		{@render header?.()}
-		<hr />
-		{@render children?.()}
-		<hr />
-		<button autofocus onclick={() => dialog.close()}>Close</button>
-		<!-- Uncommented and simplified for explicit closing -->
+	<div class="modal-content">
+		{#if header}
+			<div class="modal-header">
+				{#if typeof header === 'function'}
+					{@render header()}
+				{:else}
+					{header}
+				{/if}
+			</div>
+			<hr />
+		{/if}
+
+		<div class="modal-body">
+			{#if typeof children === 'function'}
+				{@render children()}
+			{:else}
+				{children}
+			{/if}
+		</div>
+
+		<div class="modal-footer">
+			<button autofocus type="button" class="close-btn" on:click={handleClose}>Close</button>
+		</div>
 	</div>
 </dialog>
 
 <style>
 	dialog {
 		max-width: 32em;
-		border-radius: 0.2em;
+		border-radius: 10px;
 		border: none;
 		padding: 0;
+		background-color: #1e1f22;
+		color: #f0f0f0;
+		box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+
+		/* Properly center the dialog */
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		margin: 0;
+
+		max-height: 90vh;
+		overflow: hidden;
 	}
+
+	dialog.wide-modal {
+		max-width: 800px;
+		width: 95%;
+	}
+
+	dialog.full-height {
+		height: 90vh;
+		max-height: 90vh;
+	}
+
 	dialog::backdrop {
-		background: rgba(0, 0, 0, 0.3);
+		background: rgba(0, 0, 0, 0.7);
+		backdrop-filter: blur(3px);
 	}
-	dialog > div {
-		padding: 1em;
+
+	.modal-content {
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+		max-height: inherit;
 	}
+
+	.modal-header {
+		padding: 1.25rem 1.5rem;
+		background-color: rgba(0, 0, 0, 0.15);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	}
+
+	.modal-body {
+		padding: 1.5rem;
+		overflow-y: auto;
+		flex: 1;
+	}
+
+	.modal-footer {
+		padding: 1rem 1.5rem;
+		display: flex;
+		justify-content: flex-end;
+		border-top: 1px solid rgba(255, 255, 255, 0.1);
+		background-color: rgba(0, 0, 0, 0.15);
+	}
+
+	hr {
+		border: none;
+		margin: 0;
+	}
+
+	.close-btn {
+		padding: 0.5rem 1rem;
+		background-color: #2c2e33;
+		color: #f0f0f0;
+		border: none;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.9rem;
+		transition: background-color 0.2s;
+	}
+
+	.close-btn:hover {
+		background-color: #3b3f47;
+	}
+
 	dialog[open] {
 		animation: zoom 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 	}
+
 	@keyframes zoom {
 		from {
-			transform: scale(0.95);
+			transform: translate(-50%, -50%) scale(0.95);
+			opacity: 0;
 		}
 		to {
-			transform: scale(1);
+			transform: translate(-50%, -50%) scale(1);
+			opacity: 1;
 		}
 	}
+
 	dialog[open]::backdrop {
 		animation: fade 0.2s ease-out;
 	}
+
 	@keyframes fade {
 		from {
 			opacity: 0;
@@ -64,8 +176,5 @@
 		to {
 			opacity: 1;
 		}
-	}
-	button {
-		display: block;
 	}
 </style>

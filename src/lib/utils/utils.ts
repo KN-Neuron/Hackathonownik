@@ -118,3 +118,55 @@ export enum Role {
 	Jury = 'jury',
 	Participant = 'participant'
 }
+
+export function validateRating(data: any): { valid: boolean; errors: string[] } {
+	const errors: string[] = [];
+
+	if (!data.teamId) {
+		errors.push('Team ID is required');
+	}
+
+	const standardRatingFields = ['innovation', 'usefulness', 'finalPresentation'];
+	const validStandardRange = { min: 1, max: 5 };
+
+	for (const field of standardRatingFields) {
+		const value = Number(data[field]);
+		if (isNaN(value)) {
+			errors.push(`${field} must be a number`);
+		} else if (value < validStandardRange.min || value > validStandardRange.max) {
+			errors.push(
+				`${field} must be between ${validStandardRange.min} and ${validStandardRange.max}`
+			);
+		}
+	}
+
+	const implValue = Number(data.implementation);
+	if (isNaN(implValue)) {
+		errors.push('implementation must be a number');
+	} else if (implValue < 1 || implValue > 10) {
+		errors.push('implementation must be between 1 and 10');
+	}
+
+	if (data.comments !== undefined && data.comments !== null && typeof data.comments !== 'string') {
+		errors.push('Comments must be text');
+	}
+
+	return {
+		valid: errors.length === 0,
+		errors
+	};
+}
+
+export function calculateFinalGrade(ratings: {
+	innovation: number;
+	usefulness: number;
+	finalPresentation: number;
+	implementation: number;
+}): number {
+	return (
+		Number(ratings.innovation) +
+		Number(ratings.usefulness) +
+		Number(ratings.finalPresentation) +
+		Number(ratings.implementation)
+	);
+}
