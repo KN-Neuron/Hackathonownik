@@ -25,6 +25,7 @@
     "npm:prettier-plugin-svelte@^3.4.0": "3.4.0_prettier@3.6.2_svelte@5.39.11__acorn@8.15.0",
     "npm:prettier@^3.6.2": "3.6.2",
     "npm:puppeteer@^24.24.0": "24.24.0_devtools-protocol@0.0.1508733_typescript@5.9.3",
+    "npm:strip-comments@^2.0.1": "2.0.1",
     "npm:svelte-check@^4.3.1": "4.3.3_svelte@5.39.11__acorn@8.15.0_typescript@5.9.3",
     "npm:svelte@^5.38.10": "5.39.11_acorn@8.15.0",
     "npm:tailwindcss@^4.1.13": "4.1.14",
@@ -2412,6 +2413,9 @@
         "ansi-regex"
       ]
     },
+    "strip-comments@2.0.1": {
+      "integrity": "sha512-ZprKx+bBLXv067WTCALv8SSz5l2+XhpYCsVtSqlMnkAXMWDq+/ekVbl1ghqP9rUHTzv6sm/DwCOiYutU/yp1fw=="
+    },
     "strip-json-comments@3.1.1": {
       "integrity": "sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig=="
     },
@@ -2804,6 +2808,7 @@
         "npm:prettier-plugin-svelte@^3.4.0",
         "npm:prettier@^3.6.2",
         "npm:puppeteer@^24.24.0",
+        "npm:strip-comments@^2.0.1",
         "npm:svelte-check@^4.3.1",
         "npm:svelte@^5.38.10",
         "npm:tailwindcss@^4.1.13",

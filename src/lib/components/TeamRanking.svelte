@@ -8,15 +8,15 @@
 
 	let sortField = 'finalGrade';
 	let sortDirection = 'desc';
-	let filterStatus = 'all'; // 'all', 'final', or 'provisional'
+	let filterStatus = 'all'; 
 	let isPdfExporting = false;
 	let jsPDF;
 	let jsPDFAutoTable;
 
-	// Import PDF libraries only on client side
+	
 	onMount(async () => {
 		if (browser) {
-			// Dynamically import jspdf only in the browser
+			
 			const jspdfModule = await import('jspdf');
 			const autoTableModule = await import('jspdf-autotable');
 			jsPDF = jspdfModule.default;
@@ -66,24 +66,24 @@
 
 			isPdfExporting = true;
 
-			// Create new PDF document in landscape mode
+			
 			const doc = new jsPDF({
 				orientation: 'landscape',
 				unit: 'mm',
 				format: 'a4'
 			});
 
-			// Add title
+			
 			doc.setFontSize(18);
 			doc.text('Heroes of the Brain 2025 - Rankings', 14, 20);
 
-			// Add metadata
+			
 			doc.setFontSize(10);
 			doc.setTextColor(100, 100, 100);
 			doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
 			doc.text(`Total Teams: ${rankings.length} | Total Juries: ${totalJuries}`, 14, 34);
 
-			// Define the columns for the table
+			
 			const tableColumn = [
 				'Rank',
 				'Team',
@@ -95,7 +95,7 @@
 				'Status'
 			];
 
-			// Define the rows for the table
+			
 			const tableRows = sortedRankings.map((team, index) => [
 				index + 1,
 				team.team,
@@ -107,7 +107,7 @@
 				`${team.status === 'final' ? 'Final' : 'Provisional'} (${team.ratingCount}/${totalJuries})`
 			]);
 
-			// Create the table
+			
 			jsPDFAutoTable(doc, {
 				head: [tableColumn],
 				body: tableRows,
@@ -122,7 +122,7 @@
 					7: { cellWidth: 35 }
 				},
 				didDrawCell: (data) => {
-					// Color the Final Grade cell based on score
+					
 					if (data.column.index === 6 && data.section === 'body') {
 						const score = parseFloat(data.cell.text[0]);
 						if (score >= 4.5) doc.setTextColor(54, 195, 153);
@@ -130,13 +130,13 @@
 						else if (score >= 2.5) doc.setTextColor(247, 166, 84);
 						else doc.setTextColor(232, 92, 144);
 					} else if (data.section === 'body') {
-						// Reset text color for other cells
+						
 						doc.setTextColor(0, 0, 0);
 					}
 				}
 			});
 
-			// Add footer
+			
 			const pageCount = doc.internal.getNumberOfPages();
 			for (let i = 1; i <= pageCount; i++) {
 				doc.setPage(i);
@@ -157,7 +157,7 @@
 				);
 			}
 
-			// Save the PDF
+			
 			doc.save(`heroes-of-brain-rankings-${new Date().toISOString().slice(0, 10)}.pdf`);
 		} catch (err) {
 			console.error('Error exporting PDF:', err);

@@ -6,7 +6,7 @@
 
 	export let team;
 
-	// Component state
+	
 	let avatarBg = '';
 	let avatarShape = '';
 	let showFormModal = false;
@@ -339,8 +339,7 @@
 		font-weight: 600;
 	}
 
-	/* Rating Status Styles */
-	.rating-status {
+		.rating-status {
 		display: flex;
 		flex-direction: column;
 		align-items: flex-end;
@@ -374,8 +373,7 @@
 		color: #f0f0f0;
 	}
 
-	/* Button Styles */
-	.function-buttons {
+		.function-buttons {
 		display: flex;
 		justify-content: space-between;
 		gap: 10px;

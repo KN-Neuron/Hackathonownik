@@ -2,9 +2,9 @@
 	export let show = false;
 	export let header = null;
 	export let children = null;
-	export let wide = false; // For wider modals like the rating form
-	export let fullHeight = false; // For presentation viewer
-	export let fullScreen = false; // This prop will now control true fullscreen
+	export let wide = false; 
+	export let fullHeight = false; 
+	export let fullScreen = false; 
 
 	let dialog;
 
@@ -103,8 +103,7 @@
 		max-height: 90vh;
 	}
 
-	/* UPDATED: Improved full-screen class for true fullscreen */
-	dialog.full-screen {
+		dialog.full-screen {
 		width: 100vw;
 		height: 100vh;
 		max-width: 100vw;
@@ -124,8 +123,7 @@
 		backdrop-filter: blur(3px);
 	}
 
-	/* ADDED: Full black backdrop for fullscreen mode */
-	dialog.full-screen::backdrop {
+		dialog.full-screen::backdrop {
 		background: #000;
 	}
 
@@ -149,8 +147,7 @@
 		flex: 1;
 	}
 
-	/* ADDED: Remove padding for full-screen mode body */
-	.full-screen .modal-body {
+		.full-screen .modal-body {
 		padding: 0;
 	}
 
@@ -197,8 +194,7 @@
 		}
 	}
 
-	/* ADDED: Animation for fullscreen mode */
-	dialog.full-screen[open] {
+		dialog.full-screen[open] {
 		animation: fullScreenZoom 0.3s ease-out;
 	}
 

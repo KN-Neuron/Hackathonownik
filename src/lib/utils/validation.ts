@@ -1,12 +1,12 @@
 export function validateRating(data: any): { valid: boolean; errors: string[] } {
 	const errors: string[] = [];
 
-	// Required fields
+	
 	if (!data.teamId) {
 		errors.push('Team ID is required');
 	}
 
-	// Numerical fields validation
+	
 	const ratingFields = ['innovation', 'usefulness', 'finalPresentation', 'implementation'];
 	const validRange = { min: 1, max: 5 };
 
@@ -19,7 +19,7 @@ export function validateRating(data: any): { valid: boolean; errors: string[] } 
 		}
 	}
 
-	// Comments field is optional, but if provided should be a string
+	
 	if (data.comments !== undefined && data.comments !== null && typeof data.comments !== 'string') {
 		errors.push('Comments must be text');
 	}

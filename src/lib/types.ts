@@ -17,7 +17,7 @@ export interface User {
 	role: string;
 }
 
-// https://github.com/pocketbase/js-sdk?tab=readme-ov-file#specify-typescript-definitions
+
 export interface TypedPocketBase extends PocketBase {
 	collection(idOrName: 'users'): RecordService<User>;
 }

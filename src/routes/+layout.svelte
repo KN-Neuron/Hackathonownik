@@ -7,7 +7,7 @@
 	let { children } = $props();
 	let open = $state(false);
 
-	// Function to close the sidebar
+	
 	function closeSidebar() {
 		open = false;
 	}

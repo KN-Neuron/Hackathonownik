@@ -8,7 +8,7 @@
 	let titleEl: HTMLHeadingElement | null = null;
 	let pathEl: SVGPathElement | null = null;
 
-	// Wave + SVG sizing
+	
 	let d = '';
 	let amplitude = 34;
 	let segments = 9;
@@ -71,13 +71,13 @@
 		const waveWidth = measuredWidth + wavePadding * 2;
 		svgWidth = waveWidth;
 
-		// Expand vertical range to include blur/glow
+		
 		const vPad = amplitude + glowPadding;
 		viewBox = `0 -${vPad} ${svgWidth} ${vPad * 2}`;
 
 		d = buildWavePath(waveWidth, segments, amplitude);
 
-		// Defer path length calc to next frame
+		
 		rAF = requestAnimationFrame(() => {
 			if (!pathEl) return;
 			pathEl.setAttribute('d', d);
@@ -85,8 +85,7 @@
 				const len = pathEl.getTotalLength();
 				pathEl.style.setProperty('--path-len', String(len));
 			} catch {
-				/* ignore */
-			}
+							}
 		});
 	}
 
@@ -102,10 +101,10 @@
 	onMount(() => {
 		if (!browser) return;
 
-		// Initial sizing
+		
 		scheduleUpdate();
 
-		// Observe title & root changes for responsive updates
+		
 		if ('ResizeObserver' in globalThis && titleEl) {
 			resizeObserver = new ResizeObserver(scheduleUpdate);
 			resizeObserver.observe(titleEl);
@@ -117,7 +116,7 @@
 		const orientationHandler = () => scheduleUpdate();
 		window.addEventListener('orientationchange', orientationHandler);
 
-		// Also recalc if fonts load late
+		
 		document.fonts?.ready?.then(() => scheduleUpdate());
 
 		return () => {
@@ -133,7 +132,7 @@
 		resizeObserver?.disconnect();
 	});
 
-	// Manual refresh API
+	
 	export function refresh() {
 		scheduleUpdate();
 	}
@@ -147,14 +146,12 @@
 		--snake-color-3: #4df2ff;
 	}
 
-	/* Prevent scroll bars on this page */
-	:global(html, body) {
+		:global(html, body) {
 		overflow: hidden;
 	}
 
 	.hero-stage {
-		/* Exact viewport fit excluding footer + main vertical padding */
-		min-height: calc(100vh - var(--footer-height, 0px) - var(--main-padding-y, 0px));
+				min-height: calc(100vh - var(--footer-height, 0px) - var(--main-padding-y, 0px));
 		height: calc(100vh - var(--footer-height, 0px) - var(--main-padding-y, 0px));
 		display: flex;
 		align-items: center;
@@ -163,8 +160,7 @@
 		gap: clamp(2rem, 4vh, 3.75rem);
 		padding: 2rem 1.25rem;
 		position: relative;
-		/* Keep particles contained but allow internal SVG to render fully (we gave it padding in viewBox) */
-		overflow: hidden;
+				overflow: hidden;
 		box-sizing: border-box;
 	}
 
@@ -211,8 +207,7 @@
 	svg.wave {
 		overflow: visible;
 		pointer-events: none;
-		/* Slightly taller native box just in case */
-		height: 180px;
+				height: 180px;
 		display: block;
 	}
 

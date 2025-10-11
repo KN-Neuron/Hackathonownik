@@ -3,17 +3,14 @@
 </script>
 
 <style>
-	/* Ensure SVG overflow is visible so text that sits outside the 70×70 rect is not clipped */
-	svg {
+		svg {
 		display: block;
 		overflow: visible;
 	}
 
-	/* Use currentColor pattern if you'd rather control the color from CSS; keep explicit fill/stroke in markup for now */
-	.drop-rect { cursor: pointer; }
+		.drop-rect { cursor: pointer; }
 
-	/* Small responsive tweak: scale down font on very small containers */
-	@media (max-width: 120px) {
+		@media (max-width: 120px) {
 		.text { font-size: 9px; }
 	}
 </style>

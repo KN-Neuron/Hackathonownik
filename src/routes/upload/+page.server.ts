@@ -61,7 +61,7 @@ export const actions: Actions = {
 			uploadData.append('team', teamId);
 			uploadData.append('presentation', file);
 
-			// FIXME: don't hardcode admin credentials
+			
 			let adminClient = new PocketBase('https://frog01-32147.wykr.es/');
 			await adminClient.collection('_superusers').authWithPassword('admin@ad.min', 'Password123!');
 

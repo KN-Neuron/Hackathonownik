@@ -14,7 +14,7 @@ export const actions: Actions = {
             passwordConfirm: string
         }
 
-        // dev && console.log('(auth)/sign/up/+page.server', form)
+        
 
         const user = {
             email: form.email,
@@ -22,7 +22,7 @@ export const actions: Actions = {
             passwordConfirm: form.passwordConfirm,
         }
 
-        // dev && console.log('user', user)
+        
 
         try {
             if (user.email && user.password) {

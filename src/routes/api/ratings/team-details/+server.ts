@@ -13,14 +13,14 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	}
 
 	try {
-		// Get all ratings for this team with jury details
+		
 		const ratingsList = await locals.pb.collection('ratings').getList(1, 100, {
 			filter: `team = "${teamId}"`,
 			sort: '-created',
 			expand: 'jury'
 		});
 
-		// Format the ratings to include jury names
+		
 		const formattedRatings = ratingsList.items.map((rating) => {
 			const finalGrade =
 				(Number(rating.innovation) +

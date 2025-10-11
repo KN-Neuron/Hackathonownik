@@ -15,14 +15,14 @@ export function exportRankingToPdf(rankings, totalJuries) {
 	doc.text(`Total Juries: ${totalJuries}`, 14, 45);
 
 	const tableData = rankings.map((team, index) => [
-		index + 1, // Rank
-		team.team, // Team name
-		team.innovation.toFixed(1), // Innovation score
-		team.usefulness.toFixed(1), // Usefulness score
-		team.finalPresentation.toFixed(1), // Presentation score
-		team.implementation.toFixed(1), // Implementation score
-		team.finalGrade.toFixed(2), // Final grade
-		`${team.ratingCount}/${totalJuries} (${team.status})` // Status
+		index + 1, 
+		team.team, 
+		team.innovation.toFixed(1), 
+		team.usefulness.toFixed(1), 
+		team.finalPresentation.toFixed(1), 
+		team.implementation.toFixed(1), 
+		team.finalGrade.toFixed(2), 
+		`${team.ratingCount}/${totalJuries} (${team.status})` 
 	]);
 
 	const headers = [

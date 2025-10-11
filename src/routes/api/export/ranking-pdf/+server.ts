@@ -3,13 +3,13 @@ import type { RequestHandler } from './$types';
 import puppeteer from 'puppeteer';
 
 export const GET: RequestHandler = async ({ locals, url, fetch }) => {
-	// Check authentication
+	
 	if (!locals.user) {
 		return json({ error: 'Not authorized' }, { status: 401 });
 	}
 
 	try {
-		// Fetch the rankings data
+		
 		const rankingResponse = await fetch('/api/rankings/data');
 		if (!rankingResponse.ok) {
 			throw new Error('Failed to fetch rankings data');
@@ -18,14 +18,14 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 		const rankingData = await rankingResponse.json();
 		const { rankings, totalJuries } = rankingData;
 
-		// Launch browser
+		
 		const browser = await puppeteer.launch({
 			headless: 'new',
 			args: ['--no-sandbox', '--disable-setuid-sandbox']
 		});
 		const page = await browser.newPage();
 
-		// Generate HTML content for the PDF
+		
 		const htmlContent = `
 			<!DOCTYPE html>
 			<html lang="en">
@@ -140,10 +140,10 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 			</html>
 		`;
 
-		// Set the page content
+		
 		await page.setContent(htmlContent);
 
-		// Generate PDF
+		
 		const pdfBuffer = await page.pdf({
 			format: 'A4',
 			landscape: true,
@@ -156,10 +156,10 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 			}
 		});
 
-		// Close browser
+		
 		await browser.close();
 
-		// Return PDF as a response
+		
 		return new Response(pdfBuffer, {
 			headers: {
 				'Content-Type': 'application/pdf',
@@ -172,7 +172,7 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 	}
 };
 
-// Helper function to determine rating color class
+
 function getRatingColorClass(score) {
 	if (score >= 4.5) return 'good';
 	if (score >= 3.5) return 'good';

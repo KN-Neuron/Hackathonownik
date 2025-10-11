@@ -14,7 +14,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	}
 
 	try {
-		// Check if this jury already rated this team
+		
 		const existingRatings = await locals.pb.collection('ratings').getList(1, 1, {
 			filter: `jury = "${locals.user.id}" && team = "${teamId}"`,
 			sort: '-created'

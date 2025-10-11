@@ -26,7 +26,7 @@ export const load = async ({ locals }) => {
 		});
 		const totalJuries = juriesResult.totalItems;
 
-		// Create a set of valid jury IDs for reference
+		
 		const validJuryIds = new Set();
 		juriesResult.items.forEach((user) => {
 			validJuryIds.add(user.id);
@@ -51,23 +51,23 @@ export const load = async ({ locals }) => {
 				? `https://frog01-32147.wykr.es/api/files/${pres.collectionName}/${pres.id}/${pres.presentation}`
 				: null;
 
-			// Fetch ratings for this team
+			
 			const ratingsForTeam = await pb.collection('ratings').getList(1, 1000, {
 				filter: `team="${team.id}"`,
-				expand: 'jury' // Expand the jury relation to access role
+				expand: 'jury' 
 			});
 
-			// Count only unique juries with jury/admin roles who have rated this team
+			
 			const uniqueJuries = new Set();
 			ratingsForTeam.items.forEach((rating) => {
-				// Only count ratings from actual juries or admins
+				
 				if (rating.jury && validJuryIds.has(rating.jury)) {
 					uniqueJuries.add(rating.jury);
 				}
 			});
 			const ratingsCount = uniqueJuries.size;
 
-			// Check if the current jury has rated this team
+			
 			const isRatedByCurrentJury = ratingsForTeam.items.some((r) => r.jury === locals.user.id);
 
 			teams.push({

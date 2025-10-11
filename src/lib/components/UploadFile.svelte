@@ -17,8 +17,8 @@
 		file: File;
 		pdf: any | null;
 		pageCount: number;
-		currentPage: number;      // target page requested
-		displayedPage: number;    // currently visible page
+		currentPage: number;      
+		displayedPage: number;    
 		pageCache: (string | null)[];
 		error?: string;
 		isRendering: boolean;
@@ -28,13 +28,13 @@
 	let pdfPreviews: PdfPreview[] = [];
 	let initializingPreviews = false;
 
-	// Upload state
+	
 	let loading = false;
 	let errorMessage = '';
 	let successMessage = '';
 	const uploadUrl = '?/upload';
 
-	// Fullscreen
+	
 	let fullScreenIndex: number | null = null;
 
 	let pdfjsLibPromise: Promise<any> | null = null;
@@ -484,8 +484,7 @@
 {/if}
 
 <style>
-	/* Shared / existing styles (trimmed for clarity – keep your previous theme as needed) */
-
+	
 	#hidden-input { display: none; }
 	#fallback {
 		display: grid;

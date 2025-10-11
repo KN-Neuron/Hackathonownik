@@ -8,7 +8,7 @@
 	let innovation = 3;
 	let usefulness = 3;
 	let finalPresentation = 3;
-	let implementation = 5; // Default to middle of 1-10 scale
+	let implementation = 5; 
 
 	let comments = '';
 	let error = '';
@@ -375,8 +375,7 @@
 		}
 	}
 
-	/* Responsive adjustments */
-	@media (max-width: 640px) {
+		@media (max-width: 640px) {
 		.rating-form {
 			padding: 1rem;
 			border-radius: 6px;

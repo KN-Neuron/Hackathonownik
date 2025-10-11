@@ -7,25 +7,25 @@ export const GET: RequestHandler = async ({ locals }) => {
 	}
 
 	try {
-		// Get all juries in the system to calculate total expected ratings
+		
 		const juriesResult = await locals.pb.collection('users').getList(1, 100, {
 			filter: 'role = "jury"'
 		});
 		const totalJuries = juriesResult.totalItems;
 
-		// Create a set of valid jury IDs for reference
+		
 		const validJuryIds = new Set();
 		juriesResult.items.forEach((user) => {
 			validJuryIds.add(user.id);
 		});
 
-		// Get all ratings grouped by team
+		
 		const ratingsFromDB = await locals.pb.collection('ratings').getFullList({
 			sort: '-created',
 			expand: 'jury,team'
 		});
 
-		// Process ratings to include jury information
+		
 		const processedRatings = ratingsFromDB.map((r) => ({
 			...r,
 			jury: r.expand?.jury?.name || 'Unknown Jury',
@@ -65,7 +65,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 				team.juryIds.add(rating.juryId);
 				team.ratingCount++;
 
-				// Only accumulate scores from unique juries
+				
 				team.innovation += rating.innovation;
 				team.usefulness += rating.usefulness;
 				team.implementation += rating.implementation;
@@ -73,7 +73,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 			}
 		}
 
-		// Calculate averages and add status
+		
 		const finalRankings = Array.from(teamRatingsMap.values()).map((team) => {
 			const count = team.ratingCount;
 
@@ -85,7 +85,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 				};
 			}
 
-			// Calculate averages
+			
 			team.innovation /= count;
 			team.usefulness /= count;
 			team.implementation /= count;
@@ -93,14 +93,14 @@ export const GET: RequestHandler = async ({ locals }) => {
 			team.finalGrade =
 				(team.innovation + team.usefulness + team.implementation + team.finalPresentation) / 4;
 
-			// Add status information
+			
 			team.status = count >= totalJuries ? 'final' : 'provisional';
 			team.completionPercent = Math.round((count / totalJuries) * 100);
 
 			return team;
 		});
 
-		// Sort by final grade (highest first)
+		
 		finalRankings.sort((a, b) => b.finalGrade - a.finalGrade);
 
 		return json({

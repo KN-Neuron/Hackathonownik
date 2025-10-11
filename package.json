@@ -49,6 +49,7 @@
 		"jspdf-autotable": "^5.0.2",
 		"pdfjs-dist": "^5.4.149",
 		"pocketbase": "^0.26.2",
-		"puppeteer": "^24.24.0"
+		"puppeteer": "^24.24.0",
+		"strip-comments": "^2.0.1"
 	}
 }

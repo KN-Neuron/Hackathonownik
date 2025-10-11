@@ -17,7 +17,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 			);
 		}
 
-		// Calculate final grade
+		
 		const finalGrade =
 			(Number(data.innovation) +
 				Number(data.usefulness) +
@@ -25,7 +25,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 				Number(data.implementation)) /
 			4;
 
-		// Update the rating
+		
 		await locals.pb.collection('ratings').update(data.ratingId, {
 			innovation: Number(data.innovation),
 			usefulness: Number(data.usefulness),

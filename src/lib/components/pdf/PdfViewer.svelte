@@ -7,7 +7,7 @@
 	export let files: File[] = [];
 	export let multiple: boolean = false;
 
-	// Internal state
+	
 	let pdfPreviews: PdfPreview[] = [];
 	let initializingPreviews = false;
 	let fullScreenIndex: number | null = null;
@@ -18,7 +18,7 @@
 		pdfPreviews = [...pdfPreviews];
 	}
 
-	// Watch for new 'files'
+	
 	$: if (files) {
 		initFromFiles(files);
 	}
@@ -699,8 +699,7 @@
 		border-radius: 4px;
 	}
 
-	/* Error message */
-	.error-message {
+		.error-message {
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -866,8 +865,7 @@
 		height: 70vh;
 	}
 
-	/* Responsive adjustments */
-	@media (max-width: 768px) {
+		@media (max-width: 768px) {
 		.pdf-header {
 			flex-direction: column;
 			align-items: flex-start;
