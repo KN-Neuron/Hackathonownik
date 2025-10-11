@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import JuryRatingDetails from './JuryRatingDetails.svelte';
+	import { browser } from '$app/environment';
 
 	export let rankings = [];
 	export let totalJuries = 0;
@@ -7,6 +9,20 @@
 	let sortField = 'finalGrade';
 	let sortDirection = 'desc';
 	let filterStatus = 'all'; // 'all', 'final', or 'provisional'
+	let isPdfExporting = false;
+	let jsPDF;
+	let jsPDFAutoTable;
+
+	// Import PDF libraries only on client side
+	onMount(async () => {
+		if (browser) {
+			// Dynamically import jspdf only in the browser
+			const jspdfModule = await import('jspdf');
+			const autoTableModule = await import('jspdf-autotable');
+			jsPDF = jspdfModule.default;
+			jsPDFAutoTable = autoTableModule.default;
+		}
+	});
 
 	$: sortedRankings = [...rankings]
 		.sort((a, b) => {
@@ -40,6 +56,116 @@
 		if (percent >= 75) return 'bg-warning text-warning-content';
 		return 'bg-neutral text-neutral-content';
 	}
+
+	async function exportToPdf() {
+		try {
+			if (!browser || !jsPDF) {
+				alert('PDF generation is not available');
+				return;
+			}
+
+			isPdfExporting = true;
+
+			// Create new PDF document in landscape mode
+			const doc = new jsPDF({
+				orientation: 'landscape',
+				unit: 'mm',
+				format: 'a4'
+			});
+
+			// Add title
+			doc.setFontSize(18);
+			doc.text('Heroes of the Brain 2025 - Rankings', 14, 20);
+
+			// Add metadata
+			doc.setFontSize(10);
+			doc.setTextColor(100, 100, 100);
+			doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+			doc.text(`Total Teams: ${rankings.length} | Total Juries: ${totalJuries}`, 14, 34);
+
+			// Define the columns for the table
+			const tableColumn = [
+				'Rank',
+				'Team',
+				'Innovation',
+				'Usefulness',
+				'Presentation',
+				'Implementation',
+				'Final Grade',
+				'Status'
+			];
+
+			// Define the rows for the table
+			const tableRows = sortedRankings.map((team, index) => [
+				index + 1,
+				team.team,
+				team.innovation.toFixed(1),
+				team.usefulness.toFixed(1),
+				team.finalPresentation.toFixed(1),
+				team.implementation.toFixed(1),
+				team.finalGrade.toFixed(2),
+				`${team.status === 'final' ? 'Final' : 'Provisional'} (${team.ratingCount}/${totalJuries})`
+			]);
+
+			// Create the table
+			jsPDFAutoTable(doc, {
+				head: [tableColumn],
+				body: tableRows,
+				startY: 40,
+				styles: { fontSize: 9, cellPadding: 3 },
+				headStyles: { fillColor: [59, 130, 246], textColor: 255 },
+				alternateRowStyles: { fillColor: [245, 247, 250] },
+				columnStyles: {
+					0: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
+					1: { cellWidth: 'auto', fontStyle: 'bold' },
+					6: { cellWidth: 25, fontStyle: 'bold' },
+					7: { cellWidth: 35 }
+				},
+				didDrawCell: (data) => {
+					// Color the Final Grade cell based on score
+					if (data.column.index === 6 && data.section === 'body') {
+						const score = parseFloat(data.cell.text[0]);
+						if (score >= 4.5) doc.setTextColor(54, 195, 153);
+						else if (score >= 3.5) doc.setTextColor(54, 195, 153);
+						else if (score >= 2.5) doc.setTextColor(247, 166, 84);
+						else doc.setTextColor(232, 92, 144);
+					} else if (data.section === 'body') {
+						// Reset text color for other cells
+						doc.setTextColor(0, 0, 0);
+					}
+				}
+			});
+
+			// Add footer
+			const pageCount = doc.internal.getNumberOfPages();
+			for (let i = 1; i <= pageCount; i++) {
+				doc.setPage(i);
+				doc.setFontSize(8);
+				doc.setTextColor(150);
+				doc.text(
+					'Heroes of the Brain 2025 © KN Neuron',
+					doc.internal.pageSize.getWidth() / 2,
+					doc.internal.pageSize.getHeight() - 10,
+					{
+						align: 'center'
+					}
+				);
+				doc.text(
+					`Page ${i} of ${pageCount}`,
+					doc.internal.pageSize.getWidth() - 20,
+					doc.internal.pageSize.getHeight() - 10
+				);
+			}
+
+			// Save the PDF
+			doc.save(`heroes-of-brain-rankings-${new Date().toISOString().slice(0, 10)}.pdf`);
+		} catch (err) {
+			console.error('Error exporting PDF:', err);
+			alert('Failed to export PDF. Please try again.');
+		} finally {
+			isPdfExporting = false;
+		}
+	}
 </script>
 
 <div class="flex flex-col gap-4">
@@ -63,14 +189,40 @@
 			</div>
 		</div>
 
-		<div class="stats shadow">
-			<div class="stat">
-				<div class="stat-title">Teams</div>
-				<div class="stat-value text-xl">{rankings.length}</div>
-			</div>
-			<div class="stat">
-				<div class="stat-title">Juries</div>
-				<div class="stat-value text-xl">{totalJuries}</div>
+		<div class="flex items-center gap-3">
+			<button
+				class="btn btn-sm btn-accent {isPdfExporting ? 'loading' : ''}"
+				on:click={exportToPdf}
+				disabled={isPdfExporting}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					class="mr-1"
+				>
+					<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+					<polyline points="14 2 14 8 20 8"></polyline>
+					<line x1="16" y1="13" x2="8" y2="13"></line>
+					<line x1="16" y1="17" x2="8" y2="17"></line>
+					<polyline points="10 9 9 9 8 9"></polyline>
+				</svg>
+				Export as PDF
+			</button>
+
+			<div class="stats shadow">
+				<div class="stat">
+					<div class="stat-title">Teams</div>
+					<div class="stat-value text-xl">{rankings.length}</div>
+				</div>
+				<div class="stat">
+					<div class="stat-title">Juries</div>
+					<div class="stat-value text-xl">{totalJuries}</div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -108,6 +260,7 @@
 						Final Grade {sortField === 'finalGrade' ? (sortDirection === 'desc' ? '↓' : '↑') : ''}
 					</th>
 					<th>Status</th>
+					<th>Actions</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -140,12 +293,15 @@
 								<span class="text-xs">{team.ratingCount}/{totalJuries} juries</span>
 							</div>
 						</td>
+						<td>
+							<JuryRatingDetails teamId={team.teamId} teamName={team.team} />
+						</td>
 					</tr>
 				{/each}
 
 				{#if sortedRankings.length === 0}
 					<tr>
-						<td colspan="8" class="text-center py-8 text-base-content/60">
+						<td colspan="9" class="text-center py-8 text-base-content/60">
 							No teams found matching the selected filter
 						</td>
 					</tr>
@@ -288,5 +444,15 @@
 
 	.font-bold {
 		font-weight: 700;
+	}
+
+	.btn-accent {
+		background: linear-gradient(135deg, #7f7bff, #4df2ff);
+		color: #0f1322;
+		font-weight: 500;
+	}
+
+	.btn-accent:hover {
+		background: linear-gradient(135deg, #6a67d6, #3dcede);
 	}
 </style>

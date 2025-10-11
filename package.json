@@ -45,7 +45,10 @@
 	},
 	"dependencies": {
 		"@inlang/paraglide-js": "^2.3.0",
+		"jspdf": "^3.0.3",
+		"jspdf-autotable": "^5.0.2",
 		"pdfjs-dist": "^5.4.149",
-		"pocketbase": "^0.26.2"
+		"pocketbase": "^0.26.2",
+		"puppeteer": "^24.24.0"
 	}
 }

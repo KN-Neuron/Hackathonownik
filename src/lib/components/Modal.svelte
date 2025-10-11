@@ -4,17 +4,23 @@
 	export let children = null;
 	export let wide = false; // For wider modals like the rating form
 	export let fullHeight = false; // For presentation viewer
+	export let fullScreen = false; // This prop will now control true fullscreen
 
 	let dialog;
 
 	$: if (show && dialog) {
 		dialog.showModal();
+		if (fullScreen) {
+			document.body.style.overflow = 'hidden';
+		}
 	} else if (dialog && dialog.open) {
 		dialog.close();
+		document.body.style.overflow = '';
 	}
 
 	function handleClose() {
 		show = false;
+		document.body.style.overflow = '';
 	}
 
 	function handleClick(e) {
@@ -39,9 +45,10 @@
 	on:click={handleClick}
 	class:wide-modal={wide}
 	class:full-height={fullHeight}
+	class:full-screen={fullScreen}
 >
 	<div class="modal-content">
-		{#if header}
+		{#if header && !fullScreen}
 			<div class="modal-header">
 				{#if typeof header === 'function'}
 					{@render header()}
@@ -60,9 +67,11 @@
 			{/if}
 		</div>
 
-		<div class="modal-footer">
-			<button autofocus type="button" class="close-btn" on:click={handleClose}>Close</button>
-		</div>
+		{#if !fullScreen}
+			<div class="modal-footer">
+				<button autofocus type="button" class="close-btn" on:click={handleClose}>Close</button>
+			</div>
+		{/if}
 	</div>
 </dialog>
 
@@ -75,14 +84,11 @@
 		background-color: #1e1f22;
 		color: #f0f0f0;
 		box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-
-		/* Properly center the dialog */
 		position: fixed;
 		top: 50%;
 		left: 50%;
 		transform: translate(-50%, -50%);
 		margin: 0;
-
 		max-height: 90vh;
 		overflow: hidden;
 	}
@@ -97,9 +103,30 @@
 		max-height: 90vh;
 	}
 
+	/* UPDATED: Improved full-screen class for true fullscreen */
+	dialog.full-screen {
+		width: 100vw;
+		height: 100vh;
+		max-width: 100vw;
+		max-height: 100vh;
+		border-radius: 0;
+		padding: 0;
+		margin: 0;
+		top: 0;
+		left: 0;
+		transform: none;
+		overflow: hidden;
+		background-color: #000;
+	}
+
 	dialog::backdrop {
 		background: rgba(0, 0, 0, 0.7);
 		backdrop-filter: blur(3px);
+	}
+
+	/* ADDED: Full black backdrop for fullscreen mode */
+	dialog.full-screen::backdrop {
+		background: #000;
 	}
 
 	.modal-content {
@@ -120,6 +147,11 @@
 		padding: 1.5rem;
 		overflow-y: auto;
 		flex: 1;
+	}
+
+	/* ADDED: Remove padding for full-screen mode body */
+	.full-screen .modal-body {
+		padding: 0;
 	}
 
 	.modal-footer {
@@ -161,6 +193,20 @@
 		}
 		to {
 			transform: translate(-50%, -50%) scale(1);
+			opacity: 1;
+		}
+	}
+
+	/* ADDED: Animation for fullscreen mode */
+	dialog.full-screen[open] {
+		animation: fullScreenZoom 0.3s ease-out;
+	}
+
+	@keyframes fullScreenZoom {
+		from {
+			opacity: 0;
+		}
+		to {
 			opacity: 1;
 		}
 	}

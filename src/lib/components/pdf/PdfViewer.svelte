@@ -717,7 +717,6 @@
 		color: #ff6060;
 	}
 
-	/* Fullscreen overlay */
 	.fullscreen-overlay {
 		position: fixed;
 		top: 0;
@@ -725,7 +724,7 @@
 		right: 0;
 		bottom: 0;
 		background-color: rgba(0, 0, 0, 0.95);
-		z-index: 1000;
+		z-index: 10000;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -746,7 +745,7 @@
 		align-items: center;
 		justify-content: center;
 		cursor: pointer;
-		z-index: 1010;
+		z-index: 10010;
 	}
 
 	.close-button:hover {
@@ -764,7 +763,7 @@
 	}
 
 	.fullscreen-image {
-		max-width: 90%;
+		max-width: 95vw;
 		max-height: 80vh;
 		object-fit: contain;
 		box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
