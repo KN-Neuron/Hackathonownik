@@ -1,18 +1,20 @@
-<script>
+<script lang="ts">
 	import HeaderText from '$lib/components/HeaderText.svelte';
 	import { IconNames } from '$lib/utils/utils';
 	import PdfUpload from '$lib/components/pdf/PdfUpload.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import PdfViewer from '$lib/components/pdf/PdfViewer.svelte';
 
+	let { data } = $props();
+
 	let icon = IconNames.Upload;
 	let text = 'Upload Presentation';
 
-	let selectedFiles = [];
-	let showPresentationModal = false;
-	let fullscreenMode = false;
+	let selectedFiles = $state([]);
+	let showPresentationModal = $state(false);
+	let fullscreenMode = $state(false);
 
-	function handleFiles(e) {
+	function handleFiles(e: CustomEvent) {
 		selectedFiles = e.detail.files;
 		if (selectedFiles.length > 0) {
 			showPresentationModal = true;
@@ -42,10 +44,15 @@
 			</h2>
 
 			<div class="upload-area">
-				<PdfUpload multiple={false} uploadUrl="?/upload" on:files={handleFiles} />
+				<PdfUpload
+					multiple={false}
+					uploadUrl="?/upload"
+					csrfToken={data.csrfToken}
+					on:files={handleFiles}
+				/>
 
 				{#if selectedFiles.length > 0}
-					<button class="preview-button" on:click={() => (showPresentationModal = true)}>
+					<button class="preview-button" onclick={() => (showPresentationModal = true)}>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							width="20"
@@ -70,6 +77,7 @@
 					<li>Maximum file size: 10MB</li>
 					<li>Ensure your presentation is complete and final before uploading</li>
 					<li>Your latest upload will replace any previous uploads</li>
+					<li>Maximum 5 presentations per team</li>
 				</ul>
 			</div>
 		</div>
@@ -80,7 +88,7 @@
 	{#snippet header()}
 		<div class="flex justify-between items-center w-full">
 			<h2>PDF Preview</h2>
-			<button class="btn btn-sm" on:click={toggleFullscreen}>
+			<button class="btn btn-sm" onclick={toggleFullscreen}>
 				{fullscreenMode ? 'Exit Fullscreen' : 'Enter Fullscreen'}
 			</button>
 		</div>
