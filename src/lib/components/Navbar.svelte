@@ -1,14 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { pb } from '$lib/pocketbase.svelte';
 
-	interface Props {
-		user?: any;
-	}
+	const user = $derived(pb.authStore.record);
 
-	let { user }: Props = $props();
-
-	// Determine which links to show based on user role
-	const navLinks = $derived(() => {
+	// Use $derived.by() for computed values with functions (Svelte 5 syntax)
+	const navLinks = $derived.by(() => {
 		if (!user) {
 			return [
 				{ href: '/', label: 'Home' },
@@ -22,21 +19,21 @@
 		if (user.admin) {
 			links.push(
 				{ href: '/upload', label: 'Upload' },
-				{ href: '/rankings', label: 'Rankings' },
-				{ href: '/jury', label: 'Jury Panel' },
-				{ href: '/admin', label: 'Admin Panel' }
+				{ href: '/ranking', label: 'Rankings' },
+				{ href: '/rate_presentation', label: 'Rate Presentations' },
+				{ href: '/admin/dashboard', label: 'Admin' }
 			);
 		}
-		// Jury
+		// Jury can ONLY see rate_presentation and ranking
 		else if (user.role === 'jury') {
 			links.push(
-				{ href: '/rankings', label: 'Rankings' },
-				{ href: '/jury', label: 'Rate Presentations' }
+				{ href: '/rate_presentation', label: 'Rate Presentations' },
+				{ href: '/ranking', label: 'Rankings' }
 			);
 		}
-		// Participant
+		// Participant can ONLY see upload and ranking (when available)
 		else if (user.role === 'participant' || user.team) {
-			links.push({ href: '/upload', label: 'Upload' }, { href: '/rankings', label: 'Rankings' });
+			links.push({ href: '/upload', label: 'Upload' }, { href: '/ranking', label: 'Rankings' });
 		}
 
 		// Everyone who is logged in can logout
@@ -58,13 +55,9 @@
 		</div>
 
 		<ul class="nav-links">
-			{#each navLinks() as link}
+			{#each navLinks as link}
 				<li>
-					<a
-						href={link.href}
-						class:active={isActive(link.href)}
-						data-sveltekit-reload={link.href === '/logout'}
-					>
+					<a href={link.href} class:active={isActive(link.href)}>
 						{link.label}
 					</a>
 				</li>
@@ -84,131 +77,117 @@
 
 <style>
 	.navbar {
-		background: rgba(30, 31, 34, 0.95);
-		backdrop-filter: blur(10px);
-		border-bottom: 1px solid rgba(127, 123, 255, 0.2);
+		background-color: rgba(20, 21, 24, 0.95);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+		padding: 0.75rem 0;
 		position: sticky;
 		top: 0;
-		z-index: 100;
-		padding: 0.75rem 0;
+		z-index: 1000;
+		backdrop-filter: blur(10px);
 	}
 
 	.container {
-		max-width: 1200px;
+		max-width: 1400px;
 		margin: 0 auto;
 		padding: 0 1rem;
 		display: flex;
-		align-items: center;
 		justify-content: space-between;
+		align-items: center;
 		gap: 2rem;
 	}
 
 	.brand a {
 		font-size: 1.25rem;
 		font-weight: 700;
-		background: linear-gradient(to right, #7f7bff, #4df2ff);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
+		color: #7f7bff;
 		text-decoration: none;
-		transition: opacity 0.2s;
+		transition: color 0.2s;
 	}
 
 	.brand a:hover {
-		opacity: 0.8;
+		color: #4df2ff;
 	}
 
 	.nav-links {
 		display: flex;
-		gap: 0.5rem;
 		list-style: none;
+		gap: 0.5rem;
 		margin: 0;
 		padding: 0;
 		flex: 1;
 	}
 
+	.nav-links li {
+		margin: 0;
+	}
+
 	.nav-links a {
+		display: block;
+		padding: 0.5rem 1rem;
 		color: rgba(255, 255, 255, 0.7);
 		text-decoration: none;
-		padding: 0.5rem 1rem;
 		border-radius: 0.5rem;
 		transition: all 0.2s;
-		font-size: 0.9rem;
 		font-weight: 500;
 	}
 
 	.nav-links a:hover {
-		color: #fff;
-		background: rgba(127, 123, 255, 0.1);
+		color: #ffffff;
+		background-color: rgba(127, 123, 255, 0.1);
 	}
 
 	.nav-links a.active {
-		color: #7f7bff;
-		background: rgba(127, 123, 255, 0.15);
+		color: #ffffff;
+		background: linear-gradient(to right, rgba(127, 123, 255, 0.2), rgba(77, 242, 255, 0.2));
+		border-bottom: 2px solid #7f7bff;
 	}
 
 	.user-info {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-		padding: 0.5rem 1rem;
-		background: rgba(0, 0, 0, 0.3);
-		border-radius: 0.5rem;
-		border: 1px solid rgba(255, 255, 255, 0.1);
 	}
 
 	.user-name {
-		color: #f0f0f0;
+		color: rgba(255, 255, 255, 0.9);
 		font-size: 0.9rem;
-		font-weight: 500;
 	}
 
 	.user-role {
+		padding: 0.25rem 0.75rem;
+		border-radius: 1rem;
 		font-size: 0.75rem;
-		padding: 0.25rem 0.5rem;
-		border-radius: 0.25rem;
-		background: rgba(77, 242, 255, 0.2);
-		color: #4df2ff;
 		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
+		background: rgba(255, 255, 255, 0.1);
+		color: rgba(255, 255, 255, 0.8);
 	}
 
 	.user-role.admin {
-		background: rgba(255, 77, 77, 0.2);
-		color: #ff4d4d;
+		background: linear-gradient(to right, #ff6b6b, #ee5a6f);
+		color: white;
 	}
 
 	.user-role.jury {
-		background: rgba(255, 200, 77, 0.2);
-		color: #ffc84d;
+		background: linear-gradient(to right, #4df2ff, #7f7bff);
+		color: #0f1322;
 	}
 
-	/* Mobile responsive */
 	@media (max-width: 768px) {
 		.container {
-			flex-wrap: wrap;
+			flex-direction: column;
+			gap: 1rem;
+			align-items: stretch;
 		}
 
 		.nav-links {
-			order: 3;
-			width: 100%;
-			flex-wrap: wrap;
-			justify-content: center;
+			flex-direction: column;
 			gap: 0.25rem;
 		}
 
-		.nav-links a {
-			padding: 0.4rem 0.75rem;
-			font-size: 0.85rem;
-		}
-
 		.user-info {
-			font-size: 0.85rem;
-		}
-
-		.user-name {
-			display: none;
+			justify-content: center;
+			padding-top: 0.5rem;
+			border-top: 1px solid rgba(255, 255, 255, 0.1);
 		}
 	}
 </style>

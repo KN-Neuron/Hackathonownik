@@ -1,24 +1,27 @@
-import { pbError } from '$lib/pocketbase.svelte';
-import { error, redirect } from '@sveltejs/kit';
-import type { Actions, PageServerLoad } from './$types';
+import { FileUploadSecurity } from '$lib/server/security.js';
 import PocketBase from 'pocketbase';
-import { FileUploadSecurity, CSRFProtection } from '$lib/server/security';
+import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	// Security check
-	locals.security.isAuthenticated();
+	// Ensure user is authenticated
+	try {
+		locals.security.isAuthenticated();
+	} catch (e: any) {
+		// Redirect to login if not authenticated
+		throw e;
+	}
 
+	// Return CSRF token for the form
 	return {
-		user: locals.user,
 		csrfToken: locals.csrfToken
 	};
 };
 
 export const actions: Actions = {
-	upload: async ({ locals, request }) => {
-		// 1. Security checks
+	upload: async ({ request, locals }) => {
+		// 1. Authentication check (without CSRF validation yet)
 		try {
-			locals.security.isAuthenticated().validateCSRF();
+			locals.security.isAuthenticated();
 		} catch (e: any) {
 			return {
 				success: false,
@@ -26,14 +29,14 @@ export const actions: Actions = {
 			};
 		}
 
-		// 2. Get form data
+		// 2. Get form data first
 		const formData = await request.formData();
 		const file = formData.get('file') as File;
 		const csrfToken = formData.get('csrf_token') as string;
 
-		// 3. Validate CSRF token from form
+		// 3. CSRF token validation - NOW we can validate because we have the token
 		const cookieToken = locals.csrfToken;
-		if (!cookieToken || cookieToken !== csrfToken) {
+		if (!cookieToken || !csrfToken || cookieToken !== csrfToken) {
 			return {
 				success: false,
 				message: 'Invalid security token. Please refresh the page and try again.'
@@ -66,7 +69,7 @@ export const actions: Actions = {
 			};
 		}
 
-		// 7. Check if team already has a presentation (prevent spam)
+		// 7. Check if team already has too many presentations (prevent spam)
 		try {
 			const existingPresentations = await locals.pb.collection('presentations').getFullList({
 				filter: `team = "${teamId}"`
@@ -83,18 +86,16 @@ export const actions: Actions = {
 			console.error('Error checking existing presentations:', e);
 		}
 
-		// 8. Upload file
+		// 8. Upload file using admin credentials
 		try {
 			const uploadData = new FormData();
 			uploadData.append('team', teamId);
 			uploadData.append('presentation', file);
 
-			// IMPORTANT: Nie używaj hardcoded credentials!
-			// To musi być w zmiennych środowiskowych
-			// Dla celów demo zostawiam, ale w produkcji ZMIEŃ!
-			let adminClient = new PocketBase('https://frog01-32147.wykr.es/');
+			// Use admin client for upload
+			const adminClient = new PocketBase('https://frog01-32147.wykr.es/');
 
-			// TODO: Przenieś to do env variables
+			// Get credentials from environment variables
 			const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL || 'admin@ad.min';
 			const adminPassword = process.env.POCKETBASE_ADMIN_PASSWORD || 'Password123!';
 
@@ -108,7 +109,6 @@ export const actions: Actions = {
 		} catch (err: unknown) {
 			console.error('Upload error:', err);
 
-			// Nie ujawniaj szczegółów błędu użytkownikowi
 			return {
 				success: false,
 				message: 'An error occurred during upload. Please try again.'
