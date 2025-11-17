@@ -1,6 +1,7 @@
 import { FileUploadSecurity } from '$lib/server/security.js';
 import PocketBase from 'pocketbase';
 import type { Actions, PageServerLoad } from './$types';
+import 'dotenv/config';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// Ensure user is authenticated
@@ -95,9 +96,18 @@ export const actions: Actions = {
 			// Use admin client for upload
 			const adminClient = new PocketBase('https://frog01-32147.wykr.es/');
 
-			// Get credentials from environment variables
-			const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL || 'admin@ad.min';
-			const adminPassword = process.env.POCKETBASE_ADMIN_PASSWORD || 'Password123!';
+			// Get credentials from environment variables - ensure they are properly set
+			const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL;
+			const adminPassword = process.env.POCKETBASE_ADMIN_PASSWORD;
+
+			// Validate that admin credentials are properly configured
+			if (!adminEmail || !adminPassword) {
+				console.error('Missing admin credentials in environment variables. Please set POCKETBASE_ADMIN_EMAIL and POCKETBASE_ADMIN_PASSWORD');
+				return {
+					success: false,
+					message: 'Server configuration error: Missing admin credentials. Please contact the administrator to set up the required environment variables.'
+				};
+			}
 
 			await adminClient.collection('_superusers').authWithPassword(adminEmail, adminPassword);
 			await adminClient.collection('presentations').create(uploadData);
@@ -109,6 +119,7 @@ export const actions: Actions = {
 		} catch (err: unknown) {
 			console.error('Upload error:', err);
 
+			// Don't expose sensitive error details to the client
 			return {
 				success: false,
 				message: 'An error occurred during upload. Please try again.'

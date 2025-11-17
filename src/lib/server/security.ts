@@ -1,6 +1,6 @@
 import { error, type RequestEvent } from '@sveltejs/kit';
 import type { User } from '$lib/types';
-import crypto from 'crypto';
+import { randomBytes } from 'crypto';
 
 // ============================================
 // RATE LIMITING
@@ -118,7 +118,7 @@ export class CSRFProtection {
 	private static readonly HEADER_NAME = 'x-csrf-token';
 
 	static generateToken(): string {
-		return crypto.randomBytes(this.TOKEN_LENGTH).toString('hex');
+		return randomBytes(this.TOKEN_LENGTH).toString('hex');
 	}
 
 	static validateToken(event: RequestEvent): boolean {
@@ -345,10 +345,7 @@ export class Security {
 
 		if (!result.allowed) {
 			const retryAfter = Math.ceil((result.resetTime - Date.now()) / 1000);
-			error(429, {
-				message: 'Too many requests. Please try again later.',
-				retryAfter
-			});
+			error(429, 'Too many requests. Please try again later.');
 		}
 	}
 

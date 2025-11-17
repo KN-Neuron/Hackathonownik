@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import PocketBase from 'pocketbase';
 import { type Handle, redirect } from '@sveltejs/kit';
 import type { TypedPocketBase } from '$lib/types';
@@ -49,14 +48,7 @@ async function checkRouteAccess(
 			return true;
 		}
 
-		if (pathname === '/presentations' || pathname.startsWith('/presentations/')) {
-			// Participants can see presentations after all teams are rated
-			const allRated = await areAllTeamsRated(pb);
-			return allRated;
-		}
-
 		if (pathname === '/ranking' || pathname.startsWith('/ranking/')) {
-			// Participants can see rankings after all teams are rated
 			const allRated = await areAllTeamsRated(pb);
 			return allRated;
 		}
@@ -65,8 +57,7 @@ async function checkRouteAccess(
 	}
 
 	if (user.role === 'jury') {
-		// Juries can always view presentations, rate, and see rankings
-		const juryAllowedRoutes = ['/presentations', '/rate_presentation', '/ranking'];
+		const juryAllowedRoutes = ['/rate_presentation', '/ranking'];
 		const isAllowed = juryAllowedRoutes.some(
 			(route) => pathname === route || pathname.startsWith(route + '/')
 		);
@@ -121,12 +112,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const clientIp = event.getClientAddress();
 	const rateLimitKey = event.locals.user?.id ? `user:${event.locals.user.id}` : `ip:${clientIp}`;
 
-	// In development mode, use more permissive limits
-	const isDev = process.env.NODE_ENV === 'development';
-
-	// General rate limit: 1000 requests per minute (very high for dev)
-	const requestsPerMinute = isDev ? 5000 : 1000; // More permissive in development
-	const generalLimit = rateLimiters.general.check(rateLimitKey, requestsPerMinute, 60 * 1000);
+	const generalLimit = rateLimiters.general.check(rateLimitKey, 100, 60 * 1000);
 
 	if (!generalLimit.allowed) {
 		const retryAfter = Math.ceil((generalLimit.resetTime - Date.now()) / 1000);
@@ -141,21 +127,23 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// CSRF Protection
 	// CRITICAL: Always get token from cookie and set in locals
+	// This is needed for BOTH GET (to generate) and POST (to validate)
 	let token = CSRFProtection.getToken(event);
 
 	if (event.request.method === 'GET') {
+		// For GET: Generate new token if doesn't exist
 		if (!token) {
 			token = CSRFProtection.setToken(event);
 		}
 	}
 
-	// Set token in locals for ALL requests (GET and POST)
+	// IMPORTANT: Set token in locals for ALL requests (GET and POST)
+	// This way the action handler can access it for validation
 	event.locals.csrfToken = token;
 
-	// Auth rate limiting: 10 attempts per 5 minutes, 10 minute lockout
+	// Auth-specific Rate Limiting
 	if (pathname.includes('/login') || pathname.includes('/register')) {
-		const maxAttempts = isDev ? 100 : 10; // More permissive in development
-		const authLimit = rateLimiters.auth.check(rateLimitKey, maxAttempts, 5 * 60 * 1000, 10 * 60 * 1000);
+		const authLimit = rateLimiters.auth.check(rateLimitKey, 5, 15 * 60 * 1000, 30 * 60 * 1000);
 
 		if (!authLimit.allowed) {
 			const retryAfter = Math.ceil((authLimit.resetTime - Date.now()) / 1000);
@@ -169,10 +157,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	// Upload rate limiting: 50 uploads per 5 minutes
+	// Upload-specific Rate Limiting
 	if (pathname.includes('/upload')) {
-		const maxUploads = isDev ? 100 : 50; // More permissive in development
-		const uploadLimit = rateLimiters.upload.check(rateLimitKey, maxUploads, 5 * 60 * 1000);
+		const uploadLimit = rateLimiters.upload.check(rateLimitKey, 10, 60 * 1000);
 
 		if (!uploadLimit.allowed) {
 			const retryAfter = Math.ceil((uploadLimit.resetTime - Date.now()) / 1000);
@@ -213,7 +200,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		);
 	}
 
-	response.headers.set('X-RateLimit-Limit', '1000');
+	response.headers.set('X-RateLimit-Limit', '100');
 	response.headers.set('X-RateLimit-Remaining', generalLimit.remaining.toString());
 	response.headers.set('X-RateLimit-Reset', new Date(generalLimit.resetTime).toISOString());
 
@@ -221,7 +208,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 };
 
 export const handleError = ({ error, event }) => {
-	const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV; // Default to dev-like behavior if NODE_ENV is not set
+	const isDev = process.env.NODE_ENV === 'development';
 	if (isDev) {
 		console.error('Error:', error);
 	}

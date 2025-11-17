@@ -8,6 +8,41 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw redirect(303, '/login');
 	}
 
+	// Check access based on user role
+	// Juries can always see rankings, participants only when all teams are rated
+	if (locals.user.role === 'participant' || locals.user.team) {
+		// For participants, check if all presentations have been rated by at least one jury
+		// We'll follow the same logic as in hooks.server.ts
+		try {
+			const presentations = await locals.pb.collection('presentations').getFullList();
+			if (presentations.length === 0) {
+				// No presentations, so no rankings to show
+				return {
+					rankings: [],
+					totalJuries: 0
+				};
+			}
+
+			const ratings = await locals.pb.collection('ratings').getFullList();
+			if (ratings.length === 0) {
+				// No ratings yet, so don't show rankings to participants
+				throw redirect(303, '/upload');  // Redirect participant back to upload page
+			}
+
+			const presentationIds = presentations.map((p) => p.id);
+			const ratedPresentationIds = new Set(ratings.map((r) => r.presentation));
+
+			// If not all presentations have been rated yet, don't show rankings to participants
+			if (!presentationIds.every((id) => ratedPresentationIds.has(id))) {
+				throw redirect(303, '/upload');  // Redirect participant back to upload page
+			}
+		} catch (err) {
+			console.error('Error checking ratings status:', err);
+			throw redirect(303, '/upload');
+		}
+	}
+	// Juries and admins can always access rankings
+
 	try {
 		const juriesResult = await locals.pb.collection('users').getList(1, 100, {
 			filter: 'role = "jury"'

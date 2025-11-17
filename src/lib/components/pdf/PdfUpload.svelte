@@ -35,14 +35,16 @@
 		}
 	}
 
-	function handleFiles(newFiles: File[]) {
+	async function handleFiles(newFiles: File[]) {
 		// Validate files
-		const validFiles = newFiles.filter((file) => {
-			// Only PDFs
+		const validFiles = [];
+		
+		for (const file of newFiles) {
+			// Only PDFs - check both extension and header
 			if (!file.name.toLowerCase().endsWith('.pdf')) {
 				uploadMessage = 'Only PDF files are allowed';
 				uploadStatus = 'error';
-				return false;
+				return; // Exit early on first invalid file to prevent multiple error messages
 			}
 
 			// Max 10MB
@@ -50,7 +52,7 @@
 			if (file.size > maxSize) {
 				uploadMessage = 'File size exceeds 10MB limit';
 				uploadStatus = 'error';
-				return false;
+				return;
 			}
 
 			// Validate filename (no special characters, path traversal)
@@ -59,11 +61,31 @@
 				uploadMessage =
 					'Invalid filename. Use only letters, numbers, dots, dashes, and underscores';
 				uploadStatus = 'error';
-				return false;
+				return;
 			}
 
-			return true;
-		});
+			// Validate PDF header (first few bytes should be %PDF)
+			try {
+				const buffer = await file.arrayBuffer();
+				const bytes = new Uint8Array(buffer);
+				
+				// Check first 4 bytes for PDF signature "%PDF"
+				const pdfSignature = [0x25, 0x50, 0x44, 0x46]; // %PDF
+				const isValidPdf = pdfSignature.every((byte, index) => bytes[index] === byte);
+				
+				if (!isValidPdf) {
+					uploadMessage = 'File is not a valid PDF';
+					uploadStatus = 'error';
+					return;
+				}
+			} catch (e) {
+				uploadMessage = 'Could not validate file content';
+				uploadStatus = 'error';
+				return;
+			}
+
+			validFiles.push(file);
+		}
 
 		if (validFiles.length > 0) {
 			if (multiple) {
@@ -142,7 +164,7 @@
 		type="file"
 		bind:this={fileInput}
 		{multiple}
-		accept=".pdf,application/pdf"
+		accept=".pdf,application/pdf,application/x-pdf"
 		onchange={handleFileSelect}
 		style="display: none"
 	/>
