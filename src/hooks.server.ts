@@ -3,6 +3,7 @@ import PocketBase from 'pocketbase';
 import { type Handle, redirect } from '@sveltejs/kit';
 import type { TypedPocketBase } from '$lib/types';
 import { Security, CSRFProtection, SECURITY_HEADERS, rateLimiters } from '$lib/server/security';
+import { SecureCookieHandler } from '$lib/server/secure-cookie';
 
 // ============================================
 // ROUTE ACCESS CONTROL
@@ -89,7 +90,16 @@ async function checkRouteAccess(
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const pb = new PocketBase('https://frog01-32147.wykr.es/') as TypedPocketBase;
-	pb.authStore.loadFromCookie(event.request.headers.get('cookie') || '');
+
+	// Try to load session using our secure cookie first
+	const secureSession = SecureCookieHandler.getSessionFromCookie(event);
+	if (secureSession) {
+		// Load the session data into PocketBase
+		pb.authStore.save(secureSession.token, secureSession.model);
+	} else {
+		// Fallback to loading from standard cookie (for transition)
+		pb.authStore.loadFromCookie(event.request.headers.get('cookie') || '');
+	}
 
 	event.locals.pb = pb;
 	event.locals.user = pb.authStore.isValid ? pb.authStore.record : null;
@@ -214,14 +224,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 	});
 
 	if (pb.authStore.isValid) {
-		response.headers.append(
-			'set-cookie',
-			pb.authStore.exportToCookie({
-				httpOnly: true,
-				secure: true,
-				sameSite: 'strict',
-				maxAge: 60 * 60 * 24 * 7
-			})
+		// Use our secure cookie handler instead of direct PocketBase cookie export
+		SecureCookieHandler.setSessionCookie(
+			event,
+			{
+				token: pb.authStore.token,
+				model: pb.authStore.record
+			},
+			60 * 60 * 24 * 7 // 7 days
 		);
 	}
 
@@ -233,12 +243,24 @@ export const handle: Handle = async ({ event, resolve }) => {
 };
 
 export const handleError = ({ error, event }) => {
+	// Always log the error for debugging purposes (in both dev and prod)
+	const errorLog = {
+		timestamp: new Date().toISOString(),
+		url: event?.url?.toString(),
+		method: event?.request?.method,
+		error: error?.message,
+		stack: error?.stack,
+		cause: error?.cause
+	};
+
+	console.error('Server Error:', JSON.stringify(errorLog, null, 2));
+
+	// In production, don't expose internal error messages to the client for security
 	const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV; // Default to dev-like behavior if NODE_ENV is not set
-	if (isDev) {
-		console.error('Error:', error);
-	}
+
+	// For security, return generic error message to client
 	return {
-		message: 'An error occurred',
+		message: isDev ? (error?.message || 'An error occurred') : 'An error occurred',
 		code: error?.code ?? 'UNKNOWN'
 	};
 };
