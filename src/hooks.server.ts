@@ -9,21 +9,28 @@ import { Security, CSRFProtection, SECURITY_HEADERS, rateLimiters } from '$lib/s
 // ============================================
 
 async function areAllTeamsRated(pb: TypedPocketBase): Promise<boolean> {
+	let presentations;
 	try {
-		const presentations = await pb.collection('presentations').getFullList();
-		if (presentations.length === 0) return false;
-
-		const ratings = await pb.collection('ratings').getFullList();
-		if (ratings.length === 0) return false;
-
-		const presentationIds = presentations.map((p) => p.id);
-		const ratedPresentationIds = new Set(ratings.map((r) => r.presentation));
-
-		return presentationIds.every((id) => ratedPresentationIds.has(id));
+		presentations = await pb.collection('presentations').getFullList();
 	} catch (e) {
-		console.error('Error checking if all teams rated:', e);
-		return false;
+		throw new Error('Failed to fetch presentations list', { cause: e });
 	}
+
+	if (presentations.length === 0) return false;
+
+	let ratings;
+	try {
+		ratings = await pb.collection('ratings').getFullList();
+	} catch (e) {
+		throw new Error('Failed to fetch ratings list', { cause: e });
+	}
+
+	if (ratings.length === 0) return false;
+
+	const presentationIds = presentations.map((p) => p.id);
+	const ratedPresentationIds = new Set(ratings.map((r) => r.presentation));
+
+	return presentationIds.every((id) => ratedPresentationIds.has(id));
 }
 
 async function checkRouteAccess(
@@ -155,7 +162,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// Auth rate limiting: 10 attempts per 5 minutes, 10 minute lockout
 	if (pathname.includes('/login') || pathname.includes('/register')) {
 		const maxAttempts = isDev ? 100 : 10; // More permissive in development
-		const authLimit = rateLimiters.auth.check(rateLimitKey, maxAttempts, 5 * 60 * 1000, 10 * 60 * 1000);
+		const authLimit = rateLimiters.auth.check(
+			rateLimitKey,
+			maxAttempts,
+			5 * 60 * 1000,
+			10 * 60 * 1000
+		);
 
 		if (!authLimit.allowed) {
 			const retryAfter = Math.ceil((authLimit.resetTime - Date.now()) / 1000);
