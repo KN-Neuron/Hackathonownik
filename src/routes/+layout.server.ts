@@ -1,7 +1,8 @@
-import { pbError } from '$lib/pocketbase.svelte'
+import type { LayoutServerLoad } from './$types';
 
-export const load = async ({ locals, url }) => {
-    let results = { user: locals.user ?? null }
-    return results
-}
-
+export const load: LayoutServerLoad = async ({ locals }) => {
+	return {
+		user: locals.user,
+		csrfToken: locals.csrfToken
+	};
+};
