@@ -51,31 +51,40 @@ export const load = async ({ locals }) => {
 				? `https://frog01-32147.wykr.es/api/files/${pres.collectionName}/${pres.id}/${pres.presentation}`
 				: null;
 
-			
+
 			const ratingsForTeam = await pb.collection('ratings').getList(1, 1000, {
 				filter: `team="${team.id}"`,
-				expand: 'jury' 
+				expand: 'jury'
 			});
 
-			
+
 			const uniqueJuries = new Set();
 			ratingsForTeam.items.forEach((rating) => {
-				
+
 				if (rating.jury && validJuryIds.has(rating.jury)) {
 					uniqueJuries.add(rating.jury);
 				}
 			});
 			const ratingsCount = uniqueJuries.size;
 
-			
+
 			const isRatedByCurrentJury = ratingsForTeam.items.some((r) => r.jury === locals.user.id);
+
+			// Find current jury's rating to display in the card
+			const currentJuryRating = ratingsForTeam.items.find((r) => r.jury === locals.user.id);
 
 			teams.push({
 				...team,
 				presentationUrl,
 				ratingsCount,
 				isRatedByCurrentJury,
-				totalJuries
+				totalJuries,
+				// Add current jury's ratings for display
+				innowacyjnosc: currentJuryRating?.innovation ?? null,
+				uzytecznosc: currentJuryRating?.usefulness ?? null,
+				prezentacja_koncowa: currentJuryRating?.finalPresentation ?? null,
+				jakosc_implementacji: currentJuryRating?.implementation ?? null,
+				ocena: currentJuryRating?.finalGrade ?? null
 			});
 		}
 		return { teams, totalJuries };

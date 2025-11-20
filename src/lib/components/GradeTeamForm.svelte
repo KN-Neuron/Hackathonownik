@@ -27,7 +27,7 @@
 	onMount(async () => {
 		try {
 			loading = true;
-			const response = await fetch(`/api/ratings/check?teamId=${teamId}`);
+			const response = await fetch(`/api/ratings?teamId=${teamId}`);
 			const data = await response.json();
 
 			if (data.found) {
@@ -36,7 +36,7 @@
 				usefulness = existingRating.usefulness;
 				finalPresentation = existingRating.finalPresentation;
 				implementation = existingRating.implementation;
-				comments = existingRating.comments || '';
+				comments = existingRating.comments ?? '';
 			}
 		} catch (err) {
 			console.error('Error checking existing rating:', err);

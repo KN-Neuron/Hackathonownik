@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { pb } from '$lib/pocketbase.svelte';
 
-	const user = $derived(pb.authStore.record);
+	// Use server-provided user data instead of client PocketBase for security
+	const user = $derived($page.data.user);
 
 	// Use $derived.by() for computed values with functions (Svelte 5 syntax)
 	const navLinks = $derived.by(() => {
