@@ -111,6 +111,22 @@
 						<h3>{presentation.teamName}</h3>
 						<p class="team-id">Team ID: {presentation.teamId}</p>
 						<p class="created-date">Submitted: {new Date(presentation.created).toLocaleDateString()}</p>
+						{#if presentation.repo_link}
+							<div class="repo-link-container">
+								<a
+									href={presentation.repo_link}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="repo-link"
+									on:click|stopPropagation
+								>
+									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+										<polygon points="12 2 15 12 22 12 17 19 20 2 12 2"></polygon>
+									</svg>
+									View Repository
+								</a>
+							</div>
+						{/if}
 						<div class="card-actions">
 							<button class="view-btn">
 								<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -233,6 +249,31 @@
 
 	.view-btn:hover {
 		transform: scale(1.05);
+	}
+
+	.repo-link-container {
+		margin: 0.5rem 0;
+	}
+
+	.repo-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		background: #6e5494; /* GitHub purple */
+		color: white;
+		border: none;
+		padding: 0.3rem 0.75rem;
+		border-radius: 0.375rem;
+		font-size: 0.75rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		text-decoration: none;
+	}
+
+	.repo-link:hover {
+		background: #5c477e; /* Darker GitHub purple */
+		text-decoration: none;
 	}
 
 	.no-presentations {

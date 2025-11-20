@@ -32,3 +32,20 @@ export interface Rating {
 	team: string;
 	finalGrade: number | null;
 }
+
+export interface Presentation {
+	collectionId: string;
+	collectionName: string;
+	created: string;
+	id: string;
+	team: string;
+	updated: string;
+	presentation: string;
+	repo_link?: string | null;
+	expand?: {
+		team?: {
+			id: string;
+			name: string;
+		};
+	};
+}

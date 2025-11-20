@@ -6,9 +6,10 @@
 		multiple?: boolean;
 		uploadUrl?: string;
 		csrfToken?: string;
+		repoLink?: string;
 	}
 
-	let { multiple = false, uploadUrl = '', csrfToken = '' }: Props = $props();
+	let { multiple = false, uploadUrl = '', csrfToken = '', repoLink = '' }: Props = $props();
 
 	const dispatch = createEventDispatcher();
 
@@ -225,6 +226,11 @@
 					// Dodaj plik do formData
 					if (files.length > 0) {
 						formData.set('file', files[0]);
+					}
+
+					// Add repo_link if provided
+					if (repoLink) {
+						formData.set('repo_link', repoLink);
 					}
 
 					// CSRF token już jest w hidden input

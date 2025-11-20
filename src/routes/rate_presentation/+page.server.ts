@@ -12,6 +12,16 @@ export interface TeamWithPresentationUrl {
 	team: string;
 	updated: string;
 	presentationUrl: string | null;
+	repo_link?: string | null;
+	ratingsCount?: number;
+	isRatedByCurrentJury?: boolean;
+	totalJuries?: number;
+	innowacyjnosc?: number | null;
+	uzytecznosc?: number | null;
+	prezentacja_koncowa?: number | null;
+	jakosc_implementacji?: number | null;
+	ocena?: number | null;
+	name?: string;  // for team name
 }
 
 export const load = async ({ locals }) => {
@@ -71,6 +81,7 @@ export const load = async ({ locals }) => {
 			teams.push({
 				...team,
 				presentationUrl,
+				repo_link: pres.repo_link || null,
 				ratingsCount,
 				isRatedByCurrentJury,
 				totalJuries,

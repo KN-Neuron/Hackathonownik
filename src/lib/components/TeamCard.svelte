@@ -220,6 +220,19 @@
 			</div>
 
 			<div class="function-buttons">
+				{#if team.repo_link}
+					<a
+						href={team.repo_link}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="btn btn-repo"
+					>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<polygon points="12 2 15 12 22 12 17 19 20 2 12 2"></polygon>
+						</svg>
+						View Repo
+					</a>
+				{/if}
 				<button
 					class="btn btn-secondary"
 					on:click={showPresentationModalHandler}
@@ -425,6 +438,15 @@
 	.btn-secondary {
 		background-color: #2c2e33;
 		color: #f0f0f0;
+	}
+
+	.btn-repo {
+		background-color: #6e5494; /* GitHub purple */
+		color: white;
+	}
+
+	.btn-repo:hover {
+		background-color: #5c477e; /* Darker GitHub purple */
 	}
 
 	.btn-primary {

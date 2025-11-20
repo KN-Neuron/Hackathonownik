@@ -39,6 +39,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			teamId: presentation.expand?.team?.id,
 			created: presentation.created,
 			updated: presentation.updated,
+			repo_link: presentation.repo_link || null,
 			// Use our secure API endpoint to access the presentation file
 			presentationUrl: `/api/presentations/${presentation.id}`
 		}));
