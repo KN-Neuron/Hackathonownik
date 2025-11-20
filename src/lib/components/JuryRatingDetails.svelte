@@ -23,7 +23,7 @@
 			}
 
 			const data = await response.json();
-			ratings = data.ratings || [];
+			ratings = data.ratings ?? [];
 		} catch (err) {
 			console.error('Error fetching rating details:', err);
 			error = err instanceof Error ? err.message : 'An error occurred';

@@ -1,7 +1,5 @@
 <script>
 	import '../../app.css';
-	import { pb } from '$lib/pocketbase.svelte';
-	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
 
 	let email = $state('');

@@ -39,7 +39,7 @@ async function checkRouteAccess(
 	user: any,
 	pb: TypedPocketBase
 ): Promise<boolean> {
-	const publicRoutes = ['/login', '/register', '/', '/logout'];
+	const publicRoutes = ['/login', '/'];
 	if (publicRoutes.includes(pathname)) {
 		return true;
 	}
@@ -89,7 +89,7 @@ async function checkRouteAccess(
 // ============================================
 
 export const handle: Handle = async ({ event, resolve }) => {
-	const pb = new PocketBase('https://frog01-32147.wykr.es/') as TypedPocketBase;
+	const pb = new PocketBase('http://aneta139.mikrus.xyz:20139/') as TypedPocketBase;
 
 	// Try to load session using our secure cookie first
 	const secureSession = SecureCookieHandler.getSessionFromCookie(event);
@@ -207,6 +207,19 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	event.locals.security = new Security(event);
 
+	// Set session cookie BEFORE resolving if auth is valid
+	// This must happen before resolve() to avoid "Cannot use cookies.set() after response generated" error
+	if (pb.authStore.isValid) {
+		SecureCookieHandler.setSessionCookie(
+			event,
+			{
+				token: pb.authStore.token,
+				model: pb.authStore.record
+			},
+			60 * 60 * 24 * 7 // 7 days
+		);
+	}
+
 	const response = await resolve(event, {
 		filterSerializedResponseHeaders(name) {
 			return (
@@ -222,18 +235,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 	Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
 		response.headers.set(key, value);
 	});
-
-	if (pb.authStore.isValid) {
-		// Use our secure cookie handler instead of direct PocketBase cookie export
-		SecureCookieHandler.setSessionCookie(
-			event,
-			{
-				token: pb.authStore.token,
-				model: pb.authStore.record
-			},
-			60 * 60 * 24 * 7 // 7 days
-		);
-	}
 
 	response.headers.set('X-RateLimit-Limit', '1000');
 	response.headers.set('X-RateLimit-Remaining', generalLimit.remaining.toString());
@@ -260,7 +261,7 @@ export const handleError = ({ error, event }) => {
 
 	// For security, return generic error message to client
 	return {
-		message: isDev ? (error?.message || 'An error occurred') : 'An error occurred',
+		message: isDev ? error?.message || 'An error occurred' : 'An error occurred',
 		code: error?.code ?? 'UNKNOWN'
 	};
 };
