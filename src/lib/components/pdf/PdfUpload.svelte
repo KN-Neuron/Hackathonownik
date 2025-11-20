@@ -7,9 +7,10 @@
 		uploadUrl?: string;
 		csrfToken?: string;
 		repoLink?: string;
+		videoLink?: string;
 	}
 
-	let { multiple = false, uploadUrl = '', csrfToken = '', repoLink = '' }: Props = $props();
+	let { multiple = false, uploadUrl = '', csrfToken = '', repoLink = '', videoLink = '' }: Props = $props();
 
 	const dispatch = createEventDispatcher();
 
@@ -231,6 +232,11 @@
 					// Add repo_link if provided
 					if (repoLink) {
 						formData.set('repo_link', repoLink);
+					}
+
+					// Add video_link if provided
+					if (videoLink) {
+						formData.set('video_link', videoLink);
 					}
 
 					// CSRF token już jest w hidden input

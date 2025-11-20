@@ -12,6 +12,7 @@
 
 	let selectedFiles = $state([]);
 	let repoLink = $state('');
+	let videoLink = $state('');
 	let showPresentationModal = $state(false);
 	let fullscreenMode = $state(false);
 	let showDeadlineMessage = $state(false);
@@ -71,6 +72,7 @@
 							uploadUrl="?/upload"
 							csrfToken={data.csrfToken}
 							repoLink={repoLink}
+							videoLink={videoLink}
 							on:files={handleFiles}
 						/>
 
@@ -105,6 +107,19 @@
 						/>
 						<p class="repo-help">Provide a link to your project's source code repository (e.g., GitHub, GitLab)</p>
 					</div>
+
+					<div class="repo-link-section">
+						<label for="video_link" class="repo-label">Video Link (Optional)</label>
+						<input
+							type="url"
+							id="video_link"
+							name="video_link"
+							placeholder="https://youtube.com/watch?v=..."
+							bind:value={videoLink}
+							class="repo-input"
+						/>
+						<p class="repo-help">Provide a link to your project's demo video (e.g., YouTube, Vimeo)</p>
+					</div>
 				</form>
 
 				<div class="guidelines">
@@ -116,6 +131,7 @@
 						<li>Your latest upload will replace any previous uploads</li>
 						<li>Maximum 5 presentations per team</li>
 						<li>Repository link is optional but recommended for jury review</li>
+						<li>Video link is optional but recommended to showcase your project demo</li>
 					</ul>
 				</div>
 			</div>

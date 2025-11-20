@@ -42,6 +42,7 @@ export interface Presentation {
 	updated: string;
 	presentation: string;
 	repo_link?: string | null;
+	video_link?: string | null;
 	expand?: {
 		team?: {
 			id: string;

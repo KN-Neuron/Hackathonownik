@@ -28,12 +28,9 @@
 				{ href: '/ranking', label: 'Rankings' }
 			);
 		}
-		// Participant can ONLY see upload; presentation viewing and ranking are controlled by server
+		// Participant can ONLY see upload
 		else if (user.role === 'participant' || user.team) {
 			links.push({ href: '/upload', label: 'Upload Presentation' });
-			// Note: Server-side logic determines if these are actually accessible
-			links.push({ href: '/presentations', label: 'View Presentations' });
-			links.push({ href: '/ranking', label: 'Rankings' });
 		}
 
 		// Everyone who is logged in can logout

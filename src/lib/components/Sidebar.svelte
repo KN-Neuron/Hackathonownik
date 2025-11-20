@@ -3,6 +3,7 @@
 	import { IconNames } from '$lib/utils/utils';
 	import { page } from '$app/stores';
 
+	let user = $derived($page.data.user);
 	let isAuthenticated = $derived($page.data.user?.id);
 
 	const { open = false } = $props();
@@ -20,19 +21,41 @@
 			<a class="nav-link" href="/" class:active={$page.url.pathname === '/'}>
 				<SidebarElement icon={IconNames.Home} text="Home" />
 			</a>
-			<a
-				class="nav-link"
-				href="/rate_presentation"
-				class:active={$page.url.pathname === '/rate_presentation'}
-			>
-				<SidebarElement icon={IconNames.Rate} text="Rate" />
-			</a>
-			<a class="nav-link" href="/ranking" class:active={$page.url.pathname === '/ranking'}>
-				<SidebarElement icon={IconNames.Ranking} text="Ranking" />
-			</a>
-			<a class="nav-link" href="/upload" class:active={$page.url.pathname === '/upload'}>
-				<SidebarElement icon={IconNames.Upload} text="Upload" />
-			</a>
+
+			{#if user?.admin}
+				<!-- Admin sees admin dashboard only -->
+				<a
+					class="nav-link"
+					href="/admin/dashboard"
+					class:active={$page.url.pathname.startsWith('/admin/dashboard')}
+				>
+					<SidebarElement icon={IconNames.Stats} text="Admin Dashboard" />
+				</a>
+			{:else if user?.role === 'jury'}
+				<!-- Jury can see presentations, rate, and rankings -->
+				<a
+					class="nav-link"
+					href="/presentations"
+					class:active={$page.url.pathname === '/presentations'}
+				>
+					<SidebarElement icon={IconNames.Info} text="View Presentations" />
+				</a>
+				<a
+					class="nav-link"
+					href="/rate_presentation"
+					class:active={$page.url.pathname === '/rate_presentation'}
+				>
+					<SidebarElement icon={IconNames.Rate} text="Rate Presentations" />
+				</a>
+				<a class="nav-link" href="/ranking" class:active={$page.url.pathname === '/ranking'}>
+					<SidebarElement icon={IconNames.Ranking} text="Rankings" />
+				</a>
+			{:else if user?.role === 'participant' || user?.team}
+				<!-- Participants can only upload -->
+				<a class="nav-link" href="/upload" class:active={$page.url.pathname === '/upload'}>
+					<SidebarElement icon={IconNames.Upload} text="Upload Presentation" />
+				</a>
+			{/if}
 			<!-- <form method="get" action="/logout" style="display:inline"> -->
 			<!-- 	<button class="btn" type="submit">Logout</button> -->
 			<!-- </form> -->

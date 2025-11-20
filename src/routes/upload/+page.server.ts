@@ -44,6 +44,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const file = formData.get('file') as File;
 		const repoLink = formData.get('repo_link') as string;
+		const videoLink = formData.get('video_link') as string;
 		const csrfToken = formData.get('csrf_token') as string;
 
 		// Validate repo link if provided
@@ -54,6 +55,18 @@ export const actions: Actions = {
 				return {
 					success: false,
 					message: 'Invalid repository link provided. Please enter a valid URL.'
+				};
+			}
+		}
+
+		// Validate video link if provided
+		if (videoLink) {
+			try {
+				new URL(videoLink); // This will throw an error if not a valid URL
+			} catch (e) {
+				return {
+					success: false,
+					message: 'Invalid video link provided. Please enter a valid URL.'
 				};
 			}
 		}
@@ -118,6 +131,10 @@ export const actions: Actions = {
 			// Add repo_link if provided
 			if (repoLink) {
 				uploadData.append('repo_link', repoLink);
+			}
+			// Add video_link if provided
+			if (videoLink) {
+				uploadData.append('video_link', videoLink);
 			}
 
 			// Use admin client for upload

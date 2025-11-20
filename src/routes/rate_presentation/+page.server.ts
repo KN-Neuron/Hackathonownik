@@ -13,6 +13,7 @@ export interface TeamWithPresentationUrl {
 	updated: string;
 	presentationUrl: string | null;
 	repo_link?: string | null;
+	video_link?: string | null;
 	ratingsCount?: number;
 	isRatedByCurrentJury?: boolean;
 	totalJuries?: number;
@@ -56,8 +57,9 @@ export const load = async ({ locals }) => {
 		for (const pres of newestPresentations) {
 			const team = await pb.collection('teams').getOne(pres.team);
 
+			// Use secure API endpoint instead of direct PocketBase URL
 			const presentationUrl = pres.presentation
-				? `http://aneta139.mikrus.xyz:20139/api/files/${pres.collectionName}/${pres.id}/${pres.presentation}`
+				? `/api/presentations/${pres.id}`
 				: null;
 
 			const ratingsForTeam = await pb.collection('ratings').getList(1, 1000, {
@@ -82,6 +84,7 @@ export const load = async ({ locals }) => {
 				...team,
 				presentationUrl,
 				repo_link: pres.repo_link || null,
+				video_link: pres.video_link || null,
 				ratingsCount,
 				isRatedByCurrentJury,
 				totalJuries,
