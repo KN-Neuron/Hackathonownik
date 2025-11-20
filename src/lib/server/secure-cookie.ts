@@ -1,15 +1,54 @@
 import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
 import type { RequestEvent } from '@sveltejs/kit';
 
-const ENCRYPTION_KEY = process.env.COOKIE_ENCRYPTION_KEY || randomBytes(32);
 const IV_LENGTH = 16; // For AES-256-CBC
+
+/**
+ * Get encryption key from environment variable
+ * Key should be a 32-byte random value encoded as base64 or hex
+ * Generate with: openssl rand -base64 32
+ */
+function getEncryptionKey(): Buffer {
+	const key = process.env.COOKIE_ENCRYPTION_KEY;
+
+	if (!key) {
+		throw new Error(
+			'COOKIE_ENCRYPTION_KEY is not defined in environment variables. ' +
+			'Generate one with: openssl rand -base64 32'
+		);
+	}
+
+	// Try to decode as base64 first (recommended)
+	try {
+		const buffer = Buffer.from(key, 'base64');
+		if (buffer.length === 32) {
+			return buffer;
+		}
+	} catch (e) {
+		// Not valid base64, try hex
+	}
+
+	// Try to decode as hex
+	try {
+		const buffer = Buffer.from(key, 'hex');
+		if (buffer.length === 32) {
+			return buffer;
+		}
+	} catch (e) {
+		// Not valid hex
+	}
+
+	// If neither works, throw error
+	throw new Error(
+		'COOKIE_ENCRYPTION_KEY must be a 32-byte (256-bit) key encoded as base64 or hex. ' +
+		'Current key length: ' + (key.length) + ' characters. ' +
+		'Generate a proper key with: openssl rand -base64 32'
+	);
+}
 
 export class SecureCookieHandler {
 	private static readonly COOKIE_NAME = 'secure_auth_session';
-	private static readonly ENCRYPTION_KEY = Buffer.from(
-		process.env.COOKIE_ENCRYPTION_KEY?.padEnd(32, '\0') || randomBytes(32).toString('hex').substring(0, 32),
-		'utf8'
-	).slice(0, 32); // Ensure it's exactly 32 bytes for AES-256
+	private static readonly ENCRYPTION_KEY = getEncryptionKey();
 
 	// Encrypt and store PocketBase session data
 	static encryptSession(sessionData: any): string {
