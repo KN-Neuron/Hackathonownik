@@ -94,7 +94,7 @@ export const actions: Actions = {
 			uploadData.append('presentation', file);
 
 			// Use admin client for upload
-			const adminClient = new PocketBase('https://frog01-32147.wykr.es/');
+			const adminClient = new PocketBase('http://aneta139.mikrus.xyz:20139/');
 
 			// Get credentials from environment variables - ensure they are properly set
 			const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL;
@@ -102,10 +102,13 @@ export const actions: Actions = {
 
 			// Validate that admin credentials are properly configured
 			if (!adminEmail || !adminPassword) {
-				console.error('Missing admin credentials in environment variables. Please set POCKETBASE_ADMIN_EMAIL and POCKETBASE_ADMIN_PASSWORD');
+				console.error(
+					'Missing admin credentials in environment variables. Please set POCKETBASE_ADMIN_EMAIL and POCKETBASE_ADMIN_PASSWORD'
+				);
 				return {
 					success: false,
-					message: 'Server configuration error: Missing admin credentials. Please contact the administrator to set up the required environment variables.'
+					message:
+						'Server configuration error: Missing admin credentials. Please contact the administrator to set up the required environment variables.'
 				};
 			}
 

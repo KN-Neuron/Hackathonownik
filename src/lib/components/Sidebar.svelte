@@ -33,9 +33,9 @@
 			<a class="nav-link" href="/upload" class:active={$page.url.pathname === '/upload'}>
 				<SidebarElement icon={IconNames.Upload} text="Upload" />
 			</a>
-			<form method="get" action="/logout" style="display:inline">
-				<button class="btn" type="submit">Logout</button>
-			</form>
+			<!-- <form method="get" action="/logout" style="display:inline"> -->
+			<!-- 	<button class="btn" type="submit">Logout</button> -->
+			<!-- </form> -->
 		{:else}
 			<a class="nav-link" href="/login" class:active={$page.url.pathname === '/login'}>
 				<SidebarElement icon={IconNames.Login} text="Login" />

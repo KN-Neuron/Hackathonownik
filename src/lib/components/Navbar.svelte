@@ -37,7 +37,7 @@
 		}
 
 		// Everyone who is logged in can logout
-		links.push({ href: '/logout', label: 'Logout' });
+		// links.push({ href: '/logout', label: 'Logout' });
 
 		return links;
 	});

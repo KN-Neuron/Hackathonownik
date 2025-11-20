@@ -26,7 +26,6 @@ export const load = async ({ locals }) => {
 		});
 		const totalJuries = juriesResult.totalItems;
 
-		
 		const validJuryIds = new Set();
 		juriesResult.items.forEach((user) => {
 			validJuryIds.add(user.id);
@@ -48,25 +47,21 @@ export const load = async ({ locals }) => {
 			const team = await pb.collection('teams').getOne(pres.team);
 
 			const presentationUrl = pres.presentation
-				? `https://frog01-32147.wykr.es/api/files/${pres.collectionName}/${pres.id}/${pres.presentation}`
+				? `http://aneta139.mikrus.xyz:20139/api/files/${pres.collectionName}/${pres.id}/${pres.presentation}`
 				: null;
-
 
 			const ratingsForTeam = await pb.collection('ratings').getList(1, 1000, {
 				filter: `team="${team.id}"`,
 				expand: 'jury'
 			});
 
-
 			const uniqueJuries = new Set();
 			ratingsForTeam.items.forEach((rating) => {
-
 				if (rating.jury && validJuryIds.has(rating.jury)) {
 					uniqueJuries.add(rating.jury);
 				}
 			});
 			const ratingsCount = uniqueJuries.size;
-
 
 			const isRatedByCurrentJury = ratingsForTeam.items.some((r) => r.jury === locals.user.id);
 
