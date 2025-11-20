@@ -18,9 +18,7 @@
 		// Admin sees admin dashboard only (admins don't typically upload/rate)
 		// Note: Server-side validation in hooks.server.ts ensures actual access control
 		if (user.admin) {
-			links.push(
-				{ href: '/admin/dashboard', label: 'Admin Dashboard' }
-			);
+			links.push({ href: '/admin/dashboard', label: 'Admin Dashboard' });
 		}
 		// Jury can see rate_presentation, presentations, and rankings at all times
 		else if (user.role === 'jury') {

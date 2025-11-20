@@ -55,16 +55,21 @@
 		return blocks;
 	}
 
-	function getScoreWidth(score) {
-		return score ? `${score * 10}%` : '0%';
+	// Calculate width based on max score for each metric
+	function getScoreWidth(score, maxScore = 5) {
+		if (!score) return '0%';
+		const percentage = (score / maxScore) * 100;
+		return `${Math.min(percentage, 100)}%`;
 	}
 
-	function getScoreColor(score) {
+	// Color based on percentage of max score
+	function getScoreColor(score, maxScore = 5) {
 		if (!score) return '#555';
-		if (score >= 9) return '#36c399';
-		if (score >= 7) return '#f7a654';
-		if (score >= 5) return '#e85c90';
-		return '#555';
+		const percentage = (score / maxScore) * 100;
+		if (percentage >= 90) return '#36c399'; // Green for 90%+
+		if (percentage >= 70) return '#f7a654'; // Orange for 70%+
+		if (percentage >= 50) return '#e85c90'; // Pink for 50%+
+		return '#555'; // Gray for < 50%
 	}
 
 	async function getPresentationFiles(team) {
@@ -87,6 +92,21 @@
 			loadingPresentation = false;
 		}
 	}
+
+	// Calculate final grade from individual scores
+	function calculateFinalGrade() {
+		const hasAllScores =
+			team.innowacyjnosc != null &&
+			team.uzytecznosc != null &&
+			team.prezentacja_koncowa != null &&
+			team.jakosc_implementacji != null;
+
+		if (!hasAllScores) return null;
+
+		return team.innowacyjnosc + team.uzytecznosc + team.prezentacja_koncowa + team.jakosc_implementacji;
+	}
+
+	$: finalGrade = calculateFinalGrade();
 </script>
 
 <div class="team-card">
@@ -128,12 +148,13 @@
 				<div class="metric-bar">
 					<div
 						class="metric-fill"
-						style="width: {getScoreWidth(team.innowacyjnosc)}; background-color: {getScoreColor(
-							team.innowacyjnosc
+						style="width: {getScoreWidth(team.innowacyjnosc, 5)}; background-color: {getScoreColor(
+							team.innowacyjnosc,
+							5
 						)}"
 					></div>
 				</div>
-				<div class="metric-value">{team.innowacyjnosc || '-'}</div>
+				<div class="metric-value">{team.innowacyjnosc != null ? `${team.innowacyjnosc}/5` : '-'}</div>
 			</div>
 
 			<div class="metric">
@@ -141,12 +162,13 @@
 				<div class="metric-bar">
 					<div
 						class="metric-fill"
-						style="width: {getScoreWidth(team.uzytecznosc)}; background-color: {getScoreColor(
-							team.uzytecznosc
+						style="width: {getScoreWidth(team.uzytecznosc, 5)}; background-color: {getScoreColor(
+							team.uzytecznosc,
+							5
 						)}"
 					></div>
 				</div>
-				<div class="metric-value">{team.uzytecznosc || '-'}</div>
+				<div class="metric-value">{team.uzytecznosc != null ? `${team.uzytecznosc}/5` : '-'}</div>
 			</div>
 
 			<div class="metric">
@@ -154,12 +176,13 @@
 				<div class="metric-bar">
 					<div
 						class="metric-fill"
-						style="width: {getScoreWidth(
-							team.prezentacja_koncowa
-						)}; background-color: {getScoreColor(team.prezentacja_koncowa)}"
+						style="width: {getScoreWidth(team.prezentacja_koncowa, 5)}; background-color: {getScoreColor(
+							team.prezentacja_koncowa,
+							5
+						)}"
 					></div>
 				</div>
-				<div class="metric-value">{team.prezentacja_koncowa || '-'}</div>
+				<div class="metric-value">{team.prezentacja_koncowa != null ? `${team.prezentacja_koncowa}/5` : '-'}</div>
 			</div>
 
 			<div class="metric">
@@ -167,12 +190,13 @@
 				<div class="metric-bar">
 					<div
 						class="metric-fill"
-						style="width: {getScoreWidth(
-							team.jakosc_implementacji
-						)}; background-color: {getScoreColor(team.jakosc_implementacji)}"
+						style="width: {getScoreWidth(team.jakosc_implementacji, 10)}; background-color: {getScoreColor(
+							team.jakosc_implementacji,
+							10
+						)}"
 					></div>
 				</div>
-				<div class="metric-value">{team.jakosc_implementacji || '-'}</div>
+				<div class="metric-value">{team.jakosc_implementacji != null ? `${team.jakosc_implementacji}/10` : '-'}</div>
 			</div>
 		</div>
 
@@ -180,7 +204,7 @@
 			<div class="grade-section">
 				<div class="grade">
 					<span class="grade-label">Final Grade:</span>
-					<span class="grade-value">{team.ocena || '-'}</span>
+					<span class="grade-value">{finalGrade != null ? `${finalGrade}/25` : '-'}</span>
 				</div>
 
 				<!-- Rating Status Section -->
@@ -303,11 +327,12 @@
 	}
 
 	.metric-value {
-		width: 20px;
-		font-size: 14px;
+		min-width: 45px;
+		font-size: 13px;
 		font-weight: 600;
 		color: #f0f0f0;
 		text-align: right;
+		white-space: nowrap;
 	}
 
 	.team-footer {
