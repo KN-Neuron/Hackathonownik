@@ -20,7 +20,17 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
 	upload: async ({ request, locals }) => {
-		// 1. Authentication check (without CSRF validation yet)
+		// 1. Check deadline (12:00 PM on 30.11.2025)
+		const deadline = new Date('2025-11-30T12:00:00');
+		const now = new Date();
+		if (now > deadline) {
+			return {
+				success: false,
+				message: 'Submission deadline has passed. Presentations can no longer be submitted after November 30, 2025 at 12:00 PM.'
+			};
+		}
+
+		// 2. Authentication check (without CSRF validation yet)
 		try {
 			locals.security.isAuthenticated();
 		} catch (e: any) {
@@ -30,12 +40,38 @@ export const actions: Actions = {
 			};
 		}
 
-		// 2. Get form data first
+		// 3. Get form data first
 		const formData = await request.formData();
 		const file = formData.get('file') as File;
+		const repoLink = formData.get('repo_link') as string;
+		const videoLink = formData.get('video_link') as string;
 		const csrfToken = formData.get('csrf_token') as string;
 
-		// 3. CSRF token validation - NOW we can validate because we have the token
+		// Validate repo link if provided
+		if (repoLink) {
+			try {
+				new URL(repoLink); // This will throw an error if not a valid URL
+			} catch (e) {
+				return {
+					success: false,
+					message: 'Invalid repository link provided. Please enter a valid URL.'
+				};
+			}
+		}
+
+		// Validate video link if provided
+		if (videoLink) {
+			try {
+				new URL(videoLink); // This will throw an error if not a valid URL
+			} catch (e) {
+				return {
+					success: false,
+					message: 'Invalid video link provided. Please enter a valid URL.'
+				};
+			}
+		}
+
+		// 4. CSRF token validation - NOW we can validate because we have the token
 		const cookieToken = locals.csrfToken;
 		if (!cookieToken || !csrfToken || cookieToken !== csrfToken) {
 			return {
@@ -44,7 +80,7 @@ export const actions: Actions = {
 			};
 		}
 
-		// 4. Validate file presence
+		// 5. Validate file presence
 		if (!file || file.size === 0) {
 			return {
 				success: false,
@@ -52,7 +88,7 @@ export const actions: Actions = {
 			};
 		}
 
-		// 5. Comprehensive file validation
+		// 6. Comprehensive file validation
 		const validation = await FileUploadSecurity.validatePdfUpload(file);
 		if (!validation.valid) {
 			return {
@@ -61,7 +97,7 @@ export const actions: Actions = {
 			};
 		}
 
-		// 6. Check team association
+		// 7. Check team association
 		const teamId = locals.user?.team;
 		if (!teamId) {
 			return {
@@ -70,7 +106,7 @@ export const actions: Actions = {
 			};
 		}
 
-		// 7. Check if team already has too many presentations (prevent spam)
+		// 8. Check if team already has too many presentations (prevent spam)
 		try {
 			const existingPresentations = await locals.pb.collection('presentations').getFullList({
 				filter: `team = "${teamId}"`
@@ -87,14 +123,22 @@ export const actions: Actions = {
 			console.error('Error checking existing presentations:', e);
 		}
 
-		// 8. Upload file using admin credentials
+		// 9. Upload file using admin credentials
 		try {
 			const uploadData = new FormData();
 			uploadData.append('team', teamId);
 			uploadData.append('presentation', file);
+			// Add repo_link if provided
+			if (repoLink) {
+				uploadData.append('repo_link', repoLink);
+			}
+			// Add video_link if provided
+			if (videoLink) {
+				uploadData.append('video_link', videoLink);
+			}
 
 			// Use admin client for upload
-			const adminClient = new PocketBase('https://frog01-32147.wykr.es/');
+			const adminClient = new PocketBase('http://aneta139.mikrus.xyz:20139/');
 
 			// Get credentials from environment variables - ensure they are properly set
 			const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL;
@@ -102,10 +146,13 @@ export const actions: Actions = {
 
 			// Validate that admin credentials are properly configured
 			if (!adminEmail || !adminPassword) {
-				console.error('Missing admin credentials in environment variables. Please set POCKETBASE_ADMIN_EMAIL and POCKETBASE_ADMIN_PASSWORD');
+				console.error(
+					'Missing admin credentials in environment variables. Please set POCKETBASE_ADMIN_EMAIL and POCKETBASE_ADMIN_PASSWORD'
+				);
 				return {
 					success: false,
-					message: 'Server configuration error: Missing admin credentials. Please contact the administrator to set up the required environment variables.'
+					message:
+						'Server configuration error: Missing admin credentials. Please contact the administrator to set up the required environment variables.'
 				};
 			}
 

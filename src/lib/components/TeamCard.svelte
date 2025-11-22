@@ -55,16 +55,21 @@
 		return blocks;
 	}
 
-	function getScoreWidth(score) {
-		return score ? `${score * 10}%` : '0%';
+	// Calculate width based on max score for each metric
+	function getScoreWidth(score, maxScore = 5) {
+		if (!score) return '0%';
+		const percentage = (score / maxScore) * 100;
+		return `${Math.min(percentage, 100)}%`;
 	}
 
-	function getScoreColor(score) {
+	// Color based on percentage of max score
+	function getScoreColor(score, maxScore = 5) {
 		if (!score) return '#555';
-		if (score >= 9) return '#36c399';
-		if (score >= 7) return '#f7a654';
-		if (score >= 5) return '#e85c90';
-		return '#555';
+		const percentage = (score / maxScore) * 100;
+		if (percentage >= 90) return '#36c399'; // Green for 90%+
+		if (percentage >= 70) return '#f7a654'; // Orange for 70%+
+		if (percentage >= 50) return '#e85c90'; // Pink for 50%+
+		return '#555'; // Gray for < 50%
 	}
 
 	async function getPresentationFiles(team) {
@@ -87,6 +92,21 @@
 			loadingPresentation = false;
 		}
 	}
+
+	// Calculate final grade from individual scores
+	function calculateFinalGrade() {
+		const hasAllScores =
+			team.innowacyjnosc != null &&
+			team.uzytecznosc != null &&
+			team.prezentacja_koncowa != null &&
+			team.jakosc_implementacji != null;
+
+		if (!hasAllScores) return null;
+
+		return team.innowacyjnosc + team.uzytecznosc + team.prezentacja_koncowa + team.jakosc_implementacji;
+	}
+
+	$: finalGrade = calculateFinalGrade();
 </script>
 
 <div class="team-card">
@@ -128,12 +148,13 @@
 				<div class="metric-bar">
 					<div
 						class="metric-fill"
-						style="width: {getScoreWidth(team.innowacyjnosc)}; background-color: {getScoreColor(
-							team.innowacyjnosc
+						style="width: {getScoreWidth(team.innowacyjnosc, 5)}; background-color: {getScoreColor(
+							team.innowacyjnosc,
+							5
 						)}"
 					></div>
 				</div>
-				<div class="metric-value">{team.innowacyjnosc || '-'}</div>
+				<div class="metric-value">{team.innowacyjnosc != null ? `${team.innowacyjnosc}/5` : '-'}</div>
 			</div>
 
 			<div class="metric">
@@ -141,12 +162,13 @@
 				<div class="metric-bar">
 					<div
 						class="metric-fill"
-						style="width: {getScoreWidth(team.uzytecznosc)}; background-color: {getScoreColor(
-							team.uzytecznosc
+						style="width: {getScoreWidth(team.uzytecznosc, 5)}; background-color: {getScoreColor(
+							team.uzytecznosc,
+							5
 						)}"
 					></div>
 				</div>
-				<div class="metric-value">{team.uzytecznosc || '-'}</div>
+				<div class="metric-value">{team.uzytecznosc != null ? `${team.uzytecznosc}/5` : '-'}</div>
 			</div>
 
 			<div class="metric">
@@ -154,12 +176,13 @@
 				<div class="metric-bar">
 					<div
 						class="metric-fill"
-						style="width: {getScoreWidth(
-							team.prezentacja_koncowa
-						)}; background-color: {getScoreColor(team.prezentacja_koncowa)}"
+						style="width: {getScoreWidth(team.prezentacja_koncowa, 5)}; background-color: {getScoreColor(
+							team.prezentacja_koncowa,
+							5
+						)}"
 					></div>
 				</div>
-				<div class="metric-value">{team.prezentacja_koncowa || '-'}</div>
+				<div class="metric-value">{team.prezentacja_koncowa != null ? `${team.prezentacja_koncowa}/5` : '-'}</div>
 			</div>
 
 			<div class="metric">
@@ -167,12 +190,13 @@
 				<div class="metric-bar">
 					<div
 						class="metric-fill"
-						style="width: {getScoreWidth(
-							team.jakosc_implementacji
-						)}; background-color: {getScoreColor(team.jakosc_implementacji)}"
+						style="width: {getScoreWidth(team.jakosc_implementacji, 10)}; background-color: {getScoreColor(
+							team.jakosc_implementacji,
+							10
+						)}"
 					></div>
 				</div>
-				<div class="metric-value">{team.jakosc_implementacji || '-'}</div>
+				<div class="metric-value">{team.jakosc_implementacji != null ? `${team.jakosc_implementacji}/10` : '-'}</div>
 			</div>
 		</div>
 
@@ -180,7 +204,7 @@
 			<div class="grade-section">
 				<div class="grade">
 					<span class="grade-label">Final Grade:</span>
-					<span class="grade-value">{team.ocena || '-'}</span>
+					<span class="grade-value">{finalGrade != null ? `${finalGrade}/25` : '-'}</span>
 				</div>
 
 				<!-- Rating Status Section -->
@@ -196,6 +220,32 @@
 			</div>
 
 			<div class="function-buttons">
+				{#if team.repo_link}
+					<a
+						href={team.repo_link}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="btn btn-repo"
+					>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+						</svg>
+						Repository
+					</a>
+				{/if}
+				{#if team.video_link}
+					<a
+						href={team.video_link}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="btn btn-video"
+					>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<polygon points="5 3 19 12 5 21 5 3"></polygon>
+						</svg>
+						Video Demo
+					</a>
+				{/if}
 				<button
 					class="btn btn-secondary"
 					on:click={showPresentationModalHandler}
@@ -303,11 +353,12 @@
 	}
 
 	.metric-value {
-		width: 20px;
-		font-size: 14px;
+		min-width: 45px;
+		font-size: 13px;
 		font-weight: 600;
 		color: #f0f0f0;
 		text-align: right;
+		white-space: nowrap;
 	}
 
 	.team-footer {
@@ -400,6 +451,24 @@
 	.btn-secondary {
 		background-color: #2c2e33;
 		color: #f0f0f0;
+	}
+
+	.btn-repo {
+		background-color: #6e5494; /* GitHub purple */
+		color: white;
+	}
+
+	.btn-repo:hover {
+		background-color: #5c477e; /* Darker GitHub purple */
+	}
+
+	.btn-video {
+		background-color: #ff0000; /* YouTube red */
+		color: white;
+	}
+
+	.btn-video:hover {
+		background-color: #cc0000; /* Darker YouTube red */
 	}
 
 	.btn-primary {

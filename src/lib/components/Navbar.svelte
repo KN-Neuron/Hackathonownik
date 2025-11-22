@@ -18,9 +18,7 @@
 		// Admin sees admin dashboard only (admins don't typically upload/rate)
 		// Note: Server-side validation in hooks.server.ts ensures actual access control
 		if (user.admin) {
-			links.push(
-				{ href: '/admin/dashboard', label: 'Admin Dashboard' }
-			);
+			links.push({ href: '/admin/dashboard', label: 'Admin Dashboard' });
 		}
 		// Jury can see rate_presentation, presentations, and rankings at all times
 		else if (user.role === 'jury') {
@@ -30,16 +28,13 @@
 				{ href: '/ranking', label: 'Rankings' }
 			);
 		}
-		// Participant can ONLY see upload; presentation viewing and ranking are controlled by server
+		// Participant can ONLY see upload
 		else if (user.role === 'participant' || user.team) {
 			links.push({ href: '/upload', label: 'Upload Presentation' });
-			// Note: Server-side logic determines if these are actually accessible
-			links.push({ href: '/presentations', label: 'View Presentations' });
-			links.push({ href: '/ranking', label: 'Rankings' });
 		}
 
 		// Everyone who is logged in can logout
-		links.push({ href: '/logout', label: 'Logout' });
+		// links.push({ href: '/logout', label: 'Logout' });
 
 		return links;
 	});

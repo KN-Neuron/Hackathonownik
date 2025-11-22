@@ -12,6 +12,17 @@ export interface TeamWithPresentationUrl {
 	team: string;
 	updated: string;
 	presentationUrl: string | null;
+	repo_link?: string | null;
+	video_link?: string | null;
+	ratingsCount?: number;
+	isRatedByCurrentJury?: boolean;
+	totalJuries?: number;
+	innowacyjnosc?: number | null;
+	uzytecznosc?: number | null;
+	prezentacja_koncowa?: number | null;
+	jakosc_implementacji?: number | null;
+	ocena?: number | null;
+	name?: string;  // for team name
 }
 
 export const load = async ({ locals }) => {
@@ -26,7 +37,6 @@ export const load = async ({ locals }) => {
 		});
 		const totalJuries = juriesResult.totalItems;
 
-		
 		const validJuryIds = new Set();
 		juriesResult.items.forEach((user) => {
 			validJuryIds.add(user.id);
@@ -47,26 +57,23 @@ export const load = async ({ locals }) => {
 		for (const pres of newestPresentations) {
 			const team = await pb.collection('teams').getOne(pres.team);
 
+			// Use secure API endpoint instead of direct PocketBase URL
 			const presentationUrl = pres.presentation
-				? `https://frog01-32147.wykr.es/api/files/${pres.collectionName}/${pres.id}/${pres.presentation}`
+				? `/api/presentations/${pres.id}`
 				: null;
-
 
 			const ratingsForTeam = await pb.collection('ratings').getList(1, 1000, {
 				filter: `team="${team.id}"`,
 				expand: 'jury'
 			});
 
-
 			const uniqueJuries = new Set();
 			ratingsForTeam.items.forEach((rating) => {
-
 				if (rating.jury && validJuryIds.has(rating.jury)) {
 					uniqueJuries.add(rating.jury);
 				}
 			});
 			const ratingsCount = uniqueJuries.size;
-
 
 			const isRatedByCurrentJury = ratingsForTeam.items.some((r) => r.jury === locals.user.id);
 
@@ -76,6 +83,8 @@ export const load = async ({ locals }) => {
 			teams.push({
 				...team,
 				presentationUrl,
+				repo_link: pres.repo_link || null,
+				video_link: pres.video_link || null,
 				ratingsCount,
 				isRatedByCurrentJury,
 				totalJuries,
