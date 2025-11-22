@@ -119,11 +119,20 @@ export enum Role {
 	Participant = 'participant'
 }
 
+// PocketBase record ID format: 15 lowercase alphanumeric characters
+const POCKETBASE_ID_REGEX = /^[a-z0-9]{15}$/;
+
+export function isValidPocketBaseId(id: unknown): boolean {
+	return typeof id === 'string' && POCKETBASE_ID_REGEX.test(id);
+}
+
 export function validateRating(data: any): { valid: boolean; errors: string[] } {
 	const errors: string[] = [];
 
 	if (!data.teamId) {
 		errors.push('Team ID is required');
+	} else if (!isValidPocketBaseId(data.teamId)) {
+		errors.push('Team ID must be a valid 15-character alphanumeric string');
 	}
 
 	const standardRatingFields = ['innovation', 'usefulness', 'finalPresentation'];
@@ -133,6 +142,8 @@ export function validateRating(data: any): { valid: boolean; errors: string[] } 
 		const value = Number(data[field]);
 		if (isNaN(value)) {
 			errors.push(`${field} must be a number`);
+		} else if (value % 1 !== 0) {
+			errors.push(`${field} must be a whole number (no decimals)`);
 		} else if (value < validStandardRange.min || value > validStandardRange.max) {
 			errors.push(
 				`${field} must be between ${validStandardRange.min} and ${validStandardRange.max}`
@@ -143,11 +154,13 @@ export function validateRating(data: any): { valid: boolean; errors: string[] } 
 	const implValue = Number(data.implementation);
 	if (isNaN(implValue)) {
 		errors.push('implementation must be a number');
+	} else if (implValue % 1 !== 0) {
+		errors.push('implementation must be a whole number (no decimals)');
 	} else if (implValue < 1 || implValue > 10) {
 		errors.push('implementation must be between 1 and 10');
 	}
 
-	if (data.comments !== undefined && data.comments !== null && typeof data.comments !== 'string') {
+	if (data.comments !== undefined || data.comments !== null || typeof data.comments !== 'string') {
 		errors.push('Comments must be text');
 	}
 

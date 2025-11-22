@@ -13,13 +13,38 @@ interface RateLimitEntry {
 	blockUntil?: number;
 }
 
-class RateLimiter {
-	private store = new Map<string, RateLimitEntry>();
-	private cleanupInterval: NodeJS.Timeout;
+interface RateLimiterConfig {
+	maxRequests: number;       // Maksymalna liczba requestów w oknie czasowym
+	windowMs: number;          // Długość okna czasowego w ms
+	blockDurationMs: number;   // Czas blokady po przekroczeniu limitu w ms
+	cleanupIntervalMs: number; // Interwał czyszczenia wygasłych wpisów w ms
+}
 
-	constructor() {
-		// Cleanup co 5 minut
-		this.cleanupInterval = setInterval(() => this.cleanup(), 5 * 60 * 1000);
+class RateLimiter {
+	readonly store = new Map<string, RateLimitEntry>();
+	private cleanupInterval: NodeJS.Timeout;
+	private readonly config: RateLimiterConfig;
+
+	constructor(config: Partial<RateLimiterConfig> = {}) {
+		this.config = {
+			maxRequests: config.maxRequests ?? 100,
+			windowMs: config.windowMs ?? 60 * 1000,           // 1 minuta default
+			blockDurationMs: config.blockDurationMs ?? 15 * 60 * 1000, // 15 minut default
+			cleanupIntervalMs: config.cleanupIntervalMs ?? 5 * 60 * 1000 // 5 minut default
+		};
+
+		this.cleanupInterval = setInterval(
+			() => this.cleanup(),
+			this.config.cleanupIntervalMs
+		);
+	}
+
+	get maxRequests(): number {
+		return this.config.maxRequests;
+	}
+
+	get windowMs(): number {
+		return this.config.windowMs;
 	}
 
 	private cleanup() {
@@ -34,14 +59,10 @@ class RateLimiter {
 		}
 	}
 
-	check(
-		identifier: string,
-		maxRequests: number,
-		windowMs: number,
-		blockDurationMs: number = 15 * 60 * 1000 // 15 minut default
-	): { allowed: boolean; remaining: number; resetTime: number } {
+	check(identifier: string): { allowed: boolean; remaining: number; resetTime: number } {
 		const now = Date.now();
 		const entry = this.store.get(identifier);
+		const { maxRequests, windowMs, blockDurationMs } = this.config;
 
 		// Sprawdź czy jest zablokowany
 		if (entry?.blocked && entry.blockUntil && entry.blockUntil > now) {
@@ -100,12 +121,32 @@ class RateLimiter {
 	}
 }
 
-// Instancje rate limiterów
+// Instancje rate limiterów z konfiguracją
 export const rateLimiters = {
-	general: new RateLimiter(), // Ogólne requesty
-	auth: new RateLimiter(), // Login/auth endpoints
-	upload: new RateLimiter(), // Upload plików
-	api: new RateLimiter() // API calls
+	// Ogólne requesty: 100 req/min
+	general: new RateLimiter({
+		maxRequests: 100,
+		windowMs: 60 * 1000,          // 1 minuta
+		blockDurationMs: 5 * 60 * 1000 // 5 minut blokady
+	}),
+	// Login/auth: 5 prób/15 min (ochrona przed brute force)
+	auth: new RateLimiter({
+		maxRequests: 5,
+		windowMs: 15 * 60 * 1000,      // 15 minut
+		blockDurationMs: 30 * 60 * 1000 // 30 minut blokady
+	}),
+	// Upload plików: 10 uploadów/godz
+	upload: new RateLimiter({
+		maxRequests: 10,
+		windowMs: 60 * 60 * 1000,      // 1 godzina
+		blockDurationMs: 60 * 60 * 1000 // 1 godzina blokady
+	}),
+	// API calls: 200 req/min
+	api: new RateLimiter({
+		maxRequests: 200,
+		windowMs: 60 * 1000,           // 1 minuta
+		blockDurationMs: 10 * 60 * 1000 // 10 minut blokady
+	})
 };
 
 // ============================================
@@ -440,31 +481,25 @@ export class Security {
 	}
 
 	// Sprawdź rate limit - this checks and potentially increments the counter
-	// For idempotent checks that don't increment, use checkRateLimitWithoutIncrement
-	checkRateLimit(
-		type: 'general' | 'auth' | 'upload' | 'api',
-		maxRequests: number,
-		windowMs: number
-	): void {
+	// Limity są zdefiniowane przy konstrukcji rate limitera
+	checkRateLimit(type: 'general' | 'auth' | 'upload' | 'api'): void {
 		const identifier = this.getRateLimitIdentifier();
 		const checkKey = `${type}:${identifier}`;
+		const limiter = rateLimiters[type];
 
 		// Check if this specific rate limit check has already been performed in this request
 		if (this.rateLimitChecks.has(checkKey)) {
 			// Already checked, get current status without incrementing
-			const limiter = rateLimiters[type];
 			const now = Date.now();
 			const entry = limiter.store.get(identifier);
 
 			// If already blocked, reject
 			if (entry?.blocked && entry.blockUntil && entry.blockUntil > now) {
-				const retryAfter = Math.ceil((entry.blockUntil - Date.now()) / 1000);
 				error(429, 'Too many requests. Please try again later.');
 			}
 
 			// If already hit the limit in this window, reject
-			if (entry && entry.resetTime > now && entry.count >= maxRequests) {
-				const retryAfter = Math.ceil((entry.resetTime - Date.now()) / 1000);
+			if (entry && entry.resetTime > now && entry.count >= limiter.maxRequests) {
 				error(429, 'Too many requests. Please try again later.');
 			}
 
@@ -476,28 +511,22 @@ export class Security {
 		// Mark it as checked to prevent double counting in this request
 		this.rateLimitChecks.add(checkKey);
 
-		const limiter = rateLimiters[type];
-		const result = limiter.check(identifier, maxRequests, windowMs);
+		const result = limiter.check(identifier);
 
 		// Dodaj headery rate limit do response
 		this.event.setHeaders({
-			'X-RateLimit-Limit': maxRequests.toString(),
+			'X-RateLimit-Limit': limiter.maxRequests.toString(),
 			'X-RateLimit-Remaining': result.remaining.toString(),
 			'X-RateLimit-Reset': new Date(result.resetTime).toISOString()
 		});
 
 		if (!result.allowed) {
-			const retryAfter = Math.ceil((result.resetTime - Date.now()) / 1000);
 			error(429, 'Too many requests. Please try again later.');
 		}
 	}
 
 	// Check rate limit without incrementing the counter (for idempotent checks)
-	checkRateLimitWithoutIncrement(
-		type: 'general' | 'auth' | 'upload' | 'api',
-		maxRequests: number,
-		windowMs: number
-	): void {
+	checkRateLimitWithoutIncrement(type: 'general' | 'auth' | 'upload' | 'api'): void {
 		const identifier = this.getRateLimitIdentifier();
 		const limiter = rateLimiters[type];
 
@@ -512,13 +541,11 @@ export class Security {
 
 		// If already blocked, reject
 		if (entry.blocked && entry.blockUntil && entry.blockUntil > now) {
-			const retryAfter = Math.ceil((entry.blockUntil - Date.now()) / 1000);
 			error(429, 'Too many requests. Please try again later.');
 		}
 
 		// If count has reached max requests in current window, reject
-		if (entry.count >= maxRequests) {
-			const retryAfter = Math.ceil((entry.resetTime - Date.now()) / 1000);
+		if (entry.count >= limiter.maxRequests) {
 			error(429, 'Too many requests. Please try again later.');
 		}
 	}

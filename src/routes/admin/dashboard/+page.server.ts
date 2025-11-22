@@ -10,8 +10,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw error(403, 'Admin access required');
 	}
 
-	// Rate limit dla admin actions
-	locals.security.checkRateLimit('api', 100, 60 * 1000); // 100 requestów/minutę
+	// Rate limit dla admin actions (limity zdefiniowane w konfiguracji rate limitera)
+	locals.security.checkRateLimit('api');
 
 	try {
 		// Pobierz wszystkie dane dla admin panelu
