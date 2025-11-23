@@ -15,6 +15,9 @@ export default defineConfig({
 	define: {
 		global: 'globalThis'
 	},
+	server: {
+		allowedHosts: true
+	},
 	test: {
 		projects: [
 			{
