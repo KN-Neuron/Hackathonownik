@@ -494,14 +494,14 @@ export class Security {
 			const entry = limiter.store.get(identifier);
 
 			// If already blocked, reject
-			if (entry?.blocked && entry.blockUntil && entry.blockUntil > now) {
-				error(429, 'Too many requests. Please try again later.');
-			}
-
-			// If already hit the limit in this window, reject
-			if (entry && entry.resetTime > now && entry.count >= limiter.maxRequests) {
-				error(429, 'Too many requests. Please try again later.');
-			}
+			// if (entry?.blocked && entry.blockUntil && entry.blockUntil > now) {
+			// 	error(429, 'Too many requests. Please try again later.');
+			// }
+			//
+			// // If already hit the limit in this window, reject
+			// if (entry && entry.resetTime > now && entry.count >= limiter.maxRequests) {
+			// 	error(429, 'Too many requests. Please try again later.');
+			// }
 
 			// If not rate limited, return without incrementing
 			return;
@@ -520,9 +520,9 @@ export class Security {
 			'X-RateLimit-Reset': new Date(result.resetTime).toISOString()
 		});
 
-		if (!result.allowed) {
-			error(429, 'Too many requests. Please try again later.');
-		}
+		// if (!result.allowed) {
+		// 	error(429, 'Too many requests. Please try again later.');
+		// }
 	}
 
 	// Check rate limit without incrementing the counter (for idempotent checks)
@@ -540,14 +540,14 @@ export class Security {
 		}
 
 		// If already blocked, reject
-		if (entry.blocked && entry.blockUntil && entry.blockUntil > now) {
-			error(429, 'Too many requests. Please try again later.');
-		}
+		// if (entry.blocked && entry.blockUntil && entry.blockUntil > now) {
+		// 	error(429, 'Too many requests. Please try again later.');
+		// }
 
 		// If count has reached max requests in current window, reject
-		if (entry.count >= limiter.maxRequests) {
-			error(429, 'Too many requests. Please try again later.');
-		}
+		// if (entry.count >= limiter.maxRequests) {
+		// 	error(429, 'Too many requests. Please try again later.');
+		// }
 	}
 
 	// Walidacja CSRF

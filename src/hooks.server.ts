@@ -145,16 +145,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const requestsPerMinute = isDev ? 5000 : 2000; // More permissive in development
 	const generalLimit = rateLimiters.general.check(rateLimitKey, requestsPerMinute, 60 * 1000);
 
-	if (!generalLimit.allowed) {
-		const retryAfter = Math.ceil((generalLimit.resetTime - Date.now()) / 1000);
-		return new Response(JSON.stringify({ error: 'Too many requests', retryAfter }), {
-			status: 429,
-			headers: {
-				'Content-Type': 'application/json',
-				'Retry-After': retryAfter.toString()
-			}
-		});
-	}
+	// if (!generalLimit.allowed) {
+	// 	const retryAfter = Math.ceil((generalLimit.resetTime - Date.now()) / 1000);
+	// 	return new Response(JSON.stringify({ error: 'Too many requests', retryAfter }), {
+	// 		status: 429,
+	// 		headers: {
+	// 			'Content-Type': 'application/json',
+	// 			'Retry-After': retryAfter.toString()
+	// 		}
+	// 	});
+	// }
 
 	// CSRF Protection
 	// CRITICAL: Always get token from cookie and set in locals
@@ -197,13 +197,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 		const maxUploads = isDev ? 100 : 50; // More permissive in development
 		const uploadLimit = rateLimiters.upload.check(rateLimitKey, maxUploads, 5 * 60 * 1000);
 
-		if (!uploadLimit.allowed) {
-			const retryAfter = Math.ceil((uploadLimit.resetTime - Date.now()) / 1000);
-			return new Response(JSON.stringify({ error: 'Too many upload attempts', retryAfter }), {
-				status: 429,
-				headers: { 'Content-Type': 'application/json', 'Retry-After': retryAfter.toString() }
-			});
-		}
+		// if (!uploadLimit.allowed) {
+		// 	const retryAfter = Math.ceil((uploadLimit.resetTime - Date.now()) / 1000);
+		// 	return new Response(JSON.stringify({ error: 'Too many upload attempts', retryAfter }), {
+		// 		status: 429,
+		// 		headers: { 'Content-Type': 'application/json', 'Retry-After': retryAfter.toString() }
+		// 	});
+		// }
 	}
 
 	event.locals.security = new Security(event);
