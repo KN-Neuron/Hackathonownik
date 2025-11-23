@@ -1,6 +1,6 @@
 import { error, type RequestEvent } from '@sveltejs/kit';
 import type { User } from '$lib/types';
-import { randomBytes } from 'crypto';
+import { randomBytes } from 'node:crypto';
 
 // ============================================
 // RATE LIMITING
@@ -262,7 +262,7 @@ export class InputValidator {
 export class FileUploadSecurity {
 	static readonly ALLOWED_PDF_MIME_TYPES = ['application/pdf'];
 
-	static readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+	static readonly MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
 	static async validatePdfUpload(file: File): Promise<{ valid: boolean; error?: string }> {
 		// Sprawdź czy plik istnieje
@@ -586,7 +586,7 @@ export const CSP_HEADERS = {
 		"style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
 		"img-src 'self' data: https:",
 		"font-src 'self' data: https:",
-		"connect-src 'self' http://aneta139.mikrus.xyz:20139/",
+		"connect-src 'self' https://hotb-pb.knneuron.pl/",
 		"frame-ancestors 'none'",
 		"base-uri 'self'",
 		"form-action 'self'"

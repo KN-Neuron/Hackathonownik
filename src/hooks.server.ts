@@ -89,7 +89,7 @@ async function checkRouteAccess(
 // ============================================
 
 export const handle: Handle = async ({ event, resolve }) => {
-	const pb = new PocketBase('http://aneta139.mikrus.xyz:20139/') as TypedPocketBase;
+	const pb = new PocketBase('https://hotb-pb.knneuron.pl/') as TypedPocketBase;
 
 	// Try to load session using our secure cookie first
 	const secureSession = SecureCookieHandler.getSessionFromCookie(event);

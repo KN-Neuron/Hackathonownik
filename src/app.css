@@ -3,6 +3,10 @@
 @plugin '@tailwindcss/typography';
 @plugin 'daisyui';
 
+html {
+	color-scheme: dark;
+}
+
 body {
 	box-sizing: border-box;
 	margin: 0;

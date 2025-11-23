@@ -1,4 +1,4 @@
-import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
+import { randomBytes, createCipheriv, createDecipheriv } from 'node:crypto';
 import type { RequestEvent } from '@sveltejs/kit';
 
 const IV_LENGTH = 16; // For AES-256-CBC
