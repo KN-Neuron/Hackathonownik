@@ -63,9 +63,6 @@
 			<a class="nav-link" href="/login" class:active={$page.url.pathname === '/login'}>
 				<SidebarElement icon={IconNames.Login} text="Login" />
 			</a>
-			<a class="nav-link" href="/register" class:active={$page.url.pathname === '/register'}>
-				<SidebarElement icon={IconNames.Register} text="Register" />
-			</a>
 		{/if}
 	</nav>
 

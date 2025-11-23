@@ -14,7 +14,7 @@ export const pbError = (e: unknown) => {
 };
 
 function createPocketBase(): TypedPocketBase {
-	const pb = new PocketBase('http://aneta139.mikrus.xyz:20139/') as TypedPocketBase;
+	const pb = new PocketBase('https://hotb-pb.knneuron.pl/') as TypedPocketBase;
 	if (browser) {
 		pb.authStore.loadFromCookie(document.cookie);
 	}

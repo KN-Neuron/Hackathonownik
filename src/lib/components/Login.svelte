@@ -17,7 +17,7 @@
 
 		<span class="self-center text-gray-400 text-sm">
 			Don't have an account?
-			<a class="link link-secondary" href="/register">Register</a>
+			Contact your administrator
 		</span>
 
 		<div class="divider mt-8 mb-8">Heroes of the Brain</div>

@@ -26,7 +26,8 @@ export const actions: Actions = {
 		if (now > deadline) {
 			return {
 				success: false,
-				message: 'Submission deadline has passed. Presentations can no longer be submitted after November 30, 2025 at 12:00 PM.'
+				message:
+					'Submission deadline has passed. Presentations can no longer be submitted after November 30, 2025 at 12:00 PM.'
 			};
 		}
 
@@ -138,7 +139,7 @@ export const actions: Actions = {
 			}
 
 			// Use admin client for upload
-			const adminClient = new PocketBase('http://aneta139.mikrus.xyz:20139/');
+			const adminClient = new PocketBase('https://hotb-pb.knneuron.pl/');
 
 			// Get credentials from environment variables - ensure they are properly set
 			const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL;
