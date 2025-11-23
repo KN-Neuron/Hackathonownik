@@ -141,8 +141,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// In development mode, use more permissive limits
 	const isDev = process.env.NODE_ENV === 'development';
 
-	// General rate limit: 1000 requests per minute (very high for dev)
-	const requestsPerMinute = isDev ? 5000 : 1000; // More permissive in development
+	// General rate limit: 2000 requests per minute (very high for dev)
+	const requestsPerMinute = isDev ? 5000 : 2000; // More permissive in development
 	const generalLimit = rateLimiters.general.check(rateLimitKey, requestsPerMinute, 60 * 1000);
 
 	if (!generalLimit.allowed) {

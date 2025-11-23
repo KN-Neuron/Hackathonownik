@@ -14,9 +14,9 @@ interface RateLimitEntry {
 }
 
 interface RateLimiterConfig {
-	maxRequests: number;       // Maksymalna liczba requestów w oknie czasowym
-	windowMs: number;          // Długość okna czasowego w ms
-	blockDurationMs: number;   // Czas blokady po przekroczeniu limitu w ms
+	maxRequests: number; // Maksymalna liczba requestów w oknie czasowym
+	windowMs: number; // Długość okna czasowego w ms
+	blockDurationMs: number; // Czas blokady po przekroczeniu limitu w ms
 	cleanupIntervalMs: number; // Interwał czyszczenia wygasłych wpisów w ms
 }
 
@@ -28,15 +28,12 @@ class RateLimiter {
 	constructor(config: Partial<RateLimiterConfig> = {}) {
 		this.config = {
 			maxRequests: config.maxRequests ?? 100,
-			windowMs: config.windowMs ?? 60 * 1000,           // 1 minuta default
+			windowMs: config.windowMs ?? 60 * 1000, // 1 minuta default
 			blockDurationMs: config.blockDurationMs ?? 15 * 60 * 1000, // 15 minut default
 			cleanupIntervalMs: config.cleanupIntervalMs ?? 5 * 60 * 1000 // 5 minut default
 		};
 
-		this.cleanupInterval = setInterval(
-			() => this.cleanup(),
-			this.config.cleanupIntervalMs
-		);
+		this.cleanupInterval = setInterval(() => this.cleanup(), this.config.cleanupIntervalMs);
 	}
 
 	get maxRequests(): number {
@@ -126,25 +123,25 @@ export const rateLimiters = {
 	// Ogólne requesty: 100 req/min
 	general: new RateLimiter({
 		maxRequests: 100,
-		windowMs: 60 * 1000,          // 1 minuta
+		windowMs: 60 * 1000, // 1 minuta
 		blockDurationMs: 5 * 60 * 1000 // 5 minut blokady
 	}),
 	// Login/auth: 5 prób/15 min (ochrona przed brute force)
 	auth: new RateLimiter({
 		maxRequests: 5,
-		windowMs: 15 * 60 * 1000,      // 15 minut
+		windowMs: 15 * 60 * 1000, // 15 minut
 		blockDurationMs: 30 * 60 * 1000 // 30 minut blokady
 	}),
 	// Upload plików: 10 uploadów/godz
 	upload: new RateLimiter({
 		maxRequests: 10,
-		windowMs: 60 * 60 * 1000,      // 1 godzina
+		windowMs: 60 * 60 * 1000, // 1 godzina
 		blockDurationMs: 60 * 60 * 1000 // 1 godzina blokady
 	}),
 	// API calls: 200 req/min
 	api: new RateLimiter({
 		maxRequests: 200,
-		windowMs: 60 * 1000,           // 1 minuta
+		windowMs: 60 * 1000, // 1 minuta
 		blockDurationMs: 10 * 60 * 1000 // 10 minut blokady
 	})
 };
@@ -319,16 +316,14 @@ export class FileUploadSecurity {
 	}
 
 	// Server-side file validation for uploaded files (works with SvelteKit formData)
-	static async validatePdfUploadServerSide(
-		file: {
-			name?: string;
-			type?: string;
-			size?: number;
-			stream: () => ReadableStream;  // For SvelteKit file handling
-			arrayBuffer?: () => Promise<ArrayBuffer>;  // Browser File API
-			text?: () => Promise<string>;
-		}
-	): Promise<{ valid: boolean; error?: string }> {
+	static async validatePdfUploadServerSide(file: {
+		name?: string;
+		type?: string;
+		size?: number;
+		stream: () => ReadableStream; // For SvelteKit file handling
+		arrayBuffer?: () => Promise<ArrayBuffer>; // Browser File API
+		text?: () => Promise<string>;
+	}): Promise<{ valid: boolean; error?: string }> {
 		// First check: check if file exists and has content
 		if (!file || (typeof file.size !== 'undefined' && file.size === 0)) {
 			return { valid: false, error: 'No file provided' };
@@ -369,7 +364,9 @@ export class FileUploadSecurity {
 		try {
 			// For server-side, we need to read the first 4 bytes from the stream
 			// Create a small buffer to read the first 4 bytes
-			const arrayBuffer = file.arrayBuffer ? await file.arrayBuffer() : await this.readFirstBytes(file, 4);
+			const arrayBuffer = file.arrayBuffer
+				? await file.arrayBuffer()
+				: await this.readFirstBytes(file, 4);
 
 			if (!arrayBuffer) {
 				return { valid: false, error: 'Could not read file content' };
@@ -392,7 +389,10 @@ export class FileUploadSecurity {
 	}
 
 	// Helper method to read first N bytes from a file stream
-	private static async readFirstBytes(file: { stream: () => ReadableStream }, byteCount: number): Promise<ArrayBuffer | null> {
+	private static async readFirstBytes(
+		file: { stream: () => ReadableStream },
+		byteCount: number
+	): Promise<ArrayBuffer | null> {
 		const reader = file.stream().getReader();
 		const buffers: Uint8Array[] = [];
 		let totalBytes = 0;
@@ -586,7 +586,7 @@ export const CSP_HEADERS = {
 		"style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
 		"img-src 'self' data: https:",
 		"font-src 'self' data: https:",
-		"connect-src 'self' https://frog01-32147.wykr.es",
+		"connect-src 'self' http://aneta139.mikrus.xyz:20139/",
 		"frame-ancestors 'none'",
 		"base-uri 'self'",
 		"form-action 'self'"
