@@ -48,7 +48,7 @@
 <nav class="navbar">
 	<div class="container">
 		<div class="brand">
-			<a href="/">Hackathon App</a>
+			<a href="/">Heroes of the Brain 2025</a>
 		</div>
 
 		<ul class="nav-links">
