@@ -1,10 +1,13 @@
 <script>
 	import '../../app.css';
 	import { enhance } from '$app/forms';
+	import { page } from '$app/stores';
 
 	let email = '';
 	let password = '';
-	let error = '';
+
+	// Subscribe to form data to get error messages from server
+	$: error = $page.form?.error || '';
 </script>
 
 <form
@@ -63,6 +66,32 @@
 		</div>
 
 		<button class="btn btn-primary" type="submit">Log in</button>
-		{#if error}<div style="color:red">{error}</div>{/if}
+
+		<!-- Show error as an alert popup -->
+		{#if error}
+		<div role="alert" class="alert alert-error mt-4 animate-fade-in">
+			<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+			</svg>
+			<span>{error}</span>
+		</div>
+		{/if}
 	</fieldset>
 </form>
+
+<style>
+	@keyframes fade-in {
+		from {
+			opacity: 0;
+			transform: translateY(-10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.animate-fade-in {
+		animation: fade-in 0.3s ease-out;
+	}
+</style>
