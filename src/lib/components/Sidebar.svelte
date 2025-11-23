@@ -38,7 +38,7 @@
 					href="/presentations"
 					class:active={$page.url.pathname === '/presentations'}
 				>
-					<SidebarElement icon={IconNames.Info} text="View Presentations" />
+					<SidebarElement icon={IconNames.Presentation} text="View Presentations" />
 				</a>
 				<a
 					class="nav-link"

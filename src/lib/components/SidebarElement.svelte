@@ -4,9 +4,12 @@
 	import Home from '$lib/components/icons/Home.svelte';
 	import Info from '$lib/components/icons/Info.svelte';
 	import Ranking from '$lib/components/icons/Ranking.svelte';
+	import Stats from '$lib/components/icons/Stats.svelte';
 	import Upload from '$lib/components/icons/Upload.svelte';
 	import Login from '$lib/components/icons/Login.svelte';
 	import Register from '$lib/components/icons/Register.svelte';
+	import Presentation from '$lib/components/icons/Presentation.svelte';
+	import Rate from '$lib/components/icons/Rate.svelte';
 
 	let { icon, text } = $props();
 </script>
@@ -16,15 +19,19 @@
 		{#if icon === IconNames.Home}
 			<Home />
 		{:else if icon === IconNames.Rate}
-			<Info />
+			<Rate />
 		{:else if icon === IconNames.Ranking}
 			<Ranking />
+		{:else if icon === IconNames.Stats}
+			<Stats />
 		{:else if icon === IconNames.Upload}
 			<Upload />
 		{:else if icon === IconNames.Login}
 			<Login />
 		{:else if icon === IconNames.Register}
 			<Register />
+		{:else if icon === IconNames.Presentation}
+			<Presentation />
 		{/if}
 	</div>
 	<span class="item-text">{text}</span>
