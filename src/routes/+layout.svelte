@@ -7,7 +7,6 @@
 	let { children } = $props();
 	let open = $state(false);
 
-	
 	function closeSidebar() {
 		open = false;
 	}
@@ -61,6 +60,8 @@
 		overflow-y: auto;
 		width: 100%;
 		box-sizing: border-box;
+		scroll-behavior: smooth;
+		-webkit-overflow-scrolling: touch;
 	}
 
 	.desktop-sidebar {
