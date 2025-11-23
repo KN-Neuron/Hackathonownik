@@ -8,7 +8,6 @@
 	let titleEl: HTMLHeadingElement | null = null;
 	let pathEl: SVGPathElement | null = null;
 
-	
 	let d = '';
 	let amplitude = 34;
 	let segments = 9;
@@ -71,13 +70,11 @@
 		const waveWidth = measuredWidth + wavePadding * 2;
 		svgWidth = waveWidth;
 
-		
 		const vPad = amplitude + glowPadding;
 		viewBox = `0 -${vPad} ${svgWidth} ${vPad * 2}`;
 
 		d = buildWavePath(waveWidth, segments, amplitude);
 
-		
 		rAF = requestAnimationFrame(() => {
 			if (!pathEl) return;
 			pathEl.setAttribute('d', d);
@@ -101,10 +98,8 @@
 	onMount(() => {
 		if (!browser) return;
 
-		
 		scheduleUpdate();
 
-		
 		if ('ResizeObserver' in globalThis && titleEl) {
 			resizeObserver = new ResizeObserver(scheduleUpdate);
 			resizeObserver.observe(titleEl);
@@ -116,7 +111,6 @@
 		const orientationHandler = () => scheduleUpdate();
 		window.addEventListener('orientationchange', orientationHandler);
 
-		
 		document.fonts?.ready?.then(() => scheduleUpdate());
 
 		return () => {
@@ -132,7 +126,6 @@
 		resizeObserver?.disconnect();
 	});
 
-	
 	export function refresh() {
 		scheduleUpdate();
 	}
@@ -146,10 +139,6 @@
 		--snake-color-3: #4df2ff;
 	}
 
-		:global(html, body) {
-		overflow: hidden;
-	}
-
 	.hero-stage {
 				min-height: calc(100vh - var(--footer-height, 0px) - var(--main-padding-y, 0px));
 		height: calc(100vh - var(--footer-height, 0px) - var(--main-padding-y, 0px));
@@ -160,7 +149,7 @@
 		gap: clamp(2rem, 4vh, 3.75rem);
 		padding: 2rem 1.25rem;
 		position: relative;
-				overflow: hidden;
+		overflow: hidden;
 		box-sizing: border-box;
 	}
 
@@ -287,7 +276,7 @@
 		path.snake { stroke-width: 5; }
 	}
 
-	:global(body) {
+	:global(html, body) {
 		background:
 			radial-gradient(circle at 70% 15%, #1d2340, #0e121f 60%),
 			radial-gradient(circle at 15% 85%, #191f34, transparent 70%),
