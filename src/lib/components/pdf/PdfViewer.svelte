@@ -7,7 +7,6 @@
 	export let files: File[] = [];
 	export let multiple: boolean = false;
 
-	
 	let pdfPreviews: PdfPreview[] = [];
 	let initializingPreviews = false;
 	let fullScreenIndex: number | null = null;
@@ -18,7 +17,6 @@
 		pdfPreviews = [...pdfPreviews];
 	}
 
-	
 	$: if (files) {
 		initFromFiles(files);
 	}
@@ -70,6 +68,16 @@
 			}
 		} finally {
 			initializingPreviews = false;
+			// Dispatch initial page change event if there are previews
+			if (browser && pdfPreviews.length > 0 && pdfPreviews[0].pageCount > 0) {
+				const event = new CustomEvent('pageChange', {
+					detail: {
+						currentPage: pdfPreviews[0].currentPage || 1,
+						totalPages: pdfPreviews[0].pageCount
+					}
+				});
+				dispatchEvent(event);
+			}
 		}
 	}
 
@@ -105,6 +113,16 @@
 			if (preview.currentPage === pageNumber) {
 				preview.displayedPage = pageNumber;
 				currentPage = pageNumber;
+				// Dispatch page change event
+				if (browser) {
+					const event = new CustomEvent('pageChange', {
+						detail: {
+							currentPage: currentPage,
+							totalPages: preview.pageCount
+						}
+					});
+					dispatchEvent(event);
+				}
 			}
 			touch();
 		} catch (e) {
@@ -128,6 +146,17 @@
 			touch();
 		} else {
 			void ensureRendered(preview, page);
+		}
+
+		// Dispatch page change event
+		if (browser) {
+			const event = new CustomEvent('pageChange', {
+				detail: {
+					currentPage: currentPage,
+					totalPages: preview.pageCount
+				}
+			});
+			dispatchEvent(event);
 		}
 	}
 
@@ -422,42 +451,42 @@
 			</button>
 		</div>
 
-		<div class="fullscreen-controls">
-			<div class="page-display">
-				Page {preview.displayedPage} of {preview.pageCount}
-			</div>
-
-			<div class="fullscreen-nav">
-				<button
-					class="btn-sm"
-					disabled={preview.currentPage <= 1}
-					on:click={() => goToPage(preview, 1)}
-				>
-					First
-				</button>
-
-				<div class="page-jump">
-					<input
-						type="number"
-						value={currentPage}
-						min="1"
-						max={preview.pageCount}
-						on:change={(e) => handlePageInput(e, preview)}
-					/>
-					<button class="btn-sm" on:click={(e) => handlePageInput(e, preview)}>Go</button>
-				</div>
-
-				<button
-					class="btn-sm"
-					disabled={preview.currentPage >= preview.pageCount}
-					on:click={() => goToPage(preview, preview.pageCount)}
-				>
-					Last
-				</button>
-			</div>
-
-			<p class="keyboard-hint">Press ESC to exit fullscreen</p>
-		</div>
+		<!-- <div class="fullscreen-controls"> -->
+		<!-- 	<div class="page-display"> -->
+		<!-- 		Page {preview.displayedPage} of {preview.pageCount} -->
+		<!-- 	</div> -->
+		<!---->
+		<!-- 	<div class="fullscreen-nav"> -->
+		<!-- 		<button -->
+		<!-- 			class="btn-sm" -->
+		<!-- 			disabled={preview.currentPage <= 1} -->
+		<!-- 			on:click={() => goToPage(preview, 1)} -->
+		<!-- 		> -->
+		<!-- 			First -->
+		<!-- 		</button> -->
+		<!---->
+		<!-- 		<div class="page-jump"> -->
+		<!-- 			<input -->
+		<!-- 				type="number" -->
+		<!-- 				value={currentPage} -->
+		<!-- 				min="1" -->
+		<!-- 				max={preview.pageCount} -->
+		<!-- 				on:change={(e) => handlePageInput(e, preview)} -->
+		<!-- 			/> -->
+		<!-- 			<button class="btn-sm" on:click={(e) => handlePageInput(e, preview)}>Go</button> -->
+		<!-- 		</div> -->
+		<!---->
+		<!-- 		<button -->
+		<!-- 			class="btn-sm" -->
+		<!-- 			disabled={preview.currentPage >= preview.pageCount} -->
+		<!-- 			on:click={() => goToPage(preview, preview.pageCount)} -->
+		<!-- 		> -->
+		<!-- 			Last -->
+		<!-- 		</button> -->
+		<!-- 	</div> -->
+		<!---->
+		<!-- 	<p class="keyboard-hint">Press ESC to exit fullscreen</p> -->
+		<!-- </div> -->
 	</div>
 {/if}
 
@@ -699,7 +728,7 @@
 		border-radius: 4px;
 	}
 
-		.error-message {
+	.error-message {
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -865,7 +894,7 @@
 		height: 70vh;
 	}
 
-		@media (max-width: 768px) {
+	@media (max-width: 768px) {
 		.pdf-header {
 			flex-direction: column;
 			align-items: flex-start;

@@ -2,7 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
 	import PdfViewer from '$lib/components/pdf/PdfViewer.svelte';
-	
+
 	let { data } = $props<{
 		data: {
 			presentations: {
@@ -23,32 +23,41 @@
 	let showPresentationModal = $state(false);
 	let currentTeamName = $state('');
 	let presentations = $state(data.presentations);
+	let isLoading = $state(false);
+	let currentPage = $state(1);
+	let totalPages = $state(1);
 
 	// Function to open presentation in fullscreen
-	async function openFullscreen(presentation: typeof data.presentations[0]) {
+	async function openFullscreen(presentation: (typeof data.presentations)[0]) {
 		if (presentation.presentationUrl) {
 			try {
+				// Show loading state
+				isLoading = true;
+
 				// Convert URL to File object like in TeamCard
 				const filename = presentation.presentationUrl.split('/').pop() || 'presentation.pdf';
 				const response = await fetch(presentation.presentationUrl);
 				const blob = await response.blob();
 				const file = new File([blob], filename, { type: 'application/pdf' });
-				
+
 				selectedPresentationFiles = [file];
 				currentTeamName = presentation.teamName;
 				showPresentationModal = true;
-				
+
 				// Enter fullscreen mode after the component is rendered
 				await tick();
 				await enterFullscreen();
 			} catch (err) {
 				console.error('Error loading presentation:', err);
+			} finally {
+				// Hide loading state
+				isLoading = false;
 			}
 		}
 	}
 
 	let fullscreenContainer: HTMLElement | null = null;
-	
+
 	// Handle keyboard shortcuts
 	onMount(() => {
 		if (!browser) return;
@@ -62,7 +71,7 @@
 		window.addEventListener('keydown', handleKeyDown);
 		return () => window.removeEventListener('keydown', handleKeyDown);
 	});
-	
+
 	// Function to enter fullscreen mode
 	async function enterFullscreen() {
 		if (fullscreenContainer && browser) {
@@ -73,7 +82,7 @@
 			}
 		}
 	}
-	
+
 	// Function to exit fullscreen mode
 	function exitFullscreen() {
 		if (document.fullscreenElement && browser) {
@@ -81,18 +90,18 @@
 		}
 		showPresentationModal = false;
 	}
-	
+
 	// Handle fullscreen change events
 	onMount(() => {
 		if (!browser) return;
-		
+
 		const handleFullscreenChange = () => {
 			if (!document.fullscreenElement) {
 				// User exited fullscreen through browser controls
 				showPresentationModal = false;
 			}
 		};
-		
+
 		document.addEventListener('fullscreenchange', handleFullscreenChange);
 		return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
 	});
@@ -112,7 +121,9 @@
 					<div class="card-content">
 						<h3>{presentation.teamName}</h3>
 						<p class="team-id">Team ID: {presentation.teamId}</p>
-						<p class="created-date">Submitted: {new Date(presentation.created).toLocaleDateString()}</p>
+						<p class="created-date">
+							Submitted: {new Date(presentation.created).toLocaleDateString()}
+						</p>
 						{#if presentation.repo_link || presentation.video_link}
 							<div class="links-container">
 								{#if presentation.repo_link}
@@ -123,8 +134,17 @@
 										class="external-link repo-link"
 										on:click|stopPropagation
 									>
-										<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-											<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+										<svg
+											width="16"
+											height="16"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+										>
+											<path
+												d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+											></path>
 										</svg>
 										Repository
 									</a>
@@ -137,7 +157,14 @@
 										class="external-link video-link"
 										on:click|stopPropagation
 									>
-										<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+										<svg
+											width="16"
+											height="16"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+										>
 											<polygon points="5 3 19 12 5 21 5 3"></polygon>
 										</svg>
 										Video Demo
@@ -147,7 +174,14 @@
 						{/if}
 						<div class="card-actions">
 							<button class="view-btn">
-								<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<svg
+									width="20"
+									height="20"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+								>
 									<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
 									<circle cx="12" cy="12" r="3"></circle>
 								</svg>
@@ -166,23 +200,55 @@
 	{/if}
 </div>
 
-	<!-- Fullscreen container for presentations -->
-	{#if showPresentationModal}
-		<div class="fullscreen-presentation-container" bind:this={fullscreenContainer} on:click={exitFullscreen}>
-			<div class="presentation-content" on:click|stopPropagation>
-				<div class="presentation-header">
-					<h2>Presentation: {currentTeamName}</h2>
-					<button class="exit-fullscreen-btn" on:click={exitFullscreen}>
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<line x1="18" y1="6" x2="6" y2="18"></line>
-							<line x1="6" y1="6" x2="18" y2="18"></line>
-						</svg>
-					</button>
-				</div>
-				<PdfViewer files={selectedPresentationFiles} />
+<!-- Fullscreen container for presentations -->
+{#if showPresentationModal}
+	<div
+		class="fullscreen-presentation-container"
+		bind:this={fullscreenContainer}
+		on:click={exitFullscreen}
+	>
+		<div class="presentation-content" on:click|stopPropagation>
+			<div class="presentation-header">
+				<h2>Presentation: {currentTeamName}</h2>
+				<button class="exit-fullscreen-btn" on:click={exitFullscreen}>
+					<svg
+						width="20"
+						height="20"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<line x1="18" y1="6" x2="6" y2="18"></line>
+						<line x1="6" y1="6" x2="18" y2="18"></line>
+					</svg>
+				</button>
 			</div>
+
+			{#if isLoading}
+				<div class="loading-overlay-fullscreen">
+					<div class="loading-spinner"></div>
+					<p>Loading presentation...</p>
+				</div>
+			{/if}
+
+			<PdfViewer
+				files={selectedPresentationFiles}
+				on:load={() => (isLoading = false)}
+				on:pageChange={(e) => {
+					currentPage = e.detail.currentPage;
+					totalPages = e.detail.totalPages;
+				}}
+			/>
 		</div>
-	{/if}
+
+		<!-- Info box with current page and exit instructions -->
+		<!-- <div class="info-box"> -->
+		<!-- 	<span class="page-info">Page {currentPage} of {totalPages}</span> -->
+		<!-- 	<span class="exit-instruction">Press ESC to exit fullscreen</span> -->
+		<!-- </div> -->
+	</div>
+{/if}
 
 <style>
 	.presentations-gallery {
@@ -384,6 +450,47 @@
 		background: rgba(255, 255, 255, 0.1);
 	}
 
+	/* Loading overlay for fullscreen */
+	.loading-overlay-fullscreen {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(0, 0, 0, 0.8);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+	}
+
+	/* Info box */
+	.info-box {
+		position: absolute;
+		bottom: 20px;
+		left: 20px;
+		right: 20px;
+		background: rgba(0, 0, 0, 0.7);
+		color: white;
+		padding: 10px 15px;
+		border-radius: 8px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		z-index: 1000;
+		font-size: 0.9rem;
+	}
+
+	.page-info {
+		margin-right: 10px;
+	}
+
+	.exit-instruction {
+		opacity: 0.8;
+		font-size: 0.8rem;
+	}
+
 	/* Responsive design */
 	@media (max-width: 768px) {
 		.presentations-gallery {
@@ -401,5 +508,18 @@
 		.presentation-header h2 {
 			font-size: 1.25rem;
 		}
+
+		.info-box {
+			flex-direction: column;
+			gap: 5px;
+			text-align: center;
+		}
+
+		.page-info,
+		.exit-instruction {
+			display: block;
+			width: 100%;
+		}
 	}
 </style>
+
