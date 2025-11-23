@@ -375,10 +375,16 @@
 		}
 	}
 
-	@media (max-width: 640px) {
+	@media (max-width: 768px) {
 		.rating-form {
 			padding: 1rem;
 			border-radius: 6px;
+		}
+
+		.label {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0.25rem;
 		}
 
 		.label-text {
@@ -388,11 +394,31 @@
 		.label-text-alt {
 			font-size: 0.8rem;
 		}
+
+		.range {
+			width: 100%;
+		}
+
+		.w-full.flex.justify-between {
+			font-size: 0.7rem;
+		}
+
+		.score-summary {
+			margin: 1rem 0;
+		}
+
+		.form-section {
+			margin-bottom: 1rem;
+		}
 	}
 
 	@media (max-width: 480px) {
 		.w-full.flex.justify-between {
-			font-size: 0.7rem;
+			font-size: 0.6rem;
+		}
+
+		h2.text-2xl.font-bold.mb-3 {
+			font-size: 1.5rem;
 		}
 	}
 </style>

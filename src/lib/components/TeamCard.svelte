@@ -81,6 +81,20 @@
 		return [];
 	}
 
+	function downloadPresentation() {
+		if (team.presentationUrl) {
+			// Create a temporary anchor element to trigger the download
+			const link = document.createElement('a');
+			link.href = team.presentationUrl;
+			// Try to get the filename from the URL, fallback to a default name
+			const filename = team.presentationUrl.split('/').pop() || `presentation-${team.name}.pdf`;
+			link.download = filename;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+		}
+	}
+
 	async function showPresentationModalHandler() {
 		loadingPresentation = true;
 		try {
@@ -257,6 +271,18 @@
 					{:else}
 						View Presentation
 					{/if}
+				</button>
+
+				<button
+					class="btn btn-download"
+					on:click={downloadPresentation}
+				>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+						<polyline points="7,10 12,15 17,10"></polyline>
+						<line x1="12" y1="15" x2="12" y2="3"></line>
+					</svg>
+					Download
 				</button>
 
 				<button
@@ -471,6 +497,15 @@
 		background-color: #cc0000; /* Darker YouTube red */
 	}
 
+	.btn-download {
+		background-color: #6b7280; /* Gray */
+		color: white;
+	}
+
+	.btn-download:hover {
+		background-color: #565966; /* Darker Gray */
+	}
+
 	.btn-primary {
 		background-color: #3b82f6;
 		color: white;
@@ -498,6 +533,71 @@
 	@keyframes spin {
 		to {
 			transform: rotate(360deg);
+		}
+	}
+
+	/* Mobile responsiveness */
+	@media (max-width: 768px) {
+		.team-card {
+			flex-direction: column;
+		}
+
+		.team-avatar {
+			width: 60px;
+			height: 60px;
+			margin-right: 12px;
+		}
+
+		.metrics {
+			grid-template-columns: 1fr;
+			gap: 8px;
+		}
+
+		.metric {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 4px;
+		}
+
+		.metric-label {
+			width: 100%;
+			text-align: left;
+		}
+
+		.metric-bar {
+			width: 100%;
+			margin: 0;
+		}
+
+		.metric-value {
+			align-self: flex-end;
+		}
+
+		.team-footer {
+			flex-direction: column;
+		}
+
+		.grade-section {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 8px;
+		}
+
+		.rating-status {
+			align-items: flex-start;
+			width: 100%;
+		}
+
+		.function-buttons {
+			flex-direction: column;
+		}
+
+		.btn {
+			width: 100%;
+		}
+
+		.team-id {
+			font-size: 11px;
 		}
 	}
 </style>

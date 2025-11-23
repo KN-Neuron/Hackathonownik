@@ -28,4 +28,25 @@
 		max-width: 1400px;
 		margin: 0 auto;
 	}
+
+	/* Mobile responsiveness */
+	@media (max-width: 768px) {
+		.page-content {
+			padding: 1rem;
+		}
+
+		.flex.flex-col.gap-4 {
+			gap: 1rem;
+		}
+
+		.bg-base-200.p-4.rounded-lg.mb-2 {
+			padding: 0.5rem;
+			flex-direction: column;
+			gap: 0.5rem;
+		}
+
+		.stats {
+			width: 100%;
+		}
+	}
 </style>

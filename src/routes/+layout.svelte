@@ -42,7 +42,8 @@
 <style>
 	.layout-container {
 		display: flex;
-		height: 100vh;
+		min-height: 100vh;
+		width: 100%;
 	}
 
 	.content-container {
@@ -57,24 +58,29 @@
 		background-color: black;
 		flex: 1;
 		padding: 1rem;
-		overflow-y: scroll;
+		overflow-y: auto;
+		width: 100%;
+		box-sizing: border-box;
 	}
 
 	.desktop-sidebar {
 		display: none;
-		width: 400px;
+		width: 300px;
 		background-color: #1f2937;
 		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+		flex-shrink: 0;
 	}
 
 	.mobile-sidebar {
 		display: block;
+		flex-shrink: 0;
 	}
 
 	.mobile-only {
 		display: block;
 		position: relative;
 		z-index: 70;
+		width: 100%;
 	}
 
 	.sidebar-overlay {
@@ -98,7 +104,7 @@
 		}
 	}
 
-	@media (min-width: 768px) {
+	@media (min-width: 1024px) {
 		.desktop-sidebar {
 			display: block;
 		}
@@ -109,6 +115,17 @@
 
 		.mobile-only {
 			display: none;
+		}
+	}
+
+	/* Additional mobile responsiveness */
+	@media (max-width: 768px) {
+		.content-wrapper {
+			padding: 0.5rem;
+		}
+
+		.layout-container {
+			flex-direction: column;
 		}
 	}
 </style>

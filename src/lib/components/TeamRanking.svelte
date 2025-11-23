@@ -410,6 +410,43 @@
 		cursor: pointer;
 	}
 
+	/* Mobile responsiveness */
+	@media (max-width: 768px) {
+		.table {
+			display: block;
+			overflow-x: auto;
+			white-space: nowrap;
+		}
+
+		.table th,
+		.table td {
+			min-width: 100px;
+			padding: 0.5rem 0.75rem;
+		}
+
+		/* Adjust font sizes for smaller screens */
+		.stat-value {
+			font-size: 1rem;
+		}
+
+		.stat-title {
+			font-size: 0.65rem;
+		}
+	}
+
+	@media (max-width: 1024px) {
+		.table th,
+		.table td {
+			padding: 0.5rem;
+			font-size: 0.85rem;
+		}
+
+		.badge {
+			font-size: 0.65rem;
+			padding: 0.2rem 0.4rem;
+		}
+	}
+
 	.badge {
 		padding: 0.25rem 0.5rem;
 		border-radius: 1rem;

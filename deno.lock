@@ -12,7 +12,6 @@
     "npm:@tailwindcss/vite@^4.1.13": "4.1.14_vite@6.3.6__picomatch@4.0.3",
     "npm:@types/pdfjs-dist@^2.10.378": "2.10.378",
     "npm:@vitest/browser@^3.2.4": "3.2.4_playwright@1.56.0_vitest@3.2.4__@vitest+browser@3.2.4__playwright@1.56.0__vite@6.3.6___picomatch@4.0.3_@testing-library+dom@10.4.1_vite@6.3.6__picomatch@4.0.3",
-    "npm:daisyui@^5.1.10": "5.2.2",
     "npm:eslint-config-prettier@^10.1.8": "10.1.8_eslint@9.37.0",
     "npm:eslint-plugin-svelte@^3.12.3": "3.12.4_eslint@9.37.0_svelte@5.39.11__acorn@8.15.0_postcss@8.5.6",
     "npm:eslint@^9.35.0": "9.37.0",
@@ -1284,9 +1283,6 @@
     "cssesc@3.0.0": {
       "integrity": "sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg==",
       "bin": true
-    },
-    "daisyui@5.2.2": {
-      "integrity": "sha512-/ttJDqDgtPcHJlD1ihYMhRIwCQQM1UxuwOZw8xbABdvBkT/vmlmfrfCzkFMuFO+CNNKE734S4TFQ/tDEIbBHNA=="
     },
     "data-uri-to-buffer@6.0.2": {
       "integrity": "sha512-7hvf7/GW8e86rW0ptuwS3OcBGDjIi6SZva7hCyWC0yYry2cOPmLIjXAUHI6DK2HsnwJd9ifmt57i8eV2n4YNpw=="
@@ -2796,7 +2792,7 @@
         "npm:@types/node@^24.10.1",
         "npm:@types/pdfjs-dist@^2.10.378",
         "npm:@vitest/browser@^3.2.4",
-        "npm:daisyui@^5.1.10",
+        "npm:daisyui@^5.5.5",
         "npm:dotenv@^17.2.3",
         "npm:eslint-config-prettier@^10.1.8",
         "npm:eslint-plugin-svelte@^3.12.3",

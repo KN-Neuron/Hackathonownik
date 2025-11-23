@@ -91,6 +91,21 @@
 		showPresentationModal = false;
 	}
 
+	// Function to trigger download of presentation
+	function downloadPresentation(presentation) {
+		if (presentation.presentationUrl) {
+			// Create a temporary anchor element to trigger the download
+			const link = document.createElement('a');
+			link.href = presentation.presentationUrl;
+			// Try to get the filename from the URL, fallback to a default name
+			const filename = presentation.presentationUrl.split('/').pop() || `presentation-${presentation.teamName}.pdf`;
+			link.download = filename;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+		}
+	}
+
 	// Handle fullscreen change events
 	onMount(() => {
 		if (!browser) return;
@@ -187,6 +202,27 @@
 								</svg>
 								View
 							</button>
+
+							{#if presentation.presentationUrl}
+								<button
+									class="download-btn"
+									on:click|stopPropagation={() => downloadPresentation(presentation)}
+								>
+									<svg
+										width="20"
+										height="20"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+									>
+										<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+										<polyline points="7,10 12,15 17,10"></polyline>
+										<line x1="12" y1="15" x2="12" y2="3"></line>
+									</svg>
+									Download
+								</button>
+							{/if}
 						</div>
 					</div>
 				</div>
@@ -210,19 +246,44 @@
 		<div class="presentation-content" on:click|stopPropagation>
 			<div class="presentation-header">
 				<h2>Presentation: {currentTeamName}</h2>
-				<button class="exit-fullscreen-btn" on:click={exitFullscreen}>
-					<svg
-						width="20"
-						height="20"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
+				<div class="presentation-header-actions">
+					<button
+						class="download-fullscreen-btn"
+						on:click|stopPropagation={() => {
+							// Find current presentation to download
+							const currentPresentation = presentations.find(p => p.teamName === currentTeamName);
+							if (currentPresentation) {
+								downloadPresentation(currentPresentation);
+							}
+						}}
 					>
-						<line x1="18" y1="6" x2="6" y2="18"></line>
-						<line x1="6" y1="6" x2="18" y2="18"></line>
-					</svg>
-				</button>
+						<svg
+							width="20"
+							height="20"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+						>
+							<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+							<polyline points="7,10 12,15 17,10"></polyline>
+							<line x1="12" y1="15" x2="12" y2="3"></line>
+						</svg>
+					</button>
+					<button class="exit-fullscreen-btn" on:click={exitFullscreen}>
+						<svg
+							width="20"
+							height="20"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+						>
+							<line x1="18" y1="6" x2="6" y2="18"></line>
+							<line x1="6" y1="6" x2="18" y2="18"></line>
+						</svg>
+					</button>
+				</div>
 			</div>
 
 			{#if isLoading}
@@ -332,6 +393,25 @@
 	}
 
 	.view-btn:hover {
+		transform: scale(1.05);
+	}
+
+	.download-btn {
+		background: linear-gradient(to right, #8b89cc, #7c79e5);
+		color: #0f1322;
+		border: none;
+		padding: 0.5rem 1rem;
+		border-radius: 0.375rem;
+		font-weight: 600;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		transition: all 0.2s ease;
+		margin-left: 0.5rem;
+	}
+
+	.download-btn:hover {
 		transform: scale(1.05);
 	}
 
@@ -450,6 +530,28 @@
 		background: rgba(255, 255, 255, 0.1);
 	}
 
+	.presentation-header-actions {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.download-fullscreen-btn {
+		background: transparent;
+		border: none;
+		color: #f0f0f0;
+		cursor: pointer;
+		padding: 0.5rem;
+		border-radius: 0.25rem;
+		transition: background 0.2s;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.download-fullscreen-btn:hover {
+		background: rgba(255, 255, 255, 0.1);
+	}
+
 	/* Loading overlay for fullscreen */
 	.loading-overlay-fullscreen {
 		position: absolute;
@@ -492,6 +594,13 @@
 	}
 
 	/* Responsive design */
+	@media (max-width: 1024px) {
+		.presentations-grid {
+			grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+			gap: 1rem;
+		}
+	}
+
 	@media (max-width: 768px) {
 		.presentations-gallery {
 			padding: 1rem;
@@ -499,6 +608,11 @@
 
 		.presentations-grid {
 			grid-template-columns: 1fr;
+			gap: 1rem;
+		}
+
+		.presentation-card {
+			padding: 1rem;
 		}
 
 		.presentation-header {
@@ -519,6 +633,35 @@
 		.exit-instruction {
 			display: block;
 			width: 100%;
+		}
+
+		.links-container {
+			flex-direction: column;
+			gap: 0.25rem;
+		}
+
+		.external-link {
+			font-size: 0.7rem;
+			padding: 0.2rem 0.5rem;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.presentations-gallery {
+			padding: 0.5rem;
+		}
+
+		.presentation-card {
+			padding: 0.75rem;
+		}
+
+		.card-content h3 {
+			font-size: 1.1rem;
+		}
+
+		.view-btn {
+			font-size: 0.8rem;
+			padding: 0.4rem 0.8rem;
 		}
 	}
 </style>
