@@ -14,6 +14,14 @@
 		<a href="/"
 			><h2 class="text-2xl font-bold text-primary mb-6 text-center">Heroes of the Brain 2025</h2></a
 		>
+		{#if isAuthenticated}
+			<div class="user-info-sidebar">
+				<span class="user-name-sidebar">{user.name || user.email}</span>
+				<span class="user-role-sidebar" class:admin={user.admin} class:jury={user.role === 'jury'}>
+					{user.admin ? 'Admin' : user.role === 'jury' ? 'Jury' : 'Participant'}
+				</span>
+			</div>
+		{/if}
 	</div>
 
 	<nav class="sidebar-nav">
@@ -87,6 +95,44 @@
 		padding-bottom: 1rem;
 		border-bottom: 1px solid #e5e7eb;
 		color: white;
+	}
+
+	.user-info-sidebar {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 1rem;
+		padding: 0.75rem;
+		background: rgba(255, 255, 255, 0.05);
+		border-radius: 0.5rem;
+	}
+
+	.user-name-sidebar {
+		color: rgba(255, 255, 255, 0.9);
+		font-size: 0.9rem;
+		font-weight: 500;
+		text-align: center;
+	}
+
+	.user-role-sidebar {
+		padding: 0.25rem 0.75rem;
+		border-radius: 1rem;
+		font-size: 0.75rem;
+		font-weight: 600;
+		background: rgba(255, 255, 255, 0.1);
+		color: rgba(255, 255, 255, 0.8);
+		text-align: center;
+	}
+
+	.user-role-sidebar.admin {
+		background: linear-gradient(to right, #ff6b6b, #ee5a6f);
+		color: white;
+	}
+
+	.user-role-sidebar.jury {
+		background: linear-gradient(to right, #4df2ff, #7f7bff);
+		color: #0f1322;
 	}
 
 	.sidebar-nav {
