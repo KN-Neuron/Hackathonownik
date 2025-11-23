@@ -169,7 +169,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// Set token in locals for ALL requests (GET and POST)
 	event.locals.csrfToken = token;
 
-	// Auth rate limiting: 10 attempts per 5 minutes, 10 minute lockout
+	/* Auth rate limiting: 10 attempts per 5 minutes, 10 minute lockout
 	if (pathname.includes('/login') || pathname.includes('/register')) {
 		const maxAttempts = isDev ? 100 : 10; // More permissive in development
 		const authLimit = rateLimiters.auth.check(
@@ -190,6 +190,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			);
 		}
 	}
+	*/
 
 	// Upload rate limiting: 50 uploads per 5 minutes
 	if (pathname.includes('/upload')) {
