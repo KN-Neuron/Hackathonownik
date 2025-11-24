@@ -48,8 +48,13 @@
 	{:else}
 		<div class="intro-section">
 			<p>
-				Upload your team's presentation in PDF format. Maximum file size is 40MB. After uploading,
-				your presentation will be available for jury members to review and rate.
+				<b class="camelCase"
+					>File name should be your team name in camelCase. For example "Neuron Team" =>
+					neuronTeam.pdf</b
+				>
+				<br />
+				Upload your team's presentation in PDF format. Maximum file size is 40MB. After uploading, your
+				presentation will be available for jury members to review and rate.
 			</p>
 			<p class="deadline-info">Deadline: November 30, 2025 at 12:00 PM</p>
 		</div>
@@ -225,6 +230,9 @@
 		gap: 0.5rem;
 	}
 
+	.camelCase {
+		font-size: 2em;
+	}
 	.section-indicator {
 		display: block;
 		width: 4px;

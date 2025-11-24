@@ -1,6 +1,4 @@
 <div class="flex flex-col gap-6 rounded-box bg-base-200 p-6 max-w-md text-center">
-	<h1 class="text-2xl font-bold">Forgot password?</h1>
-
 	<span>
 		Remember your password?
 		<a class="link link-secondary" href="/login">Log in here</a>
