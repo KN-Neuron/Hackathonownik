@@ -15,7 +15,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	}
 
 	// Check if user is a jury member or admin (they can always access)
-	if (locals.user.role !== 'jury' && !locals.user.admin) {
+	if (locals.user.role !== 'jury' && locals.user.role !== 'admin' && !locals.user.admin) {
 		// For participants, check if all teams have been rated
 		try {
 			const presentations = await locals.pb.collection('presentations').getFullList();

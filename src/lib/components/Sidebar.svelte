@@ -17,8 +17,8 @@
 		{#if isAuthenticated}
 			<div class="user-info-sidebar">
 				<span class="user-name-sidebar">{user.name || user.email}</span>
-				<span class="user-role-sidebar" class:admin={user.admin} class:jury={user.role === 'jury'}>
-					{user.admin ? 'Admin' : user.role === 'jury' ? 'Jury' : 'Participant'}
+				<span class="user-role-sidebar" class:admin={user.admin || user.role === 'admin'} class:jury={user.role === 'jury'}>
+					{user.admin || user.role === 'admin' ? 'Admin' : user.role === 'jury' ? 'Jury' : 'Participant'}
 				</span>
 			</div>
 		{/if}
@@ -30,14 +30,21 @@
 				<SidebarElement icon={IconNames.Home} text="Home" />
 			</a>
 
-			{#if user?.admin}
-				<!-- Admin sees admin dashboard only -->
+			{#if user?.admin || user?.role === 'admin'}
+				<!-- Admin sees admin dashboard and presentations -->
 				<a
 					class="nav-link"
 					href="/admin/dashboard"
 					class:active={$page.url.pathname.startsWith('/admin/dashboard')}
 				>
 					<SidebarElement icon={IconNames.Stats} text="Admin Dashboard" />
+				</a>
+				<a
+					class="nav-link"
+					href="/presentations"
+					class:active={$page.url.pathname === '/presentations'}
+				>
+					<SidebarElement icon={IconNames.Presentation} text="View Presentations" />
 				</a>
 			{:else if user?.role === 'jury'}
 				<!-- Jury can see presentations, rate, and rankings -->

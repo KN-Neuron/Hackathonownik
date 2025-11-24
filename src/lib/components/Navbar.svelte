@@ -15,10 +15,13 @@
 
 		const links = [{ href: '/', label: 'Home' }];
 
-		// Admin sees admin dashboard only (admins don't typically upload/rate)
+		// Admin sees admin dashboard and presentations
 		// Note: Server-side validation in hooks.server.ts ensures actual access control
-		if (user.admin) {
-			links.push({ href: '/admin/dashboard', label: 'Admin Dashboard' });
+		if (user.admin || user.role === 'admin') {
+			links.push(
+				{ href: '/admin/dashboard', label: 'Admin Dashboard' },
+				{ href: '/presentations', label: 'View Presentations' }
+			);
 		}
 		// Jury can see rate_presentation, presentations, and rankings at all times
 		else if (user.role === 'jury') {
@@ -64,8 +67,8 @@
 		{#if user}
 			<div class="user-info">
 				<span class="user-name">{user.name || user.email}</span>
-				<span class="user-role" class:admin={user.admin} class:jury={user.role === 'jury'}>
-					{user.admin ? 'Admin' : user.role === 'jury' ? 'Jury' : 'Participant'}
+				<span class="user-role" class:admin={user.admin || user.role === 'admin'} class:jury={user.role === 'jury'}>
+					{user.admin || user.role === 'admin' ? 'Admin' : user.role === 'jury' ? 'Jury' : 'Participant'}
 				</span>
 			</div>
 		{/if}

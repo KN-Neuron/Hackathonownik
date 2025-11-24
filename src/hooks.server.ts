@@ -48,7 +48,7 @@ async function checkRouteAccess(
 		return false;
 	}
 
-	if (user.admin) {
+	if (user.admin || user.role === 'admin') {
 		return true;
 	}
 
@@ -122,7 +122,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 					throw redirect(303, `/login?redirect=${encodeURIComponent(pathname)}`);
 				}
 			} else {
-				if (event.locals.user.admin) {
+				if (event.locals.user.admin || event.locals.user.role === 'admin') {
 					throw redirect(303, '/admin/dashboard');
 				} else if (event.locals.user.role === 'jury') {
 					throw redirect(303, '/rate_presentation');

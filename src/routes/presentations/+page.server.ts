@@ -7,8 +7,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw redirect(303, '/login');
 	}
 
-	// Check if user is a jury member
-	if (locals.user.role !== 'jury' && !locals.user.admin) {
+	// Check if user is a jury member or admin
+	if (locals.user.role !== 'jury' && locals.user.role !== 'admin' && !locals.user.admin) {
 		throw redirect(303, '/');
 	}
 
