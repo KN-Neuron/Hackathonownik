@@ -3,6 +3,12 @@
 
 	// Use server-provided user data instead of client PocketBase for security
 	const user = $derived($page.data.user);
+	const teamCategory = $derived($page.data.teamCategory);
+
+	// Check if user is a participant (not admin or jury)
+	const isParticipant = $derived(
+		user && !user.admin && user.role !== 'admin' && user.role !== 'jury' && (user.role === 'participant' || user.team)
+	);
 
 	// Use $derived.by() for computed values with functions (Svelte 5 syntax)
 	const navLinks = $derived.by(() => {
@@ -67,9 +73,16 @@
 		{#if user}
 			<div class="user-info">
 				<span class="user-name">{user.name || user.email}</span>
-				<span class="user-role" class:admin={user.admin || user.role === 'admin'} class:jury={user.role === 'jury'}>
-					{user.admin || user.role === 'admin' ? 'Admin' : user.role === 'jury' ? 'Jury' : 'Participant'}
-				</span>
+				<div class="user-badges">
+					<span class="user-role" class:admin={user.admin || user.role === 'admin'} class:jury={user.role === 'jury'}>
+						{user.admin || user.role === 'admin' ? 'Admin' : user.role === 'jury' ? 'Jury' : 'Participant'}
+					</span>
+					{#if isParticipant && teamCategory}
+						<span class="team-challenge" class:wellness={teamCategory === 'wellness'} class:commerce={teamCategory === 'commerce'}>
+							{teamCategory === 'wellness' ? 'Wellness' : 'Commerce'}
+						</span>
+					{/if}
+				</div>
 			</div>
 		{/if}
 	</div>
@@ -153,6 +166,12 @@
 		font-size: 0.9rem;
 	}
 
+	.user-badges {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
 	.user-role {
 		padding: 0.25rem 0.75rem;
 		border-radius: 1rem;
@@ -172,6 +191,27 @@
 		color: #0f1322;
 	}
 
+	.team-challenge {
+		padding: 0.25rem 0.6rem;
+		border-radius: 0.25rem;
+		font-size: 0.7rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.3px;
+	}
+
+	.team-challenge.wellness {
+		background: rgba(54, 195, 153, 0.2);
+		color: #36c399;
+		border: 1px solid rgba(54, 195, 153, 0.3);
+	}
+
+	.team-challenge.commerce {
+		background: rgba(247, 166, 84, 0.2);
+		color: #f7a654;
+		border: 1px solid rgba(247, 166, 84, 0.3);
+	}
+
 	@media (max-width: 768px) {
 		.container {
 			flex-direction: column;
@@ -188,6 +228,12 @@
 			justify-content: center;
 			padding-top: 0.5rem;
 			border-top: 1px solid rgba(255, 255, 255, 0.1);
+			flex-wrap: wrap;
+		}
+
+		.user-badges {
+			flex-wrap: wrap;
+			justify-content: center;
 		}
 	}
 </style>

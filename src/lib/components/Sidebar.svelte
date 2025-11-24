@@ -5,6 +5,12 @@
 
 	let user = $derived($page.data.user);
 	let isAuthenticated = $derived($page.data.user?.id);
+	let teamCategory = $derived($page.data.teamCategory);
+
+	// Check if user is a participant (not admin or jury)
+	let isParticipant = $derived(
+		user && !user.admin && user.role !== 'admin' && user.role !== 'jury' && (user.role === 'participant' || user.team)
+	);
 
 	const { open = false } = $props();
 </script>
@@ -20,6 +26,11 @@
 				<span class="user-role-sidebar" class:admin={user.admin || user.role === 'admin'} class:jury={user.role === 'jury'}>
 					{user.admin || user.role === 'admin' ? 'Admin' : user.role === 'jury' ? 'Jury' : 'Participant'}
 				</span>
+				{#if isParticipant && teamCategory}
+					<span class="team-challenge" class:wellness={teamCategory === 'wellness'} class:commerce={teamCategory === 'commerce'}>
+						{teamCategory === 'wellness' ? 'Wellness Challenge' : 'Commerce Challenge'}
+					</span>
+				{/if}
 			</div>
 		{/if}
 	</div>
@@ -140,6 +151,29 @@
 	.user-role-sidebar.jury {
 		background: linear-gradient(to right, #4df2ff, #7f7bff);
 		color: #0f1322;
+	}
+
+	.team-challenge {
+		padding: 0.25rem 0.75rem;
+		border-radius: 0.375rem;
+		font-size: 0.7rem;
+		font-weight: 600;
+		text-align: center;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		margin-top: 0.25rem;
+	}
+
+	.team-challenge.wellness {
+		background: rgba(54, 195, 153, 0.2);
+		color: #36c399;
+		border: 1px solid rgba(54, 195, 153, 0.3);
+	}
+
+	.team-challenge.commerce {
+		background: rgba(247, 166, 84, 0.2);
+		color: #f7a654;
+		border: 1px solid rgba(247, 166, 84, 0.3);
 	}
 
 	.sidebar-nav {
