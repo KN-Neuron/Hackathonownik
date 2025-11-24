@@ -10,7 +10,13 @@
 		videoLink?: string;
 	}
 
-	let { multiple = false, uploadUrl = '', csrfToken = '', repoLink = '', videoLink = '' }: Props = $props();
+	let {
+		multiple = false,
+		uploadUrl = '',
+		csrfToken = '',
+		repoLink = '',
+		videoLink = ''
+	}: Props = $props();
 
 	const dispatch = createEventDispatcher();
 
@@ -40,7 +46,7 @@
 	async function handleFiles(newFiles: File[]) {
 		// Validate files
 		const validFiles = [];
-		
+
 		for (const file of newFiles) {
 			// Only PDFs - check both extension and header
 			if (!file.name.toLowerCase().endsWith('.pdf')) {
@@ -49,10 +55,10 @@
 				return; // Exit early on first invalid file to prevent multiple error messages
 			}
 
-			// Max 10MB
-			const maxSize = 10 * 1024 * 1024;
+			// Max 40MB
+			const maxSize = 40 * 1024 * 1024;
 			if (file.size > maxSize) {
-				uploadMessage = 'File size exceeds 10MB limit';
+				uploadMessage = 'File size exceeds 40MB limit';
 				uploadStatus = 'error';
 				return;
 			}
@@ -70,11 +76,11 @@
 			try {
 				const buffer = await file.arrayBuffer();
 				const bytes = new Uint8Array(buffer);
-				
+
 				// Check first 4 bytes for PDF signature "%PDF"
 				const pdfSignature = [0x25, 0x50, 0x44, 0x46]; // %PDF
 				const isValidPdf = pdfSignature.every((byte, index) => bytes[index] === byte);
-				
+
 				if (!isValidPdf) {
 					uploadMessage = 'File is not a valid PDF';
 					uploadStatus = 'error';
@@ -159,7 +165,7 @@
 				Drag & drop your PDF here, or click to select
 			{/if}
 		</p>
-		<p class="dropzone-subtext">Max file size: 10MB • Only PDF files</p>
+		<p class="dropzone-subtext">Max file size: 40MB • Only PDF files</p>
 	</div>
 
 	<input

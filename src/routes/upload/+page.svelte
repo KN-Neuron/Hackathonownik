@@ -48,12 +48,10 @@
 	{:else}
 		<div class="intro-section">
 			<p>
-				Upload your team's presentation in PDF format. Maximum file size is 10MB. After uploading,
+				Upload your team's presentation in PDF format. Maximum file size is 40MB. After uploading,
 				your presentation will be available for jury members to review and rate.
 			</p>
-			<p class="deadline-info">
-				Deadline: November 30, 2025 at 12:00 PM
-			</p>
+			<p class="deadline-info">Deadline: November 30, 2025 at 12:00 PM</p>
 		</div>
 
 		<div class="upload-container">
@@ -71,8 +69,8 @@
 							multiple={false}
 							uploadUrl="?/upload"
 							csrfToken={data.csrfToken}
-							repoLink={repoLink}
-							videoLink={videoLink}
+							{repoLink}
+							{videoLink}
 							on:files={handleFiles}
 						/>
 
@@ -105,7 +103,9 @@
 							bind:value={repoLink}
 							class="repo-input"
 						/>
-						<p class="repo-help">Provide a link to your project's source code repository (e.g., GitHub, GitLab)</p>
+						<p class="repo-help">
+							Provide a link to your project's source code repository (e.g., GitHub, GitLab)
+						</p>
 					</div>
 
 					<div class="repo-link-section">
@@ -118,7 +118,9 @@
 							bind:value={videoLink}
 							class="repo-input"
 						/>
-						<p class="repo-help">Provide a link to your project's demo video (e.g., YouTube, Vimeo)</p>
+						<p class="repo-help">
+							Provide a link to your project's demo video (e.g., YouTube, Vimeo)
+						</p>
 					</div>
 				</form>
 
@@ -126,7 +128,7 @@
 					<h3>Upload Guidelines:</h3>
 					<ul>
 						<li>Only PDF files are accepted</li>
-						<li>Maximum file size: 10MB</li>
+						<li>Maximum file size: 40MB</li>
 						<li>Ensure your presentation is complete and final before uploading</li>
 						<li>Your latest upload will replace any previous uploads</li>
 						<li>Maximum 5 presentations per team</li>
