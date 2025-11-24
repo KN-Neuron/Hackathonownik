@@ -9,6 +9,7 @@
 				id: string;
 				teamName: string;
 				teamId: string;
+				category: 'wellness' | 'commerce';
 				created: string;
 				updated: string;
 				presentationUrl: string;
@@ -26,6 +27,10 @@
 	let isLoading = $state(false);
 	let currentPage = $state(1);
 	let totalPages = $state(1);
+
+	// Group presentations by category
+	let wellnessPresentations = $derived(presentations.filter(p => p.category === 'wellness'));
+	let commercePresentations = $derived(presentations.filter(p => p.category === 'commerce'));
 
 	// Function to open presentation in fullscreen
 	async function openFullscreen(presentation: (typeof data.presentations)[0]) {
@@ -130,104 +135,159 @@
 	</div>
 
 	{#if presentations.length > 0}
-		<div class="presentations-grid">
-			{#each presentations as presentation}
-				<div class="presentation-card" on:click={() => openFullscreen(presentation)}>
-					<div class="card-content">
-						<h3>{presentation.teamName}</h3>
-						<p class="team-id">Team ID: {presentation.teamId}</p>
-						<p class="created-date">
-							Submitted: {new Date(presentation.created).toLocaleDateString()}
-						</p>
-						{#if presentation.repo_link || presentation.video_link}
-							<div class="links-container">
-								{#if presentation.repo_link}
-									<a
-										href={presentation.repo_link}
-										target="_blank"
-										rel="noopener noreferrer"
-										class="external-link repo-link"
-										on:click|stopPropagation
-									>
-										<svg
-											width="16"
-											height="16"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="2"
-										>
-											<path
-												d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
-											></path>
-										</svg>
-										Repository
-									</a>
-								{/if}
-								{#if presentation.video_link}
-									<a
-										href={presentation.video_link}
-										target="_blank"
-										rel="noopener noreferrer"
-										class="external-link video-link"
-										on:click|stopPropagation
-									>
-										<svg
-											width="16"
-											height="16"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="2"
-										>
-											<polygon points="5 3 19 12 5 21 5 3"></polygon>
-										</svg>
-										Video Demo
-									</a>
-								{/if}
-							</div>
-						{/if}
-						<div class="card-actions">
-							<button class="view-btn">
-								<svg
-									width="20"
-									height="20"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-								>
-									<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-									<circle cx="12" cy="12" r="3"></circle>
-								</svg>
-								View
-							</button>
-
-							{#if presentation.presentationUrl}
-								<button
-									class="download-btn"
-									on:click|stopPropagation={() => downloadPresentation(presentation)}
-								>
-									<svg
-										width="20"
-										height="20"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="2"
-									>
-										<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-										<polyline points="7,10 12,15 17,10"></polyline>
-										<line x1="12" y1="15" x2="12" y2="3"></line>
-									</svg>
-									Download
-								</button>
-							{/if}
-						</div>
-					</div>
+		<!-- Wellness Category -->
+		{#if wellnessPresentations.length > 0}
+			<div class="category-section">
+				<div class="category-header wellness">
+					<h2>Wellness</h2>
+					<span class="category-count">{wellnessPresentations.length} teams</span>
 				</div>
-			{/each}
-		</div>
+				<div class="presentations-grid">
+					{#each wellnessPresentations as presentation}
+						<div class="presentation-card wellness-card" on:click={() => openFullscreen(presentation)}>
+							<div class="card-content">
+								<div class="card-header-row">
+									<h3>{presentation.teamName}</h3>
+									<span class="category-badge wellness-badge">Wellness</span>
+								</div>
+								<p class="team-id">Team ID: {presentation.teamId}</p>
+								<p class="created-date">
+									Submitted: {new Date(presentation.created).toLocaleDateString()}
+								</p>
+								{#if presentation.repo_link || presentation.video_link}
+									<div class="links-container">
+										{#if presentation.repo_link}
+											<a
+												href={presentation.repo_link}
+												target="_blank"
+												rel="noopener noreferrer"
+												class="external-link repo-link"
+												on:click|stopPropagation
+											>
+												<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+													<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+												</svg>
+												Repository
+											</a>
+										{/if}
+										{#if presentation.video_link}
+											<a
+												href={presentation.video_link}
+												target="_blank"
+												rel="noopener noreferrer"
+												class="external-link video-link"
+												on:click|stopPropagation
+											>
+												<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+													<polygon points="5 3 19 12 5 21 5 3"></polygon>
+												</svg>
+												Video Demo
+											</a>
+										{/if}
+									</div>
+								{/if}
+								<div class="card-actions">
+									<button class="view-btn">
+										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+											<circle cx="12" cy="12" r="3"></circle>
+										</svg>
+										View
+									</button>
+									{#if presentation.presentationUrl}
+										<button class="download-btn" on:click|stopPropagation={() => downloadPresentation(presentation)}>
+											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+												<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+												<polyline points="7,10 12,15 17,10"></polyline>
+												<line x1="12" y1="15" x2="12" y2="3"></line>
+											</svg>
+											Download
+										</button>
+									{/if}
+								</div>
+							</div>
+						</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
+		<!-- Commerce Category -->
+		{#if commercePresentations.length > 0}
+			<div class="category-section">
+				<div class="category-header commerce">
+					<h2>Commerce</h2>
+					<span class="category-count">{commercePresentations.length} teams</span>
+				</div>
+				<div class="presentations-grid">
+					{#each commercePresentations as presentation}
+						<div class="presentation-card commerce-card" on:click={() => openFullscreen(presentation)}>
+							<div class="card-content">
+								<div class="card-header-row">
+									<h3>{presentation.teamName}</h3>
+									<span class="category-badge commerce-badge">Commerce</span>
+								</div>
+								<p class="team-id">Team ID: {presentation.teamId}</p>
+								<p class="created-date">
+									Submitted: {new Date(presentation.created).toLocaleDateString()}
+								</p>
+								{#if presentation.repo_link || presentation.video_link}
+									<div class="links-container">
+										{#if presentation.repo_link}
+											<a
+												href={presentation.repo_link}
+												target="_blank"
+												rel="noopener noreferrer"
+												class="external-link repo-link"
+												on:click|stopPropagation
+											>
+												<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+													<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+												</svg>
+												Repository
+											</a>
+										{/if}
+										{#if presentation.video_link}
+											<a
+												href={presentation.video_link}
+												target="_blank"
+												rel="noopener noreferrer"
+												class="external-link video-link"
+												on:click|stopPropagation
+											>
+												<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+													<polygon points="5 3 19 12 5 21 5 3"></polygon>
+												</svg>
+												Video Demo
+											</a>
+										{/if}
+									</div>
+								{/if}
+								<div class="card-actions">
+									<button class="view-btn">
+										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+											<circle cx="12" cy="12" r="3"></circle>
+										</svg>
+										View
+									</button>
+									{#if presentation.presentationUrl}
+										<button class="download-btn" on:click|stopPropagation={() => downloadPresentation(presentation)}>
+											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+												<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+												<polyline points="7,10 12,15 17,10"></polyline>
+												<line x1="12" y1="15" x2="12" y2="3"></line>
+											</svg>
+											Download
+										</button>
+									{/if}
+								</div>
+							</div>
+						</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
 	{:else}
 		<div class="no-presentations">
 			<h2>No presentations yet</h2>
@@ -329,6 +389,94 @@
 		font-weight: 700;
 		color: #7f7bff;
 		margin-bottom: 0.5rem;
+	}
+
+	/* Category sections */
+	.category-section {
+		margin-bottom: 3rem;
+	}
+
+	.category-header {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 1.5rem;
+		padding-bottom: 0.75rem;
+		border-bottom: 2px solid;
+	}
+
+	.category-header.wellness {
+		border-color: #36c399;
+	}
+
+	.category-header.commerce {
+		border-color: #f7a654;
+	}
+
+	.category-header h2 {
+		font-size: 1.5rem;
+		font-weight: 600;
+		margin: 0;
+	}
+
+	.category-header.wellness h2 {
+		color: #36c399;
+	}
+
+	.category-header.commerce h2 {
+		color: #f7a654;
+	}
+
+	.category-count {
+		font-size: 0.875rem;
+		color: rgba(255, 255, 255, 0.6);
+		padding: 0.25rem 0.75rem;
+		background: rgba(255, 255, 255, 0.1);
+		border-radius: 1rem;
+	}
+
+	.card-header-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: 0.5rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.card-header-row h3 {
+		margin-bottom: 0;
+	}
+
+	.category-badge {
+		font-size: 0.7rem;
+		font-weight: 600;
+		padding: 0.2rem 0.5rem;
+		border-radius: 0.25rem;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		white-space: nowrap;
+	}
+
+	.wellness-badge {
+		background: rgba(54, 195, 153, 0.2);
+		color: #36c399;
+		border: 1px solid rgba(54, 195, 153, 0.3);
+	}
+
+	.commerce-badge {
+		background: rgba(247, 166, 84, 0.2);
+		color: #f7a654;
+		border: 1px solid rgba(247, 166, 84, 0.3);
+	}
+
+	.wellness-card:hover {
+		border-color: rgba(54, 195, 153, 0.4);
+		box-shadow: 0 10px 25px rgba(54, 195, 153, 0.15);
+	}
+
+	.commerce-card:hover {
+		border-color: rgba(247, 166, 84, 0.4);
+		box-shadow: 0 10px 25px rgba(247, 166, 84, 0.15);
 	}
 
 	.presentations-grid {

@@ -5,6 +5,7 @@
 
 	export let rankings = [];
 	export let totalJuries = 0;
+	export let categoryFilter = 'all'; // 'all', 'wellness', or 'commerce'
 
 	let sortField = 'finalGrade';
 	let sortDirection = 'desc';
@@ -93,7 +94,9 @@
 			});
 
 			doc.setFontSize(18);
-			doc.text('Heroes of the Brain 2025 - Rankings', 14, 20);
+			const categoryTitle = categoryFilter === 'all' ? 'All Categories' :
+				categoryFilter === 'wellness' ? 'Wellness Category' : 'Commerce Category';
+			doc.text(`Heroes of the Brain 2025 - Rankings (${categoryTitle})`, 14, 20);
 
 			doc.setFontSize(10);
 			doc.setTextColor(100, 100, 100);
@@ -103,6 +106,7 @@
 			const tableColumn = [
 				'Rank',
 				'Team',
+				'Category',
 				'Innovation',
 				'Usefulness',
 				'Presentation',
@@ -114,6 +118,7 @@
 			const tableRows = sortedRankings.map((team, index) => [
 				index + 1,
 				team.team,
+				team.category ? team.category.charAt(0).toUpperCase() + team.category.slice(1) : 'N/A',
 				team.innovation.toFixed(1),
 				team.usefulness.toFixed(1),
 				team.finalPresentation.toFixed(1),
@@ -132,17 +137,27 @@
 				columnStyles: {
 					0: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
 					1: { cellWidth: 'auto', fontStyle: 'bold' },
-					6: { cellWidth: 25, fontStyle: 'bold' },
-					7: { cellWidth: 35 }
+					2: { cellWidth: 22 }, // Category column
+					7: { cellWidth: 25, fontStyle: 'bold' }, // Final Grade
+					8: { cellWidth: 35 } // Status
 				},
 				didDrawCell: (data) => {
-					if (data.column.index === 6 && data.section === 'body') {
+					// Color the Final Grade column (index 7)
+					if (data.column.index === 7 && data.section === 'body') {
 						const score = parseFloat(data.cell.text[0]);
 						if (score >= 4.5) doc.setTextColor(54, 195, 153);
 						else if (score >= 3.5) doc.setTextColor(54, 195, 153);
 						else if (score >= 2.5) doc.setTextColor(247, 166, 84);
 						else doc.setTextColor(232, 92, 144);
-					} else if (data.section === 'body') {
+					}
+					// Color the Category column (index 2)
+					else if (data.column.index === 2 && data.section === 'body') {
+						const category = data.cell.text[0]?.toLowerCase();
+						if (category === 'wellness') doc.setTextColor(54, 195, 153);
+						else if (category === 'commerce') doc.setTextColor(247, 166, 84);
+						else doc.setTextColor(0, 0, 0);
+					}
+					else if (data.section === 'body') {
 						doc.setTextColor(0, 0, 0);
 					}
 				}
@@ -367,7 +382,12 @@
 					<tr class="hover:bg-base-200 transition-colors">
 						<td class="font-bold">{index + 1}</td>
 						<td>
-							<div class="font-semibold">{team.team}</div>
+							<div class="team-name-cell">
+								<span class="font-semibold">{team.team}</span>
+								{#if categoryFilter === 'all' && team.category}
+									<span class="category-badge {team.category}-badge">{team.category}</span>
+								{/if}
+							</div>
 						</td>
 						<td class={getScoreColor(team.innovation)}>{team.innovation.toFixed(1)}</td>
 						<td class={getScoreColor(team.usefulness)}>{team.usefulness.toFixed(1)}</td>
@@ -590,5 +610,33 @@
 
 	.btn-accent:hover {
 		background: linear-gradient(135deg, #6a67d6, #3dcede);
+	}
+
+	/* Team name with category badge */
+	.team-name-cell {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.category-badge {
+		font-size: 0.65rem;
+		font-weight: 600;
+		padding: 0.15rem 0.4rem;
+		border-radius: 0.25rem;
+		text-transform: capitalize;
+	}
+
+	.wellness-badge {
+		background: rgba(54, 195, 153, 0.2);
+		color: #36c399;
+		border: 1px solid rgba(54, 195, 153, 0.3);
+	}
+
+	.commerce-badge {
+		background: rgba(247, 166, 84, 0.2);
+		color: #f7a654;
+		border: 1px solid rgba(247, 166, 84, 0.3);
 	}
 </style>

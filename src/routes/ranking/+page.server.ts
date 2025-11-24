@@ -65,6 +65,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			juryId: r.jury,
 			team: r.expand?.team?.name || 'Unknown Team',
 			teamId: r.expand?.team?.id || '',
+			category: r.expand?.team?.category || 'wellness',
 			finalGrade: (r.innovation + r.usefulness + r.finalPresentation + r.implementation) / 4
 		}));
 
@@ -81,6 +82,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 				teamRatingsMap.set(rating.teamId, {
 					team: rating.team,
 					teamId: rating.teamId,
+					category: rating.category,
 					innovation: 0,
 					usefulness: 0,
 					implementation: 0,

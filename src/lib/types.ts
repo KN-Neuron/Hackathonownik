@@ -33,6 +33,18 @@ export interface Rating {
 	finalGrade: number | null;
 }
 
+export type TeamCategory = 'wellness' | 'commerce';
+
+export interface Team {
+	id: string;
+	name: string;
+	category: TeamCategory;
+	collectionId?: string;
+	collectionName?: string;
+	created?: string;
+	updated?: string;
+}
+
 export interface Presentation {
 	collectionId: string;
 	collectionName: string;
@@ -47,6 +59,7 @@ export interface Presentation {
 		team?: {
 			id: string;
 			name: string;
+			category?: TeamCategory;
 		};
 	};
 }

@@ -23,6 +23,7 @@ export interface TeamWithPresentationUrl {
 	jakosc_implementacji?: number | null;
 	ocena?: number | null;
 	name?: string;  // for team name
+	category?: 'wellness' | 'commerce';
 }
 
 export const load = async ({ locals }) => {
