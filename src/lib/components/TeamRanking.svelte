@@ -57,6 +57,17 @@
 		return 'bg-neutral text-neutral-content';
 	}
 
+	async function fetchTeamRatings(teamId) {
+		try {
+			const response = await fetch(`/api/ratings/team-details?teamId=${teamId}`);
+			if (!response.ok) return [];
+			const data = await response.json();
+			return data.ratings ?? [];
+		} catch {
+			return [];
+		}
+	}
+
 	async function exportToPdf() {
 		try {
 			if (!browser || !jsPDF) {
@@ -66,24 +77,29 @@
 
 			isPdfExporting = true;
 
-			
+			// Fetch all individual jury ratings for each team
+			const teamRatingsMap = new Map();
+			await Promise.all(
+				sortedRankings.map(async (team) => {
+					const ratings = await fetchTeamRatings(team.teamId);
+					teamRatingsMap.set(team.teamId, ratings);
+				})
+			);
+
 			const doc = new jsPDF({
 				orientation: 'landscape',
 				unit: 'mm',
 				format: 'a4'
 			});
 
-			
 			doc.setFontSize(18);
 			doc.text('Heroes of the Brain 2025 - Rankings', 14, 20);
 
-			
 			doc.setFontSize(10);
 			doc.setTextColor(100, 100, 100);
 			doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
 			doc.text(`Total Teams: ${rankings.length} | Total Juries: ${totalJuries}`, 14, 34);
 
-			
 			const tableColumn = [
 				'Rank',
 				'Team',
@@ -95,7 +111,6 @@
 				'Status'
 			];
 
-			
 			const tableRows = sortedRankings.map((team, index) => [
 				index + 1,
 				team.team,
@@ -107,7 +122,6 @@
 				`${team.status === 'final' ? 'Final' : 'Provisional'} (${team.ratingCount}/${totalJuries})`
 			]);
 
-			
 			jsPDFAutoTable(doc, {
 				head: [tableColumn],
 				body: tableRows,
@@ -122,7 +136,6 @@
 					7: { cellWidth: 35 }
 				},
 				didDrawCell: (data) => {
-					
 					if (data.column.index === 6 && data.section === 'body') {
 						const score = parseFloat(data.cell.text[0]);
 						if (score >= 4.5) doc.setTextColor(54, 195, 153);
@@ -130,13 +143,100 @@
 						else if (score >= 2.5) doc.setTextColor(247, 166, 84);
 						else doc.setTextColor(232, 92, 144);
 					} else if (data.section === 'body') {
-						
 						doc.setTextColor(0, 0, 0);
 					}
 				}
 			});
 
-			
+			// Add individual jury ratings for each team
+			for (const team of sortedRankings) {
+				const ratings = teamRatingsMap.get(team.teamId) || [];
+				if (ratings.length === 0) continue;
+
+				doc.addPage();
+
+				doc.setFontSize(14);
+				doc.setTextColor(0, 0, 0);
+				doc.text(`Individual Jury Ratings: ${team.team}`, 14, 20);
+
+				doc.setFontSize(10);
+				doc.setTextColor(100, 100, 100);
+				doc.text(`Average Final Grade: ${team.finalGrade.toFixed(2)}`, 14, 28);
+
+				const juryColumns = [
+					'Jury',
+					'Innovation',
+					'Usefulness',
+					'Presentation',
+					'Implementation',
+					'Final Grade'
+				];
+
+				const juryRows = ratings.map((rating) => [
+					rating.juryName,
+					rating.innovation.toString(),
+					rating.usefulness.toString(),
+					rating.finalPresentation.toString(),
+					rating.implementation.toString(),
+					rating.finalGrade.toFixed(2)
+				]);
+
+				jsPDFAutoTable(doc, {
+					head: [juryColumns],
+					body: juryRows,
+					startY: 35,
+					styles: { fontSize: 9, cellPadding: 3 },
+					headStyles: { fillColor: [100, 100, 100], textColor: 255 },
+					alternateRowStyles: { fillColor: [245, 247, 250] },
+					columnStyles: {
+						0: { cellWidth: 'auto', fontStyle: 'bold' },
+						5: { fontStyle: 'bold' }
+					},
+					didDrawCell: (data) => {
+						if (data.column.index === 5 && data.section === 'body') {
+							const score = parseFloat(data.cell.text[0]);
+							if (score >= 4.5) doc.setTextColor(54, 195, 153);
+							else if (score >= 3.5) doc.setTextColor(54, 195, 153);
+							else if (score >= 2.5) doc.setTextColor(247, 166, 84);
+							else doc.setTextColor(232, 92, 144);
+						} else if (data.section === 'body') {
+							doc.setTextColor(0, 0, 0);
+						}
+					}
+				});
+
+				// Add comments section if any jury has comments
+				const ratingsWithComments = ratings.filter((r) => r.comments && r.comments.trim());
+				if (ratingsWithComments.length > 0) {
+					let yPos = doc.lastAutoTable.finalY + 10;
+
+					doc.setFontSize(11);
+					doc.setTextColor(0, 0, 0);
+					doc.text('Jury Comments:', 14, yPos);
+					yPos += 7;
+
+					doc.setFontSize(9);
+					for (const rating of ratingsWithComments) {
+						// Check if we need a new page
+						if (yPos > doc.internal.pageSize.getHeight() - 30) {
+							doc.addPage();
+							yPos = 20;
+						}
+
+						doc.setTextColor(50, 50, 50);
+						doc.setFont(undefined, 'bold');
+						doc.text(`${rating.juryName}:`, 14, yPos);
+						doc.setFont(undefined, 'normal');
+						yPos += 5;
+
+						doc.setTextColor(80, 80, 80);
+						const lines = doc.splitTextToSize(rating.comments, 260);
+						doc.text(lines, 14, yPos);
+						yPos += lines.length * 4 + 5;
+					}
+				}
+			}
+
 			const pageCount = doc.internal.getNumberOfPages();
 			for (let i = 1; i <= pageCount; i++) {
 				doc.setPage(i);
@@ -157,7 +257,6 @@
 				);
 			}
 
-			
 			doc.save(`heroes-of-brain-rankings-${new Date().toISOString().slice(0, 10)}.pdf`);
 		} catch (err) {
 			console.error('Error exporting PDF:', err);
