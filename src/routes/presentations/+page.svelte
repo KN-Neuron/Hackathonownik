@@ -25,6 +25,7 @@
 	let currentTeamName = $state('');
 	let presentations = $state(data.presentations);
 	let isLoading = $state(false);
+	let loadingPresentationId = $state<string | null>(null);
 	let currentPage = $state(1);
 	let totalPages = $state(1);
 
@@ -38,6 +39,7 @@
 			try {
 				// Show loading state
 				isLoading = true;
+				loadingPresentationId = presentation.id;
 
 				// Convert URL to File object like in TeamCard
 				const filename = presentation.presentationUrl.split('/').pop() || 'presentation.pdf';
@@ -57,6 +59,7 @@
 			} finally {
 				// Hide loading state
 				isLoading = false;
+				loadingPresentationId = null;
 			}
 		}
 	}
@@ -187,12 +190,20 @@
 									</div>
 								{/if}
 								<div class="card-actions">
-									<button class="view-btn">
-										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-											<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-											<circle cx="12" cy="12" r="3"></circle>
-										</svg>
-										View
+									<button
+										class="view-btn"
+										disabled={loadingPresentationId === presentation.id}
+									>
+										{#if loadingPresentationId === presentation.id}
+											<span class="loading-spinner"></span>
+											Loading...
+										{:else}
+											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+												<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+												<circle cx="12" cy="12" r="3"></circle>
+											</svg>
+											View
+										{/if}
 									</button>
 									{#if presentation.presentationUrl}
 										<button class="download-btn" on:click|stopPropagation={() => downloadPresentation(presentation)}>
@@ -264,12 +275,20 @@
 									</div>
 								{/if}
 								<div class="card-actions">
-									<button class="view-btn">
-										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-											<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-											<circle cx="12" cy="12" r="3"></circle>
-										</svg>
-										View
+									<button
+										class="view-btn"
+										disabled={loadingPresentationId === presentation.id}
+									>
+										{#if loadingPresentationId === presentation.id}
+											<span class="loading-spinner"></span>
+											Loading...
+										{:else}
+											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+												<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+												<circle cx="12" cy="12" r="3"></circle>
+											</svg>
+											View
+										{/if}
 									</button>
 									{#if presentation.presentationUrl}
 										<button class="download-btn" on:click|stopPropagation={() => downloadPresentation(presentation)}>
@@ -540,8 +559,29 @@
 		transition: all 0.2s ease;
 	}
 
-	.view-btn:hover {
+	.view-btn:hover:not(:disabled) {
 		transform: scale(1.05);
+	}
+
+	.view-btn:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.loading-spinner {
+		display: inline-block;
+		width: 16px;
+		height: 16px;
+		border: 2px solid rgba(15, 19, 34, 0.2);
+		border-left-color: #0f1322;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	.download-btn {
