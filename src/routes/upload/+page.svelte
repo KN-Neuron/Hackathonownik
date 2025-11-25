@@ -80,7 +80,11 @@
 						/>
 
 						{#if selectedFiles.length > 0}
-							<button type="button" class="preview-button" onclick={() => (showPresentationModal = true)}>
+							<button
+								type="button"
+								class="preview-button"
+								onclick={() => (showPresentationModal = true)}
+							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
 									width="20"
@@ -99,7 +103,7 @@
 					</div>
 
 					<div class="repo-link-section">
-						<label for="repo_link" class="repo-label">Repository Link (Optional)</label>
+						<label for="repo_link" class="repo-label">Repository Link</label>
 						<input
 							type="url"
 							id="repo_link"
@@ -107,6 +111,7 @@
 							placeholder="https://github.com/username/repository"
 							bind:value={repoLink}
 							class="repo-input"
+							required
 						/>
 						<p class="repo-help">
 							Provide a link to your project's source code repository (e.g., GitHub, GitLab)
@@ -114,7 +119,7 @@
 					</div>
 
 					<div class="repo-link-section">
-						<label for="video_link" class="repo-label">Video Link (Optional)</label>
+						<label for="video_link" class="repo-label">Video Link</label>
 						<input
 							type="url"
 							id="video_link"
@@ -122,9 +127,10 @@
 							placeholder="https://youtube.com/watch?v=..."
 							bind:value={videoLink}
 							class="repo-input"
+							required
 						/>
 						<p class="repo-help">
-							Provide a link to your project's demo video (e.g., YouTube, Vimeo)
+							Provide a link to your project's demo video (e.g., YouTube, Loom)
 						</p>
 					</div>
 				</form>
@@ -135,10 +141,12 @@
 						<li>Only PDF files are accepted</li>
 						<li>Maximum file size: 40MB</li>
 						<li>Ensure your presentation is complete and final before uploading</li>
-						<li>Your latest upload will replace any previous uploads</li>
-						<li>Maximum 5 presentations per team</li>
-						<li>Repository link is optional but recommended for jury review</li>
-						<li>Video link is optional but recommended to showcase your project demo</li>
+						<li>
+							Jury will see only the latest uploaded presentation. Maximum 5 presentations per team
+							are allowed.
+						</li>
+						<li>Repository link is required for jury review</li>
+						<li>Video link is required to showcase your project demo</li>
 					</ul>
 				</div>
 			</div>
