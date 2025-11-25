@@ -262,7 +262,7 @@ export class InputValidator {
 export class FileUploadSecurity {
 	static readonly ALLOWED_PDF_MIME_TYPES = ['application/pdf'];
 
-	static readonly MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+	static readonly MAX_FILE_SIZE = 40 * 1024 * 1024; // 20MB
 
 	static async validatePdfUpload(file: File): Promise<{ valid: boolean; error?: string }> {
 		// Sprawdź czy plik istnieje

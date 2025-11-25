@@ -80,7 +80,7 @@
 						/>
 
 						{#if selectedFiles.length > 0}
-							<button class="preview-button" onclick={() => (showPresentationModal = true)}>
+							<button type="button" class="preview-button" onclick={() => (showPresentationModal = true)}>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
 									width="20"
