@@ -672,13 +672,13 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 1rem 2rem;
+		padding: 0.5rem 1rem;
 		background: rgba(0, 0, 0, 0.7);
 		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 	}
 
 	.presentation-header h2 {
-		font-size: 1.5rem;
+		font-size: 1.2rem;
 		font-weight: 600;
 		color: #f0f0f0;
 		margin: 0;
@@ -686,7 +686,7 @@
 
 	.header-actions {
 		display: flex;
-		gap: 1rem;
+		gap: 0.5rem;
 	}
 
 	.exit-fullscreen-btn {
@@ -694,7 +694,7 @@
 		border: none;
 		color: #f0f0f0;
 		cursor: pointer;
-		padding: 0.5rem;
+		padding: 0.25rem;
 		border-radius: 0.25rem;
 		transition: background 0.2s;
 		display: flex;
@@ -708,7 +708,7 @@
 
 	.presentation-header-actions {
 		display: flex;
-		gap: 0.5rem;
+		gap: 0.25rem;
 	}
 
 	.download-fullscreen-btn {
@@ -716,7 +716,7 @@
 		border: none;
 		color: #f0f0f0;
 		cursor: pointer;
-		padding: 0.5rem;
+		padding: 0.25rem;
 		border-radius: 0.25rem;
 		transition: background 0.2s;
 		display: flex;

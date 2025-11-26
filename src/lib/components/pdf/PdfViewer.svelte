@@ -557,24 +557,24 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 1rem;
+		margin-bottom: 0.5rem;
 	}
 
 	.pdf-title {
 		margin: 0;
-		font-size: 1.1rem;
+		font-size: 1rem;
 		font-weight: 600;
 		color: #f0f0f0;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		max-width: 60%;
+		max-width: 50%;
 	}
 
 	.pdf-controls {
 		display: flex;
 		align-items: center;
-		gap: 1rem;
+		gap: 0.5rem;
 	}
 
 	.page-controls {
@@ -582,7 +582,7 @@
 		align-items: center;
 		background-color: rgba(255, 255, 255, 0.1);
 		border-radius: 4px;
-		padding: 0.25rem;
+		padding: 0.125rem;
 	}
 
 	.btn-icon {
@@ -590,7 +590,7 @@
 		border: none;
 		color: #f0f0f0;
 		cursor: pointer;
-		padding: 0.25rem;
+		padding: 0.125rem;
 		border-radius: 4px;
 		display: flex;
 		align-items: center;
@@ -669,19 +669,20 @@
 	.page-container {
 		position: relative;
 		background-color: #2c2e33;
-		border-radius: 8px;
+		border-radius: 4px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		min-height: 400px;
+		min-height: 500px;
 		width: 100%;
 		overflow: hidden;
 		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+		margin-bottom: 0.5rem;
 	}
 
 	.page-image {
 		max-width: 100%;
-		max-height: 70vh;
+		max-height: 75vh;
 		object-fit: contain;
 	}
 
@@ -834,12 +835,12 @@
 		justify-content: center;
 		width: 100%;
 		height: 100%;
-		padding: 2rem;
+		padding: 0.5rem;
 	}
 
 	.fullscreen-image {
-		max-width: 95vw;
-		max-height: 80vh;
+		max-width: 98vw;
+		max-height: 90vh;
 		object-fit: contain;
 		box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
 	}
@@ -849,8 +850,8 @@
 		background-color: rgba(0, 0, 0, 0.6);
 		color: white;
 		border: none;
-		width: 50px;
-		height: 50px;
+		width: 40px;
+		height: 40px;
 		border-radius: 50%;
 		display: flex;
 		align-items: center;
@@ -870,11 +871,11 @@
 	}
 
 	.fs-nav-arrow.left {
-		left: 2rem;
+		left: 0.5rem;
 	}
 
 	.fs-nav-arrow.right {
-		right: 2rem;
+		right: 0.5rem;
 	}
 
 	.fullscreen-controls {
