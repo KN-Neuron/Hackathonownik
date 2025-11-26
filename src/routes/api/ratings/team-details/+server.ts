@@ -13,22 +13,18 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	}
 
 	try {
-		
 		const ratingsList = await locals.pb.collection('ratings').getList(1, 100, {
 			filter: `team = "${teamId}"`,
 			sort: '-created',
 			expand: 'jury'
 		});
 
-		
 		const formattedRatings = ratingsList.items.map((rating) => {
 			const finalGrade =
-				(Number(rating.innovation) +
-					Number(rating.usefulness) +
-					Number(rating.finalPresentation) +
-					Number(rating.implementation)) /
-				4;
-
+				Number(rating.innovation) +
+				Number(rating.usefulness) +
+				Number(rating.finalPresentation) +
+				Number(rating.implementation);
 			return {
 				id: rating.id,
 				juryId: rating.jury,

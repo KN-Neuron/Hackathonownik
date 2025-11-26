@@ -19,11 +19,10 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 
 		
 		const finalGrade =
-			(Number(data.innovation) +
-				Number(data.usefulness) +
-				Number(data.finalPresentation) +
-				Number(data.implementation)) /
-			4;
+			Number(data.innovation) +
+			Number(data.usefulness) +
+			Number(data.finalPresentation) +
+			Number(data.implementation);
 
 		
 		await locals.pb.collection('ratings').update(data.ratingId, {

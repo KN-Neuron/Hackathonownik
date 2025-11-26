@@ -7,32 +7,28 @@ export const GET: RequestHandler = async ({ locals }) => {
 	}
 
 	try {
-		
 		const juriesResult = await locals.pb.collection('users').getList(1, 100, {
 			filter: 'role = "jury"'
 		});
 		const totalJuries = juriesResult.totalItems;
 
-		
 		const validJuryIds = new Set();
 		juriesResult.items.forEach((user) => {
 			validJuryIds.add(user.id);
 		});
 
-		
 		const ratingsFromDB = await locals.pb.collection('ratings').getFullList({
 			sort: '-created',
 			expand: 'jury,team'
 		});
 
-		
 		const processedRatings = ratingsFromDB.map((r) => ({
 			...r,
 			jury: r.expand?.jury?.name || 'Unknown Jury',
 			juryId: r.jury,
 			team: r.expand?.team?.name || 'Unknown Team',
 			teamId: r.expand?.team?.id || '',
-			finalGrade: (r.innovation + r.usefulness + r.finalPresentation + r.implementation) / 4
+			finalGrade: r.innovation + r.usefulness + r.finalPresentation + r.implementation
 		}));
 
 		// Organize ratings by team
@@ -65,7 +61,6 @@ export const GET: RequestHandler = async ({ locals }) => {
 				team.juryIds.add(rating.juryId);
 				team.ratingCount++;
 
-				
 				team.innovation += rating.innovation;
 				team.usefulness += rating.usefulness;
 				team.implementation += rating.implementation;
@@ -73,7 +68,6 @@ export const GET: RequestHandler = async ({ locals }) => {
 			}
 		}
 
-		
 		const finalRankings = Array.from(teamRatingsMap.values()).map((team) => {
 			const count = team.ratingCount;
 
@@ -85,22 +79,16 @@ export const GET: RequestHandler = async ({ locals }) => {
 				};
 			}
 
-			
-			team.innovation /= count;
-			team.usefulness /= count;
-			team.implementation /= count;
-			team.finalPresentation /= count;
+			// Calculate final grade as the sum of all individual scores across all juries
 			team.finalGrade =
-				(team.innovation + team.usefulness + team.implementation + team.finalPresentation) / 4;
+				team.innovation + team.usefulness + team.implementation + team.finalPresentation;
 
-			
 			team.status = count >= totalJuries ? 'final' : 'provisional';
 			team.completionPercent = Math.round((count / totalJuries) * 100);
 
 			return team;
 		});
 
-		
 		finalRankings.sort((a, b) => b.finalGrade - a.finalGrade);
 
 		return json({

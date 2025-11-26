@@ -87,7 +87,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			team: r.expand?.team?.name || 'Unknown Team',
 			teamId: r.expand?.team?.id || '',
 			category: r.expand?.team?.category || 'wellness',
-			finalGrade: (r.innovation + r.usefulness + r.finalPresentation + r.implementation) / 4
+			finalGrade: r.innovation + r.usefulness + r.finalPresentation + r.implementation
 		}));
 
 		// Organize ratings by team
@@ -121,6 +121,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 				team.juryIds.add(rating.juryId);
 				team.ratingCount++;
 
+				// Add this jury's individual scores to team totals
 				team.innovation += rating.innovation;
 				team.usefulness += rating.usefulness;
 				team.implementation += rating.implementation;
@@ -139,12 +140,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 				};
 			}
 
-			team.innovation /= count;
-			team.usefulness /= count;
-			team.implementation /= count;
-			team.finalPresentation /= count;
-			team.finalGrade =
-				team.innovation + team.usefulness + team.implementation + team.finalPresentation;
+			// Keep sums instead of averages for metrics
+			team.finalGrade = team.innovation + team.usefulness + team.implementation + team.finalPresentation;
 
 			team.status = count >= totalJuries ? 'final' : 'provisional';
 			team.completionPercent = Math.round((count / totalJuries) * 100);
