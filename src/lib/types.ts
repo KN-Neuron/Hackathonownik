@@ -15,6 +15,8 @@ export interface User {
 	username: string;
 	verified: boolean;
 	role: string;
+	confirmedRating?: boolean;
+	team?: string;
 }
 
 
@@ -30,6 +32,7 @@ export interface Rating {
 	comments: string;
 	jury: string;
 	team: string;
+	presentation?: string;
 	finalGrade: number | null;
 }
 

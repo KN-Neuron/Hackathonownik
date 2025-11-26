@@ -43,6 +43,10 @@ export const load = async ({ locals }) => {
 			validJuryIds.add(user.id);
 		});
 
+		// Get current jury's confirmation status
+		const currentUser = await pb.collection('users').getOne(locals.user.id);
+		const currentJuryConfirmed = currentUser.confirmedRating || false;
+
 		const teams: TeamWithPresentationUrl[] = [];
 		const presentations = await pb.collection('presentations').getFullList({ sort: '-created' });
 
@@ -97,10 +101,10 @@ export const load = async ({ locals }) => {
 				ocena: currentJuryRating?.finalGrade ?? null
 			});
 		}
-		return { teams, totalJuries };
+		return { teams, totalJuries, currentJuryConfirmed };
 	} catch (error) {
 		console.error('Error fetching data:', error);
-		return { teams: [], totalJuries: 0 };
+		return { teams: [], totalJuries: 0, currentJuryConfirmed: false };
 	}
 };
 

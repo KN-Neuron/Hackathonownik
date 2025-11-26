@@ -9,10 +9,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 	}
 
 	// Check access based on user role
-	// Juries can always see rankings, participants only when all teams are rated
+	// Juries can always see rankings, participants only when all teams are rated AND confirmed
 	if (locals.user.role === 'participant' || locals.user.team) {
 		// For participants, check if all presentations have been rated by at least one jury
-		// We'll follow the same logic as in hooks.server.ts
+		// and all juries have confirmed their ratings
 		try {
 			const presentations = await locals.pb.collection('presentations').getFullList();
 			if (presentations.length === 0) {
@@ -29,12 +29,33 @@ export const load: PageServerLoad = async ({ locals }) => {
 				throw redirect(303, '/upload');  // Redirect participant back to upload page
 			}
 
-			const presentationIds = presentations.map((p) => p.id);
-			const ratedPresentationIds = new Set(ratings.map((r) => r.presentation));
+			// Get unique team IDs from presentations (to handle multiple presentations for same team)
+			const uniqueTeamIds = new Set();
+			for (const pres of presentations) {
+				if (pres.team && !uniqueTeamIds.has(pres.team)) {
+					uniqueTeamIds.add(pres.team);
+				}
+			}
 
-			// If not all presentations have been rated yet, don't show rankings to participants
-			if (!presentationIds.every((id) => ratedPresentationIds.has(id))) {
+			// Get unique team IDs that have been rated
+			const ratedTeamIds = new Set(ratings.map((r: any) => r.team));
+
+			// If not all teams have been rated yet, don't show rankings to participants
+			if (Array.from(uniqueTeamIds).some((teamId) => !ratedTeamIds.has(teamId))) {
 				throw redirect(303, '/upload');  // Redirect participant back to upload page
+			}
+
+			// Check if all juries have confirmed their ratings
+			const juries = await locals.pb.collection('users').getFullList({
+				filter: 'role = "jury"'
+			});
+
+			if (juries.length > 0) {
+				const confirmedJuries = juries.filter((jury) => jury.confirmedRating === true);
+				if (confirmedJuries.length !== juries.length) {
+					// Not all juries have confirmed their ratings
+					throw redirect(303, '/upload');  // Redirect participant back to upload page
+				}
 			}
 		} catch (err) {
 			console.error('Error checking ratings status:', err);

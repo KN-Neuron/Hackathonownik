@@ -81,6 +81,12 @@
 				<a class="nav-link" href="/upload" class:active={$page.url.pathname === '/upload'}>
 					<SidebarElement icon={IconNames.Upload} text="Upload Presentation" />
 				</a>
+				<!-- Show ranking link to participants if all juries have confirmed their ratings -->
+				{#if $page.data.allJuriesConfirmed}
+					<a class="nav-link" href="/ranking" class:active={$page.url.pathname === '/ranking'}>
+						<SidebarElement icon={IconNames.Ranking} text="Rankings" />
+					</a>
+				{/if}
 			{/if}
 			<!-- <form method="get" action="/logout" style="display:inline"> -->
 			<!-- 	<button class="btn" type="submit">Logout</button> -->

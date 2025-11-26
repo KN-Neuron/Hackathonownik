@@ -28,10 +28,39 @@ async function areAllTeamsRated(pb: TypedPocketBase): Promise<boolean> {
 
 	if (ratings.length === 0) return false;
 
-	const presentationIds = presentations.map((p) => p.id);
-	const ratedPresentationIds = new Set(ratings.map((r) => r.presentation));
+	// Get unique team IDs from presentations (to handle multiple presentations for same team)
+	const uniqueTeamIds = new Set();
+	const presentationToTeamMap = new Map();
 
-	return presentationIds.every((id) => ratedPresentationIds.has(id));
+	for (const pres of presentations) {
+		if (pres.team && !uniqueTeamIds.has(pres.team)) {
+			uniqueTeamIds.add(pres.team);
+			presentationToTeamMap.set(pres.id, pres.team);
+		}
+	}
+
+	// Get unique team IDs that have been rated
+	const ratedTeamIds = new Set(ratings.map((r: any) => r.team));
+
+	return Array.from(uniqueTeamIds).every((teamId) => ratedTeamIds.has(teamId));
+}
+
+async function areAllJuriesConfirmed(pb: TypedPocketBase): Promise<boolean> {
+	try {
+		// Get all jury members
+		const juries = await pb.collection('users').getFullList({
+			filter: 'role = "jury"'
+		});
+
+		if (juries.length === 0) return false;
+
+		// Check if all juries have confirmed their ratings
+		const confirmedJuries = juries.filter((jury: any) => jury.confirmedRating === true);
+
+		return confirmedJuries.length === juries.length;
+	} catch (e) {
+		throw new Error('Failed to check jury confirmations', { cause: e });
+	}
 }
 
 async function checkRouteAccess(
@@ -64,9 +93,10 @@ async function checkRouteAccess(
 		}
 
 		if (pathname === '/ranking' || pathname.startsWith('/ranking/')) {
-			// Participants can see rankings after all teams are rated
+			// Participants can see rankings after all teams are rated AND all juries have confirmed
 			const allRated = await areAllTeamsRated(pb);
-			return allRated;
+			const allConfirmed = await areAllJuriesConfirmed(pb);
+			return allRated && allConfirmed;
 		}
 
 		return false;

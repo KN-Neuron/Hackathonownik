@@ -40,6 +40,10 @@
 		// Participant can ONLY see upload
 		else if (user.role === 'participant' || user.team) {
 			links.push({ href: '/upload', label: 'Upload Presentation' });
+			// Show ranking link to participants if all juries have confirmed their ratings
+			if ($page.data.allJuriesConfirmed) {
+				links.push({ href: '/ranking', label: 'Rankings' });
+			}
 		}
 
 		// Everyone who is logged in can logout
