@@ -34,6 +34,7 @@ export enum IconNames {
 
 export const componentMap: ComponentMap = {
 	[IconNames.Home]: Home,
+	[IconNames.Info]: Info,
 	[IconNames.Stats]: Stats,
 	[IconNames.Ranking]: Ranking,
 	[IconNames.Upload]: Upload,

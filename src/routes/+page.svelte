@@ -3,7 +3,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 
-	export let text: string = 'Heroes of the brain 2025';
+	export let text: string = 'Heroes of the Brain 2025';
 
 	let titleEl: HTMLHeadingElement | null = null;
 	let pathEl: SVGPathElement | null = null;
@@ -55,8 +55,7 @@
 		}
 		if (main) {
 			const styles = getComputedStyle(main);
-			mainPaddingY =
-				parseFloat(styles.paddingTop || '0') + parseFloat(styles.paddingBottom || '0');
+			mainPaddingY = parseFloat(styles.paddingTop || '0') + parseFloat(styles.paddingBottom || '0');
 			document.documentElement.style.setProperty('--main-padding-y', mainPaddingY + 'px');
 		}
 	}
@@ -81,8 +80,7 @@
 			try {
 				const len = pathEl.getTotalLength();
 				pathEl.style.setProperty('--path-len', String(len));
-			} catch {
-							}
+			} catch {}
 		});
 	}
 
@@ -131,6 +129,40 @@
 	}
 </script>
 
+<div class="hero-stage">
+	<h1 class="hero" bind:this={titleEl}>
+		{text}
+	</h1>
+
+	<div class="wave-wrapper" style="--underline-gap: {underlineGap}px">
+		<svg class="wave" aria-hidden="true" {...{ width: svgWidth, viewBox }}>
+			<defs>
+				<linearGradient id="grad" x1="0%" y1="0%" x2="130%" y2="0%">
+					<stop offset="0%" stop-color="var(--snake-color-1)" />
+					<stop offset="38%" stop-color="var(--snake-color-2)" />
+					<stop offset="75%" stop-color="var(--snake-color-3)" />
+					<stop offset="100%" stop-color="var(--snake-color-1)" />
+				</linearGradient>
+				<!-- Generous filter region so glow is never clipped -->
+				<filter id="softGlow" x="-50%" y="-120%" width="200%" height="300%">
+					<feGaussianBlur stdDeviation="18" result="b" />
+					<feMerge>
+						<feMergeNode in="b" />
+						<feMergeNode in="SourceGraphic" />
+					</feMerge>
+				</filter>
+			</defs>
+			<g class="inner-wave" filter="url(#softGlow)">
+				<path bind:this={pathEl} class="snake" {d} vector-effect="non-scaling-stroke" />
+			</g>
+		</svg>
+	</div>
+
+	<div class="floating-particles" aria-hidden="true">
+		<span></span><span></span><span></span><span></span><span></span>
+	</div>
+</div>
+
 <style>
 	:root {
 		--snake-duration: 7.5s;
@@ -140,7 +172,7 @@
 	}
 
 	.hero-stage {
-				min-height: calc(100vh - var(--footer-height, 0px) - var(--main-padding-y, 0px));
+		min-height: calc(100vh - var(--footer-height, 0px) - var(--main-padding-y, 0px));
 		height: calc(100vh - var(--footer-height, 0px) - var(--main-padding-y, 0px));
 		display: flex;
 		align-items: center;
@@ -160,16 +192,10 @@
 		line-height: 1.02;
 		text-align: center;
 		margin: 0;
-		background: linear-gradient(
-			105deg,
-			#ffffff 0%,
-			#eaeaff 35%,
-			#d9f6ff 55%,
-			#ffffff 85%
-		);
+		background: linear-gradient(105deg, #ffffff 0%, #eaeaff 35%, #d9f6ff 55%, #ffffff 85%);
 		-webkit-background-clip: text;
 		color: transparent;
-		filter: drop-shadow(0 4px 14px rgba(0,0,30,0.25));
+		filter: drop-shadow(0 4px 14px rgba(0, 0, 30, 0.25));
 		position: relative;
 	}
 
@@ -178,8 +204,8 @@
 		position: absolute;
 		inset: -14% -18%;
 		background:
-			radial-gradient(circle at 35% 40%, rgba(110,156,255,0.25), transparent 60%),
-			radial-gradient(circle at 70% 65%, rgba(255,140,230,0.22), transparent 62%);
+			radial-gradient(circle at 35% 40%, rgba(110, 156, 255, 0.25), transparent 60%),
+			radial-gradient(circle at 70% 65%, rgba(255, 140, 230, 0.22), transparent 62%);
 		filter: blur(42px) saturate(140%);
 		opacity: 0.8;
 		z-index: -1;
@@ -196,7 +222,7 @@
 	svg.wave {
 		overflow: visible;
 		pointer-events: none;
-				height: 180px;
+		height: 180px;
 		display: block;
 	}
 
@@ -214,31 +240,49 @@
 		stroke-dasharray: var(--path-len);
 		stroke-dashoffset: var(--path-len);
 		animation:
-			draw var(--snake-duration) cubic-bezier(.77,.22,.29,.84) infinite,
+			draw var(--snake-duration) cubic-bezier(0.77, 0.22, 0.29, 0.84) infinite,
 			glimmer 6.5s linear infinite,
 			morph 9s ease-in-out infinite;
-		filter:
-			drop-shadow(0 0 10px rgba(160,220,255,0.55))
-			drop-shadow(0 0 40px rgba(140,160,255,0.35))
-			drop-shadow(0 0 65px rgba(140,160,255,0.18));
+		filter: drop-shadow(0 0 10px rgba(160, 220, 255, 0.55))
+			drop-shadow(0 0 40px rgba(140, 160, 255, 0.35))
+			drop-shadow(0 0 65px rgba(140, 160, 255, 0.18));
 	}
 
 	@keyframes draw {
-		0% { stroke-dashoffset: var(--path-len); }
-		28% { stroke-dashoffset: 0; }
-		55% { stroke-dashoffset: 0; }
-		100% { stroke-dashoffset: -var(--path-len); }
+		0% {
+			stroke-dashoffset: var(--path-len);
+		}
+		28% {
+			stroke-dashoffset: 0;
+		}
+		55% {
+			stroke-dashoffset: 0;
+		}
+		100% {
+			stroke-dashoffset: -var(--path-len);
+		}
 	}
 
 	@keyframes glimmer {
-		0% { filter: drop-shadow(0 0 8px rgba(110,180,255,0.35)) brightness(1); }
-		50% { filter: drop-shadow(0 0 24px rgba(150,220,255,0.65)) brightness(1.25); }
-		100% { filter: drop-shadow(0 0 8px rgba(110,180,255,0.35)) brightness(1); }
+		0% {
+			filter: drop-shadow(0 0 8px rgba(110, 180, 255, 0.35)) brightness(1);
+		}
+		50% {
+			filter: drop-shadow(0 0 24px rgba(150, 220, 255, 0.65)) brightness(1.25);
+		}
+		100% {
+			filter: drop-shadow(0 0 8px rgba(110, 180, 255, 0.35)) brightness(1);
+		}
 	}
 
 	@keyframes morph {
-		0%, 100% { transform: scaleY(1); }
-		50% { transform: scaleY(1.08); }
+		0%,
+		100% {
+			transform: scaleY(1);
+		}
+		50% {
+			transform: scaleY(1.08);
+		}
 	}
 
 	.floating-particles {
@@ -253,77 +297,73 @@
 		position: absolute;
 		width: 10px;
 		height: 10px;
-		background: radial-gradient(circle, #ffffff, rgba(255,255,255,0) 70%);
+		background: radial-gradient(circle, #ffffff, rgba(255, 255, 255, 0) 70%);
 		border-radius: 50%;
 		animation: floatS 12s linear infinite;
 		opacity: 0.5;
 	}
 
-	.floating-particles span:nth-child(2) { width: 14px; height: 14px; animation-duration: 15s; animation-delay: -4s; left: 18%; top: 68%; }
-	.floating-particles span:nth-child(3) { width: 8px; animation-duration: 10s; animation-delay: -6s; left: 72%; top: 22%; }
-	.floating-particles span:nth-child(4) { width: 12px; animation-duration: 17s; animation-delay: -2s; left: 55%; top: 75%; }
-	.floating-particles span:nth-child(5) { width: 9px; animation-duration: 14s; animation-delay: -8s; left: 40%; top: 28%; }
+	.floating-particles span:nth-child(2) {
+		width: 14px;
+		height: 14px;
+		animation-duration: 15s;
+		animation-delay: -4s;
+		left: 18%;
+		top: 68%;
+	}
+	.floating-particles span:nth-child(3) {
+		width: 8px;
+		animation-duration: 10s;
+		animation-delay: -6s;
+		left: 72%;
+		top: 22%;
+	}
+	.floating-particles span:nth-child(4) {
+		width: 12px;
+		animation-duration: 17s;
+		animation-delay: -2s;
+		left: 55%;
+		top: 75%;
+	}
+	.floating-particles span:nth-child(5) {
+		width: 9px;
+		animation-duration: 14s;
+		animation-delay: -8s;
+		left: 40%;
+		top: 28%;
+	}
 
 	@keyframes floatS {
-		0% { transform: translateY(0) translateX(0); opacity: 0; }
-		10% { opacity: 0.6; }
-		50% { transform: translateY(-40px) translateX(20px); opacity: 0.4; }
-		90% { opacity: 0; }
-		100% { transform: translateY(-80px) translateX(40px); opacity: 0; }
+		0% {
+			transform: translateY(0) translateX(0);
+			opacity: 0;
+		}
+		10% {
+			opacity: 0.6;
+		}
+		50% {
+			transform: translateY(-40px) translateX(20px);
+			opacity: 0.4;
+		}
+		90% {
+			opacity: 0;
+		}
+		100% {
+			transform: translateY(-80px) translateX(40px);
+			opacity: 0;
+		}
 	}
 
 	@media (max-width: 640px) {
-		path.snake { stroke-width: 5; }
+		path.snake {
+			stroke-width: 5;
+		}
 	}
 
 	:global(html, body) {
 		background:
 			radial-gradient(circle at 70% 15%, #1d2340, #0e121f 60%),
-			radial-gradient(circle at 15% 85%, #191f34, transparent 70%),
-			#0f1322;
+			radial-gradient(circle at 15% 85%, #191f34, transparent 70%), #0f1322;
 		color: #ffffff;
 	}
 </style>
-
-<div class="hero-stage">
-	<h1 class="hero" bind:this={titleEl}>
-		{text}
-	</h1>
-
-	<div class="wave-wrapper" style="--underline-gap: {underlineGap}px">
-		<svg
-			class="wave"
-			aria-hidden="true"
-			{...{ width: svgWidth, viewBox }}
-		>
-			<defs>
-				<linearGradient id="grad" x1="0%" y1="0%" x2="130%" y2="0%">
-					<stop offset="0%" stop-color="var(--snake-color-1)" />
-					<stop offset="38%" stop-color="var(--snake-color-2)" />
-					<stop offset="75%" stop-color="var(--snake-color-3)" />
-					<stop offset="100%" stop-color="var(--snake-color-1)" />
-				</linearGradient>
-				<!-- Generous filter region so glow is never clipped -->
-				<filter id="softGlow" x="-50%" y="-120%" width="200%" height="300%">
-					<feGaussianBlur stdDeviation="18" result="b" />
-					<feMerge>
-						<feMergeNode in="b" />
-						<feMergeNode in="SourceGraphic" />
-					</feMerge>
-				</filter>
-			</defs>
-			<g class="inner-wave" filter="url(#softGlow)">
-				<path
-					bind:this={pathEl}
-					class="snake"
-					d={d}
-					vector-effect="non-scaling-stroke"
-				/>
-			</g>
-		</svg>
-	</div>
-
-	<div class="floating-particles" aria-hidden="true">
-		<span></span><span></span><span></span><span></span><span></span>
-	</div>
-</div>

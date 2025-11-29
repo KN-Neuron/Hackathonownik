@@ -40,6 +40,9 @@
 			<a class="nav-link" href="/" class:active={$page.url.pathname === '/'}>
 				<SidebarElement icon={IconNames.Home} text="Home" />
 			</a>
+			<a class="nav-link" href="/info" class:active={$page.url.pathname === '/info'}>
+				<SidebarElement icon={IconNames.Info} text="Info" />
+			</a>
 
 			{#if user?.admin || user?.role === 'admin'}
 				<!-- Admin sees admin dashboard and presentations -->
@@ -92,6 +95,9 @@
 			<!-- 	<button class="btn" type="submit">Logout</button> -->
 			<!-- </form> -->
 		{:else}
+			<a class="nav-link" href="/info" class:active={$page.url.pathname === '/info'}>
+				<SidebarElement icon={IconNames.Info} text="Info" />
+			</a>
 			<a class="nav-link" href="/login" class:active={$page.url.pathname === '/login'}>
 				<SidebarElement icon={IconNames.Login} text="Login" />
 			</a>
