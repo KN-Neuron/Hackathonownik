@@ -19,7 +19,7 @@
 		<h1 class="text-3xl font-bold self-center mb-2">Log in</h1>
 
 		<span class="self-center text-gray-400 text-sm">
-			Don't have an account? Contact your administrator
+			Don't have email and password? Contact organizers on discord.
 		</span>
 
 		<div class="divider mt-8 mb-8">Heroes of the Brain</div>
