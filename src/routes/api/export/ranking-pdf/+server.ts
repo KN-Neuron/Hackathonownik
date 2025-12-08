@@ -21,29 +21,42 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 		
 		const browser = await puppeteer.launch({
 			headless: 'new',
-			args: ['--no-sandbox', '--disable-setuid-sandbox']
+			args: [
+				'--no-sandbox',
+				'--disable-setuid-sandbox',
+				'--disable-web-security',
+				'--font-render-hinting=none',
+				'--disable-features=VizDisplayCompositor,FontSrcLocal',
+				'--lang=pl-PL',
+				'--accept-lang=pl-PL',
+				'--disable-gpu'
+			]
 		});
 		const page = await browser.newPage();
 
 		
 		const htmlContent = `
 			<!DOCTYPE html>
-			<html lang="en">
+			<html lang="pl">
 			<head>
 				<meta charset="UTF-8">
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
 				<title>Heroes of the Brain - Rankings</title>
 				<style>
+					@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;500;700&display=swap');
+
 					body {
-						font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+						font-family: 'Lato', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 						margin: 0;
 						padding: 20px;
 						color: #333;
+						line-height: 1.4;
 					}
 					h1 {
 						text-align: center;
 						margin-bottom: 20px;
 						color: #3b82f6;
+						font-size: 24px;
 					}
 					.metadata {
 						text-align: center;
@@ -55,15 +68,17 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 						width: 100%;
 						border-collapse: collapse;
 						margin-bottom: 20px;
+						font-size: 12px;
 					}
 					th, td {
-						padding: 10px;
+						padding: 8px 5px;
 						border: 1px solid #ddd;
 						text-align: left;
 					}
 					th {
 						background-color: #f2f2f2;
 						font-weight: bold;
+						text-align: center;
 					}
 					tr:nth-child(even) {
 						background-color: #f9f9f9;
@@ -97,7 +112,7 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 					<p>Generated: ${new Date().toLocaleString()}</p>
 					<p>Total Teams: ${rankings.length} | Total Juries: ${totalJuries}</p>
 				</div>
-				
+
 				<table>
 					<thead>
 						<tr>
@@ -132,7 +147,7 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 							.join('')}
 					</tbody>
 				</table>
-				
+
 				<div class="footer">
 					<p>Heroes of the Brain 2025 &copy; KN Neuron</p>
 				</div>
@@ -141,7 +156,18 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 		`;
 
 		
-		await page.setContent(htmlContent);
+		await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+		// Wait for fonts to load and render properly
+		await page.waitForFunction(() => {
+			if (document.fonts) {
+				return document.fonts.status === 'loaded' || document.fonts.ready;
+			}
+			return true;
+		}, { timeout: 10000 }); // Wait up to 10 seconds for fonts to load
+
+		// Additional wait to ensure fonts are rendered properly
+		await page.waitForTimeout(2000);
 
 		
 		const pdfBuffer = await page.pdf({

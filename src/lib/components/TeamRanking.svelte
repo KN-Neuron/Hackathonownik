@@ -17,7 +17,6 @@
 	
 	onMount(async () => {
 		if (browser) {
-			
 			const jspdfModule = await import('jspdf');
 			const autoTableModule = await import('jspdf-autotable');
 			jsPDF = jspdfModule.default;
@@ -92,6 +91,9 @@
 				unit: 'mm',
 				format: 'a4'
 			});
+
+			// Use helvetica which has better Unicode support
+			doc.setFont('helvetica');
 
 			doc.setFontSize(18);
 			const categoryTitle = categoryFilter === 'all' ? 'All Categories' :
@@ -280,6 +282,33 @@
 			isPdfExporting = false;
 		}
 	}
+
+	async function exportToMarkdown() {
+		try {
+			const response = await fetch('/api/export/ranking-md');
+			if (!response.ok) {
+				throw new Error('Failed to export markdown');
+			}
+
+			// Create a blob from the response
+			const blob = await response.blob();
+
+			// Create a download link
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `heroes-of-brain-rankings-${new Date().toISOString().slice(0, 10)}.md`;
+			document.body.appendChild(a);
+			a.click();
+
+			// Clean up
+			window.URL.revokeObjectURL(url);
+			document.body.removeChild(a);
+		} catch (err) {
+			console.error('Error exporting markdown:', err);
+			alert('Failed to export markdown. Please try again.');
+		}
+	}
 </script>
 
 <div class="flex flex-col gap-4">
@@ -326,6 +355,28 @@
 					<polyline points="10 9 9 9 8 9"></polyline>
 				</svg>
 				Export as PDF
+			</button>
+
+			<button
+				class="btn btn-sm btn-outline"
+				on:click={exportToMarkdown}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					class="mr-1"
+				>
+					<polyline points="4,7 4,4 20,4 20,7"></polyline>
+					<polyline points="9,20 9,17 15,17 15,20"></polyline>
+					<line x1="12" y1="17" x2="12" y2="4"></line>
+					<rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect>
+				</svg>
+				Export as Markdown
 			</button>
 
 			<div class="stats shadow">
