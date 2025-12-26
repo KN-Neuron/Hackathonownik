@@ -86,6 +86,10 @@ async function checkRouteAccess(
 			return true;
 		}
 
+		if (pathname === '/my-submission' || pathname.startsWith('/my-submission/')) {
+			return true;
+		}
+
 		if (pathname === '/presentations' || pathname.startsWith('/presentations/')) {
 			// Participants can see presentations after all teams are rated
 			const allRated = await areAllTeamsRated(pb);

@@ -1,0 +1,196 @@
+/* Centralized Color System for JuryApp */
+:root {
+  /* Primary Colors */
+  --primary: #7f7bff;          /* Main primary color */
+  --primary-focus: #4df2ff;    /* Primary focus/hover state */
+  --primary-content: #ffffff;  /* Content on primary background */
+  
+  /* Secondary Colors */
+  --secondary: #f000b8;
+  --secondary-focus: #bd0dae;
+  --secondary-content: #ffffff;
+  
+  /* Accent Colors */
+  --accent: #4df2ff;           /* Accent highlights */
+  --accent-focus: #3db9e0;
+  --accent-content: #0f1322;
+  
+  /* Neutral Colors */
+  --neutral: #1f2937;          /* Gray-800 equivalent */
+  --neutral-focus: #111827;    /* Gray-900 equivalent */
+  --neutral-content: #d1d5db;  /* Gray-300 equivalent */
+  
+  /* Base Colors (Backgrounds) */
+  --base-100: #0f1322;         /* Main background */
+  --base-200: #1a1f30;         /* Secondary background */
+  --base-300: #252d42;         /* Tertiary background */
+  --base-content: #e5e7eb;     /* Content on base backgrounds */
+  
+  /* Status Colors */
+  --success: #36c399;          /* Success/good status */
+  --warning: #f7a654;          /* Warning/caution status */
+  --error: #ff6b6b;            /* Error/bad status */
+  --info: #7f7bff;             /* Information status */
+  
+  /* Brand-Specific Colors */
+  --brand-purple: #7f7bff;     /* Main brand purple */
+  --brand-blue: #4df2ff;       /* Main brand blue/cyan */
+  --brand-dark: #0f1322;       /* Main brand dark */
+  --brand-light: #f0f0f0;      /* Main brand light text */
+  
+  /* Challenge Category Colors */
+  --wellness-color: #36c399;   /* Wellness category */
+  --wellness-light: #a3f0b5;   /* Light wellness */
+  --commerce-color: #f7a654;   /* Commerce category */
+  --commerce-light: #fed7aa;   /* Light commerce */
+  
+  /* User Role Colors */
+  --admin-color: #ff6b6b;      /* Admin role */
+  --admin-light: #ffcbc0;      /* Light admin */
+  --jury-color: #4df2ff;       /* Jury role */
+  --jury-dark: #0f1322;        /* Dark jury */
+  --participant-color: #7f7bff; /* Participant role */
+  
+  /* Rating/Score Colors */
+  --score-excellent: #36c399;  /* 90%+ scores */
+  --score-good: #f7a654;       /* 70-89% scores */
+  --score-average: #e85c90;    /* 50-69% scores */
+  --score-poor: #555555;       /* <50% scores */
+  
+  /* UI Element Colors */
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-light: rgba(255, 255, 255, 0.05);
+  --border-medium: rgba(255, 255, 255, 0.3);
+  --border-dark: #2c2e33;
+  
+  /* Background Colors */
+  --bg-card: #1e1f22;
+  --bg-overlay: rgba(0, 0, 0, 0.5);
+  --bg-overlay-dark: rgba(0, 0, 0, 0.7);
+  --bg-overlay-darker: rgba(0, 0, 0, 0.8);
+  
+  /* Shadow Colors */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 6px 12px -2px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 12px 20px -4px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  
+  /* Gradient Colors */
+  --gradient-primary: linear-gradient(to right, var(--brand-purple), var(--brand-blue));
+  --gradient-primary-reverse: linear-gradient(to right, var(--brand-blue), var(--brand-purple));
+  --gradient-wellness: linear-gradient(to right, var(--wellness-color), #2a9d7f);
+  --gradient-commerce: linear-gradient(to right, var(--commerce-color), #e58e2a);
+  --gradient-admin: linear-gradient(to right, var(--admin-color), #ee5a6f);
+  --gradient-jury: linear-gradient(to right, var(--jury-color), var(--brand-purple));
+  
+  /* Text Colors */
+  --text-primary: var(--brand-light);
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-tertiary: rgba(255, 255, 255, 0.5);
+  --text-quaternary: rgba(255, 255, 255, 0.6);
+  --text-disabled: rgba(255, 255, 255, 0.4);
+  
+  /* Button Colors */
+  --btn-primary-bg: var(--brand-purple);
+  --btn-primary-hover: #6a66e6;
+  --btn-secondary-bg: #2c2e33;
+  --btn-secondary-hover: #3a3d4a;
+  --btn-success-bg: var(--success);
+  --btn-success-hover: #2da57f;
+  --btn-warning-bg: var(--warning);
+  --btn-warning-hover: #e5954a;
+  --btn-error-bg: var(--error);
+  --btn-error-hover: #e55a5a;
+  
+  /* Card Colors */
+  --card-bg: var(--bg-card);
+  --card-border: var(--border-dark);
+  --card-shadow: var(--shadow-md);
+  
+  /* Form Colors */
+  --form-bg: var(--base-200);
+  --form-border: var(--border-default);
+  --form-focus: var(--brand-purple);
+  
+  /* Animation Durations */
+  --animation-fast: 0.2s;
+  --animation-normal: 0.3s;
+  --animation-slow: 0.5s;
+}
+
+/* Color utility classes for easy use in components */
+.text-brand-purple { color: var(--brand-purple); }
+.text-brand-blue { color: var(--brand-blue); }
+.text-brand-light { color: var(--brand-light); }
+.text-wellness { color: var(--wellness-color); }
+.text-commerce { color: var(--commerce-color); }
+.text-admin { color: var(--admin-color); }
+.text-jury { color: var(--jury-color); }
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-error { color: var(--error); }
+.text-disabled { color: var(--text-disabled); }
+
+.bg-brand-purple { background-color: var(--brand-purple); }
+.bg-brand-blue { background-color: var(--brand-blue); }
+.bg-wellness { background-color: var(--wellness-color); }
+.bg-commerce { background-color: var(--commerce-color); }
+.bg-admin { background-color: var(--admin-color); }
+.bg-jury { background-color: var(--jury-color); }
+.bg-success { background-color: var(--success); }
+.bg-warning { background-color: var(--warning); }
+.bg-error { background-color: var(--error); }
+.bg-card { background-color: var(--bg-card); }
+.bg-base-100 { background-color: var(--base-100); }
+.bg-base-200 { background-color: var(--base-200); }
+.bg-base-300 { background-color: var(--base-300); }
+
+.border-brand-purple { border-color: var(--brand-purple); }
+.border-brand-blue { border-color: var(--brand-blue); }
+.border-wellness { border-color: var(--wellness-color); }
+.border-commerce { border-color: var(--commerce-color); }
+.border-admin { border-color: var(--admin-color); }
+.border-jury { border-color: var(--jury-color); }
+.border-default { border-color: var(--border-default); }
+.border-light { border-color: var(--border-light); }
+.border-dark { border-color: var(--border-dark); }
+
+/* Gradient utility classes */
+.bg-gradient-primary { background: var(--gradient-primary); }
+.bg-gradient-primary-reverse { background: var(--gradient-primary-reverse); }
+.bg-gradient-wellness { background: var(--gradient-wellness); }
+.bg-gradient-commerce { background: var(--gradient-commerce); }
+.bg-gradient-admin { background: var(--gradient-admin); }
+.bg-gradient-jury { background: var(--gradient-jury); }
+
+/* Score-based color utilities */
+.bg-score-excellent { background-color: var(--score-excellent); }
+.bg-score-good { background-color: var(--score-good); }
+.bg-score-average { background-color: var(--score-average); }
+.bg-score-poor { background-color: var(--score-poor); }
+
+.text-score-excellent { color: var(--score-excellent); }
+.text-score-good { color: var(--score-good); }
+.text-score-average { color: var(--score-average); }
+.text-score-poor { color: var(--score-poor); }
+
+/* Overlay utilities */
+.bg-overlay { background-color: var(--bg-overlay); }
+.bg-overlay-dark { background-color: var(--bg-overlay-dark); }
+.bg-overlay-darker { background-color: var(--bg-overlay-darker); }
+
+/* Shadow utilities */
+.shadow-card { box-shadow: var(--card-shadow); }
+.shadow-form { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); }
+.shadow-modal { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4); }
+
+/* Responsive breakpoints as CSS variables */
+:root {
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}

@@ -8,7 +8,7 @@
 	let { data } = $props();
 
 	let icon = IconNames.Upload;
-	let text = 'Submit Project';
+	let text = 'Upload Presentation';
 
 	let selectedFiles = $state([]);
 	let repoLink = $state('');
@@ -17,7 +17,8 @@
 	let fullscreenMode = $state(false);
 	let showDeadlineMessage = $state(false);
 
-	const deadline = new Date('2025-12-30T12:00:00');
+	// Check if submission is after deadline (12:00 PM on 30.11.2025)
+	const deadline = new Date('2025-11-30T12:00:00');
 	const now = new Date();
 	if (now > deadline) {
 		showDeadlineMessage = true;
@@ -41,8 +42,8 @@
 	{#if showDeadlineMessage}
 		<div class="deadline-notice">
 			<h3>Submission Deadline Passed</h3>
-			<p>The deadline for submitting projects was on November 30, 2025 at 12:00 PM.</p>
-			<p>No new projects can be submitted at this time.</p>
+			<p>The deadline for submitting presentations was on November 30, 2025 at 12:00 PM.</p>
+			<p>No new presentations can be submitted at this time.</p>
 		</div>
 	{:else}
 		<div class="intro-section">
@@ -52,7 +53,8 @@
 					neuronTeam.pdf</b
 				>
 				<br />
-				Submit your complete project including presentation, code repository, and demo video. All components are required for jury evaluation.
+				Upload your team's presentation in PDF format. Maximum file size is 40MB. After uploading, your
+				presentation will be available for jury members to review and rate.
 			</p>
 			<p class="deadline-info">Deadline: November 30, 2025 at 12:00 PM</p>
 		</div>
@@ -61,140 +63,90 @@
 			<div class="upload-card">
 				<h2 class="section-title">
 					<span class="section-indicator"></span>
-					Complete Project Submission
+					PDF Upload & Preview
 				</h2>
 
 				<form method="post" action="?/upload" class="upload-form" enctype="multipart/form-data">
 					<input type="hidden" name="csrf_token" value={data.csrfToken} />
 
-					<div class="submission-grid">
-						<!-- PDF Presentation Upload -->
-						<div class="submission-section">
-							<div class="section-header">
-								<h3 class="section-label">
-									<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-									</svg>
-									Presentation PDF
-								</h3>
-								<p class="section-description">Upload your project presentation in PDF format</p>
-							</div>
+					<div class="upload-area">
+						<PdfUpload
+							multiple={false}
+							uploadUrl="?/upload"
+							csrfToken={data.csrfToken}
+							{repoLink}
+							{videoLink}
+							on:files={handleFiles}
+						/>
 
-							<PdfUpload
-								multiple={false}
-								uploadUrl="?/upload"
-								csrfToken={data.csrfToken}
-								{repoLink}
-								{videoLink}
-								on:files={handleFiles}
-							/>
-
-							{#if selectedFiles.length > 0}
-								<button
-									type="button"
-									class="preview-button"
-									onclick={() => (showPresentationModal = true)}
+						{#if selectedFiles.length > 0}
+							<button
+								type="button"
+								class="preview-button"
+								onclick={() => (showPresentationModal = true)}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="20"
+									height="20"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
 								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										width="20"
-										height="20"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="2"
-									>
-										<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-										<circle cx="12" cy="12" r="3"></circle>
-									</svg>
-									Preview Selected PDF
-								</button>
-							{/if}
-						</div>
-
-						<!-- Repository Link -->
-						<div class="submission-section">
-							<div class="section-header">
-								<h3 class="section-label">
-									<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-									</svg>
-									Source Code Repository
-								</h3>
-								<p class="section-description">Provide a link to your project's source code</p>
-							</div>
-
-							<div class="input-group">
-								<input
-									type="url"
-									name="repo_link"
-									placeholder="https://github.com/username/repository"
-									bind:value={repoLink}
-									class="input input-bordered w-full"
-									required
-								/>
-								<p class="input-help">
-									Link to your project's source code repository (GitHub, GitLab, etc.)
-								</p>
-							</div>
-						</div>
-
-						<!-- Video Demo -->
-						<div class="submission-section">
-							<div class="section-header">
-								<h3 class="section-label">
-									<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-									</svg>
-									Demo Video
-								</h3>
-								<p class="section-description">Share a demo of your project in action</p>
-							</div>
-
-							<div class="input-group">
-								<input
-									type="url"
-									name="video_link"
-									placeholder="https://youtube.com/watch?v=..."
-									bind:value={videoLink}
-									class="input input-bordered w-full"
-									required
-								/>
-								<p class="input-help">
-									Link to your project demo video (YouTube, Loom, etc.)
-								</p>
-							</div>
-						</div>
+									<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+									<circle cx="12" cy="12" r="3"></circle>
+								</svg>
+								Preview Selected PDF
+							</button>
+						{/if}
 					</div>
 
-					<!-- Submit Button -->
-					<div class="submit-section">
-						<button
-							type="submit"
-							class="btn btn-primary w-full btn-lg"
-							disabled={selectedFiles.length === 0 || !repoLink || !videoLink}
-						>
-							<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-							</svg>
-							Submit Complete Project
-						</button>
-						<p class="submit-help">All fields are required for submission</p>
+					<div class="repo-link-section">
+						<label for="repo_link" class="repo-label">Repository Link</label>
+						<input
+							type="url"
+							id="repo_link"
+							name="repo_link"
+							placeholder="https://github.com/username/repository"
+							bind:value={repoLink}
+							class="repo-input"
+							required
+						/>
+						<p class="repo-help">
+							Provide a link to your project's source code repository (e.g., GitHub, GitLab)
+						</p>
+					</div>
+
+					<div class="repo-link-section">
+						<label for="video_link" class="repo-label">Video Link</label>
+						<input
+							type="url"
+							id="video_link"
+							name="video_link"
+							placeholder="https://youtube.com/watch?v=..."
+							bind:value={videoLink}
+							class="repo-input"
+							required
+						/>
+						<p class="repo-help">
+							Provide a link to your project's demo video (e.g., YouTube, Loom)
+						</p>
 					</div>
 				</form>
 
 				<div class="guidelines">
-					<h3>Submission Guidelines:</h3>
+					<h3>Upload Guidelines:</h3>
 					<ul>
-						<li>PDF presentation must be in PDF format, maximum 40MB</li>
+						<li>Only PDF files are accepted</li>
+						<li>Maximum file size: 40MB</li>
 						<li>Ensure your presentation is complete and final before uploading</li>
 						<li>
 							Jury will see only the latest uploaded presentation. Maximum 5 presentations per team
 							are allowed.
 						</li>
-						<li>Provide a working link to your source code repository</li>
-						<li>Include a demo video showing your project in action</li>
-						<li>All three components (PDF, repo link, video link) are required for a complete submission</li>
+						<li>Repository link is required for jury review</li>
+						<li>Video link is required to showcase your project demo</li>
 					</ul>
 				</div>
 			</div>
@@ -297,112 +249,13 @@
 		border-radius: 2px;
 	}
 
-	.submission-grid {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: 1.5rem;
-		margin-bottom: 1.5rem;
-	}
-
-	.submission-section {
-		background: rgba(0, 0, 0, 0.2);
-		border-radius: 0.75rem;
-		padding: 1.5rem;
-		border: 1px solid rgba(255, 255, 255, 0.05);
-	}
-
-	.section-header {
-		margin-bottom: 1rem;
-	}
-
-	.section-label {
-		font-size: 1rem;
-		font-weight: 600;
-		color: #f0f0f0;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		margin: 0 0 0.25rem 0;
-	}
-
-	.section-description {
-		font-size: 0.85rem;
-		color: rgba(255, 255, 255, 0.7);
-		margin: 0;
-	}
-
-	.input-group {
+	.upload-area {
+		max-width: 600px;
+		margin: 0 auto 1.5rem;
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.input {
-		background-color: rgba(0, 0, 0, 0.3);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		color: #f0f0f0;
-		padding: 0.75rem;
-		border-radius: 0.5rem;
-		font-size: 1rem;
-	}
-
-	.input:focus {
-		outline: none;
-		border-color: #7f7bff;
-		box-shadow: 0 0 0 2px rgba(127, 123, 255, 0.3);
-	}
-
-	.input-help {
-		font-size: 0.8rem;
-		color: rgba(255, 255, 255, 0.6);
-		margin: 0;
-	}
-
-	.submit-section {
-		margin-top: 1.5rem;
-		padding-top: 1.5rem;
-		border-top: 1px solid rgba(255, 255, 255, 0.1);
-	}
-
-	.btn {
-		display: flex;
 		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		padding: 0.75rem;
-		font-weight: 600;
-		border-radius: 0.5rem;
-		border: none;
-		cursor: pointer;
-		transition: all 0.2s ease;
-		box-shadow: 0 2px 10px rgba(127, 123, 255, 0.3);
-	}
-
-	.btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.btn-primary {
-		background: linear-gradient(to right, #4df2ff, #7f7bff);
-		color: #0f1322;
-	}
-
-	.btn-primary:hover:not(:disabled) {
-		transform: translateY(-1px);
-		box-shadow: 0 4px 15px rgba(127, 123, 255, 0.4);
-	}
-
-	.btn-lg {
-		padding: 1rem;
-		font-size: 1.1rem;
-	}
-
-	.submit-help {
-		text-align: center;
-		font-size: 0.85rem;
-		color: rgba(255, 255, 255, 0.6);
-		margin-top: 0.5rem;
+		gap: 1rem;
 	}
 
 	.preview-button {
@@ -430,6 +283,45 @@
 
 	.preview-button:active {
 		transform: translateY(0);
+	}
+
+	.repo-link-section {
+		margin: 1.5rem 0;
+		padding: 1.5rem;
+		background: rgba(0, 0, 0, 0.2);
+		border-radius: 0.75rem;
+		border: 1px solid rgba(255, 255, 255, 0.05);
+	}
+
+	.repo-label {
+		display: block;
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: #f0f0f0;
+		margin-bottom: 0.5rem;
+	}
+
+	.repo-input {
+		width: 100%;
+		padding: 0.75rem;
+		border-radius: 0.5rem;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		background-color: rgba(0, 0, 0, 0.3);
+		color: #f0f0f0;
+		font-size: 1rem;
+	}
+
+	.repo-input:focus {
+		outline: none;
+		border-color: #7f7bff;
+		box-shadow: 0 0 0 2px rgba(127, 123, 255, 0.3);
+	}
+
+	.repo-help {
+		font-size: 0.8rem;
+		color: rgba(255, 255, 255, 0.6);
+		margin-top: 0.5rem;
+		margin-bottom: 0;
 	}
 
 	.guidelines {
@@ -469,18 +361,6 @@
 		font-weight: bold;
 	}
 
-	@media (min-width: 768px) {
-		.submission-grid {
-			grid-template-columns: repeat(3, 1fr);
-		}
-	}
-
-	@media (max-width: 767px) {
-		.submission-grid {
-			grid-template-columns: 1fr;
-		}
-	}
-
 	@media (max-width: 480px) {
 		.guidelines {
 			padding: 1rem;
@@ -488,11 +368,6 @@
 
 		.guidelines li {
 			font-size: 0.8rem;
-		}
-
-		.btn-lg {
-			padding: 0.8rem;
-			font-size: 1rem;
 		}
 	}
 </style>

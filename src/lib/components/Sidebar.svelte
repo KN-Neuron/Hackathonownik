@@ -100,6 +100,14 @@
 				<a class="nav-link" href="/upload" class:active={$page.url.pathname === '/upload'}>
 					<SidebarElement icon={IconNames.Upload} text="Upload Presentation" />
 				</a>
+
+				<a
+					class="nav-link"
+					href="/my-submission"
+					class:active={$page.url.pathname === '/my-submission'}
+				>
+					<SidebarElement text="My Submissions" />
+				</a>
 				{#if $page.data.allJuriesConfirmed && $page.data.allAdminsConfirmed}
 					<a class="nav-link" href="/ranking" class:active={$page.url.pathname === '/ranking'}>
 						<SidebarElement icon={IconNames.Ranking} text="Rankings" />

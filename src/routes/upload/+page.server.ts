@@ -21,7 +21,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
 	upload: async ({ request, locals }) => {
 		// 1. Check deadline (12:00 PM on 30.11.2025)
-		const deadline = new Date('2025-11-30T12:00:00');
+		const deadline = new Date('2025-12-30T12:00:00');
 		const now = new Date();
 		if (now > deadline) {
 			return {

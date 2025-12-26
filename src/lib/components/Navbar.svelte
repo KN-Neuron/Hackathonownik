@@ -36,6 +36,7 @@
 			);
 		} else if (user.role === 'participant' || user.team) {
 			links.push({ href: '/upload', label: 'Upload Presentation' });
+			links.push({ href: '/my-submission', label: 'My Submissions' });
 			if ($page.data.allJuriesConfirmed && $page.data.allAdminsConfirmed) {
 				links.push({ href: '/ranking', label: 'Rankings' });
 			}
