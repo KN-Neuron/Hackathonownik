@@ -12,7 +12,7 @@
 
 	// Check if all teams have been rated by the current jury
 	$: {
-		const ratedTeams = teams.filter(team => team.isRatedByCurrentJury);
+		const ratedTeams = teams.filter((team) => team.isRatedByCurrentJury);
 		allTeamsRated = ratedTeams.length > 0 && ratedTeams.length === teams.length;
 
 		// If all teams are rated but jury hasn't confirmed, show top button
@@ -71,12 +71,7 @@
 		<div class="confirmation-banner">
 			<h3>You've rated all teams!</h3>
 			<p>Remember to confirm your ratings so they become visible to participants.</p>
-			<button
-				class="btn btn-confirm"
-				on:click={openConfirmationModal}
-			>
-				Confirm My Ratings
-			</button>
+			<button class="btn btn-confirm" on:click={openConfirmationModal}> Confirm My Ratings </button>
 		</div>
 	</div>
 {:else if juryConfirmed}
@@ -95,16 +90,10 @@
 			<h3>Confirm Your Ratings</h3>
 			<p>You have rated all teams. Do you confirm these ratings as final?</p>
 			<div class="modal-buttons">
-				<button
-					class="btn btn-primary"
-					on:click={() => handleConfirmation(true)}
-				>
+				<button class="btn btn-primary" on:click={() => handleConfirmation(true)}>
 					Yes, Confirm
 				</button>
-				<button
-					class="btn btn-secondary"
-					on:click={() => handleConfirmation(false)}
-				>
+				<button class="btn btn-secondary" on:click={() => handleConfirmation(false)}>
 					No, Not Yet
 				</button>
 			</div>

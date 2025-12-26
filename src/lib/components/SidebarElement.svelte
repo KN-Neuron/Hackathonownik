@@ -30,6 +30,8 @@
 			<Login />
 		{:else if icon === IconNames.Register}
 			<Register />
+		{:else if icon === IconNames.Info}
+			<Info />
 		{:else if icon === IconNames.Presentation}
 			<Presentation />
 		{/if}

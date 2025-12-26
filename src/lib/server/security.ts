@@ -456,7 +456,7 @@ export class Security {
 	// Sprawdź czy użytkownik jest adminem
 	isAdmin(): this {
 		this.isAuthenticated();
-		if (!this.user?.admin) {
+		if (this.user?.role !== 'admin') {
 			error(403, 'Forbidden. Admin access required.');
 		}
 		return this;

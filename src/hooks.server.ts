@@ -49,7 +49,7 @@ async function areAllJuriesConfirmed(pb: TypedPocketBase): Promise<boolean> {
 	try {
 		// Get all jury members
 		const juries = await pb.collection('users').getFullList({
-			filter: 'role = "jury"'
+			filter: 'role = "jury" || role = "admin"'
 		});
 
 		if (juries.length === 0) return false;
@@ -129,6 +129,19 @@ export const handle: Handle = async ({ event, resolve }) => {
 	} else {
 		// Fallback to loading from standard cookie (for transition)
 		pb.authStore.loadFromCookie(event.request.headers.get('cookie') || '');
+	}
+
+	// Verify the connection is still valid (optional health check)
+	try {
+		if (pb.authStore.isValid) {
+			// Attempt a lightweight request to verify session is still valid
+			// This could help catch expired sessions earlier
+			// Commenting out to avoid extra API calls, but keeping as reference
+			// await pb.collection('users').authRefresh();
+		}
+	} catch (e) {
+		console.warn('Session validation failed, clearing auth:', e);
+		pb.authStore.clear();
 	}
 
 	event.locals.pb = pb;

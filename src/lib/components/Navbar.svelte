@@ -1,16 +1,17 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 
-	// Use server-provided user data instead of client PocketBase for security
 	const user = $derived($page.data.user);
 	const teamCategory = $derived($page.data.teamCategory);
 
-	// Check if user is a participant (not admin or jury)
 	const isParticipant = $derived(
-		user && !user.admin && user.role !== 'admin' && user.role !== 'jury' && (user.role === 'participant' || user.team)
+		user &&
+			!user.admin &&
+			user.role !== 'admin' &&
+			user.role !== 'jury' &&
+			(user.role === 'participant' || user.team)
 	);
 
-	// Use $derived.by() for computed values with functions (Svelte 5 syntax)
 	const navLinks = $derived.by(() => {
 		if (!user) {
 			return [
@@ -21,38 +22,30 @@
 
 		const links = [{ href: '/', label: 'Home' }];
 
-		// Admin sees admin dashboard and presentations
-		// Note: Server-side validation in hooks.server.ts ensures actual access control
 		if (user.admin || user.role === 'admin') {
 			links.push(
 				{ href: '/admin/dashboard', label: 'Admin Dashboard' },
-				{ href: '/presentations', label: 'View Presentations' }
+				{ href: '/presentations', label: 'View Presentations' },
+				{ href: '/ranking', label: 'Rankings' }
 			);
-		}
-		// Jury can see rate_presentation, presentations, and rankings at all times
-		else if (user.role === 'jury') {
+		} else if (user.role === 'jury') {
 			links.push(
 				{ href: '/presentations', label: 'View Presentations' },
 				{ href: '/rate_presentation', label: 'Rate Presentations' },
 				{ href: '/ranking', label: 'Rankings' }
 			);
-		}
-		// Participant can ONLY see upload
-		else if (user.role === 'participant' || user.team) {
+		} else if (user.role === 'participant' || user.team) {
 			links.push({ href: '/upload', label: 'Upload Presentation' });
-			// Show ranking link to participants if all juries have confirmed their ratings
-			if ($page.data.allJuriesConfirmed) {
+			if ($page.data.allJuriesConfirmed && $page.data.allAdminsConfirmed) {
 				links.push({ href: '/ranking', label: 'Rankings' });
 			}
 		}
 
-		// Everyone who is logged in can logout
-		// links.push({ href: '/logout', label: 'Logout' });
+		links.push({ href: '/logout', label: 'Logout' });
 
 		return links;
 	});
 
-	// Check if current path is active
 	function isActive(href: string): boolean {
 		return $page.url.pathname === href || $page.url.pathname.startsWith(href + '/');
 	}
@@ -78,11 +71,23 @@
 			<div class="user-info">
 				<span class="user-name">{user.name || user.email}</span>
 				<div class="user-badges">
-					<span class="user-role" class:admin={user.admin || user.role === 'admin'} class:jury={user.role === 'jury'}>
-						{user.admin || user.role === 'admin' ? 'Admin' : user.role === 'jury' ? 'Jury' : 'Participant'}
+					<span
+						class="user-role"
+						class:admin={user.admin || user.role === 'admin'}
+						class:jury={user.role === 'jury'}
+					>
+						{user.admin || user.role === 'admin'
+							? 'Admin'
+							: user.role === 'jury'
+								? 'Jury'
+								: 'Participant'}
 					</span>
 					{#if isParticipant && teamCategory}
-						<span class="team-challenge" class:wellness={teamCategory === 'wellness'} class:commerce={teamCategory === 'commerce'}>
+						<span
+							class="team-challenge"
+							class:wellness={teamCategory === 'wellness'}
+							class:commerce={teamCategory === 'commerce'}
+						>
 							{teamCategory === 'wellness' ? 'Wellness' : 'Commerce'}
 						</span>
 					{/if}

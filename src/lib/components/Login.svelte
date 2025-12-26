@@ -6,7 +6,6 @@
 	let email = '';
 	let password = '';
 
-	// Subscribe to form data to get error messages from server
 	$: error = $page.form?.error || '';
 </script>
 

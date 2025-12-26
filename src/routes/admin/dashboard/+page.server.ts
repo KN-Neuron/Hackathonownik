@@ -14,13 +14,31 @@ export const load: PageServerLoad = async ({ locals }) => {
 	locals.security.checkRateLimit('api');
 
 	try {
-		// Pobierz wszystkie dane dla admin panelu
-		const [users, teams, presentations, ratings] = await Promise.all([
+		// Pobierz wszystkie dane dla admin panelu z osobnymi blokami try-catch
+		// to uniknięcia problemów z jednym nieudanym zapytaniem
+		const [
+			usersResult,
+			teamsResult,
+			presentationsResult,
+			ratingsResult
+		] = await Promise.allSettled([
 			locals.pb.collection('users').getFullList(),
 			locals.pb.collection('teams').getFullList(),
 			locals.pb.collection('presentations').getFullList({ expand: 'team' }),
 			locals.pb.collection('ratings').getFullList({ expand: 'jury,presentation' })
 		]);
+
+		// Sprawdź wyniki i zwróć błędy jeśli są krytyczne
+		const users = usersResult.status === 'fulfilled' ? usersResult.value : [];
+		const teams = teamsResult.status === 'fulfilled' ? teamsResult.value : [];
+		const presentations = presentationsResult.status === 'fulfilled' ? presentationsResult.value : [];
+		const ratings = ratingsResult.status === 'fulfilled' ? ratingsResult.value : [];
+
+		// Jeśli wszystkie krytyczne dane są puste, to może być problem
+		if (users.length === 0 && (usersResult as PromiseRejectedResult).status === 'rejected') {
+			console.error('Error fetching users:', (usersResult as PromiseRejectedResult).reason);
+			throw error(500, 'Could not load user data');
+		}
 
 		return {
 			users,
@@ -30,9 +48,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 			user: locals.user,
 			csrfToken: locals.csrfToken
 		};
-	} catch (e) {
-		console.error('Error loading admin data:', e);
-		throw error(500, 'Could not load admin data');
+	} catch (e: any) {
+		console.error('Error loading admin data:', e?.message || e);
+		throw error(500, `Could not load admin data: ${e?.message || 'Unknown error'}`);
 	}
 };
 
@@ -85,7 +103,51 @@ export const actions: Actions = {
 		}
 	},
 
-	// Update user role (tylko admin)
+	updateConfirmedRating: async ({ locals, request }) => {
+		try {
+			locals.security.isAdmin().validateCSRF();
+		} catch (e: any) {
+			return {
+				success: false,
+				message: e.body?.message || 'Unauthorized'
+			};
+		}
+
+		const formData = await request.formData();
+		const userId = formData.get('user_id') as string;
+		const confirmedRating = formData.get('confirmed_rating') as string;
+		const csrfToken = formData.get('csrf_token') as string;
+
+		if (!locals.csrfToken || locals.csrfToken !== csrfToken) {
+			return { success: false, message: 'Invalid security token' };
+		}
+
+		if (!userId) {
+			return { success: false, message: 'Missing user ID' };
+		}
+
+		if (confirmedRating !== 'true' && confirmedRating !== 'false') {
+			return { success: false, message: 'Invalid confirmed_rating value' };
+		}
+
+		try {
+			await locals.pb.collection('users').update(userId, {
+				confirmedRating: confirmedRating === 'true'
+			});
+
+			return {
+				success: true,
+				message: 'Confirmation status updated successfully'
+			};
+		} catch (e) {
+			console.error('Error updating confirmedRating:', e);
+			return {
+				success: false,
+				message: 'Could not update confirmation status'
+			};
+		}
+	},
+
 	updateUserRole: async ({ locals, request }) => {
 		try {
 			locals.security.isAdmin().validateCSRF();

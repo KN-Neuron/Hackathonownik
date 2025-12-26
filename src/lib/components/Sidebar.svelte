@@ -7,9 +7,12 @@
 	let isAuthenticated = $derived($page.data.user?.id);
 	let teamCategory = $derived($page.data.teamCategory);
 
-	// Check if user is a participant (not admin or jury)
 	let isParticipant = $derived(
-		user && !user.admin && user.role !== 'admin' && user.role !== 'jury' && (user.role === 'participant' || user.team)
+		user &&
+			!user.admin &&
+			user.role !== 'admin' &&
+			user.role !== 'jury' &&
+			(user.role === 'participant' || user.team)
 	);
 
 	const { open = false } = $props();
@@ -23,11 +26,23 @@
 		{#if isAuthenticated}
 			<div class="user-info-sidebar">
 				<span class="user-name-sidebar">{user.name || user.email}</span>
-				<span class="user-role-sidebar" class:admin={user.admin || user.role === 'admin'} class:jury={user.role === 'jury'}>
-					{user.admin || user.role === 'admin' ? 'Admin' : user.role === 'jury' ? 'Jury' : 'Participant'}
+				<span
+					class="user-role-sidebar"
+					class:admin={user.admin || user.role === 'admin'}
+					class:jury={user.role === 'jury'}
+				>
+					{user.admin || user.role === 'admin'
+						? 'Admin'
+						: user.role === 'jury'
+							? 'Jury'
+							: 'Participant'}
 				</span>
 				{#if isParticipant && teamCategory}
-					<span class="team-challenge" class:wellness={teamCategory === 'wellness'} class:commerce={teamCategory === 'commerce'}>
+					<span
+						class="team-challenge"
+						class:wellness={teamCategory === 'wellness'}
+						class:commerce={teamCategory === 'commerce'}
+					>
 						{teamCategory === 'wellness' ? 'Wellness Challenge' : 'Commerce Challenge'}
 					</span>
 				{/if}
@@ -45,7 +60,6 @@
 			</a>
 
 			{#if user?.admin || user?.role === 'admin'}
-				<!-- Admin sees admin dashboard and presentations -->
 				<a
 					class="nav-link"
 					href="/admin/dashboard"
@@ -60,8 +74,11 @@
 				>
 					<SidebarElement icon={IconNames.Presentation} text="View Presentations" />
 				</a>
+
+				<a class="nav-link" href="/ranking" class:active={$page.url.pathname === '/ranking'}>
+					<SidebarElement icon={IconNames.Ranking} text="Rankings" />
+				</a>
 			{:else if user?.role === 'jury'}
-				<!-- Jury can see presentations, rate, and rankings -->
 				<a
 					class="nav-link"
 					href="/presentations"
@@ -80,12 +97,10 @@
 					<SidebarElement icon={IconNames.Ranking} text="Rankings" />
 				</a>
 			{:else if user?.role === 'participant' || user?.team}
-				<!-- Participants can only upload -->
 				<a class="nav-link" href="/upload" class:active={$page.url.pathname === '/upload'}>
 					<SidebarElement icon={IconNames.Upload} text="Upload Presentation" />
 				</a>
-				<!-- Show ranking link to participants if all juries have confirmed their ratings -->
-				{#if $page.data.allJuriesConfirmed}
+				{#if $page.data.allJuriesConfirmed && $page.data.allAdminsConfirmed}
 					<a class="nav-link" href="/ranking" class:active={$page.url.pathname === '/ranking'}>
 						<SidebarElement icon={IconNames.Ranking} text="Rankings" />
 					</a>
