@@ -1,7 +1,7 @@
 <script>
-	import '../../app.css';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/stores';
+	import { Button, Input } from '$lib';
 
 	let email = '';
 	let password = '';
@@ -23,43 +23,33 @@
 
 		<div class="divider mt-8 mb-8">Heroes of the Brain</div>
 
-		<label class="form-control flex flex-col mb-4">
-			<div class="label">
-				<span class="label-text">Email</span>
-			</div>
+		<Input
+			id="email"
+			name="email"
+			type="email"
+			bind:value={email}
+			placeholder="Email"
+			label="Email"
+			required
+			{...(error ? { error } : {})}
+		/>
 
-			<input
-				class="input input-bordered w-full"
-				id="email"
-				name="email"
-				type="email"
-				bind:value={email}
-				placeholder="Email"
-				required
-			/>
-		</label>
+		<Input
+			id="password"
+			name="password"
+			type="password"
+			bind:value={password}
+			placeholder="Password"
+			label="Password"
+			required
+			class="mt-4"
+		/>
 
-		<label class="form-control flex flex-col mb-4">
-			<div class="label">
-				<span class="label-text">Password</span>
-			</div>
-
-			<input
-				class="input input-bordered w-full"
-				id="password"
-				name="password"
-				type="password"
-				bind:value={password}
-				placeholder="Password"
-				required
-			/>
-		</label>
-
-		<button class="btn btn-primary" type="submit">Log in</button>
+		<Button type="submit" variant="primary" class="mt-4">Log in</Button>
 
 		<!-- Show error as an alert popup -->
 		{#if error}
-			<div role="alert" class="alert alert-error mt-4 animate-fade-in">
+			<div role="alert" class="alert alert-error mt-4 fade-in">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					class="h-6 w-6 shrink-0 stroke-current"
@@ -78,20 +68,3 @@
 		{/if}
 	</fieldset>
 </form>
-
-<style>
-	@keyframes fade-in {
-		from {
-			opacity: 0;
-			transform: translateY(-10px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
-	.animate-fade-in {
-		animation: fade-in 0.3s ease-out;
-	}
-</style>

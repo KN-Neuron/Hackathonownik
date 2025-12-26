@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { Badge } from '$lib/components/ui';
 
-	const user = $derived($page.data.user);
-	const teamCategory = $derived($page.data.teamCategory);
+	let user = $derived($page.data.user);
+	let teamCategory = $derived($page.data.teamCategory);
 
-	const isParticipant = $derived(
+	let isParticipant = $derived(
 		user &&
 			!user.admin &&
 			user.role !== 'admin' &&
@@ -12,7 +13,7 @@
 			(user.role === 'participant' || user.team)
 	);
 
-	const navLinks = $derived.by(() => {
+	let navLinks = $derived.by(() => {
 		if (!user) {
 			return [
 				{ href: '/', label: 'Home' },
@@ -72,25 +73,23 @@
 			<div class="user-info">
 				<span class="user-name">{user.name || user.email}</span>
 				<div class="user-badges">
-					<span
+					<Badge
+						variant={user.admin || user.role === 'admin' ? 'admin' : user.role === 'jury' ? 'jury' : 'default'}
 						class="user-role"
-						class:admin={user.admin || user.role === 'admin'}
-						class:jury={user.role === 'jury'}
 					>
 						{user.admin || user.role === 'admin'
 							? 'Admin'
 							: user.role === 'jury'
 								? 'Jury'
 								: 'Participant'}
-					</span>
+					</Badge>
 					{#if isParticipant && teamCategory}
-						<span
+						<Badge
+							variant={teamCategory === 'wellness' ? 'wellness' : 'commerce'}
 							class="team-challenge"
-							class:wellness={teamCategory === 'wellness'}
-							class:commerce={teamCategory === 'commerce'}
 						>
 							{teamCategory === 'wellness' ? 'Wellness' : 'Commerce'}
-						</span>
+						</Badge>
 					{/if}
 				</div>
 			</div>
@@ -101,7 +100,7 @@
 <style>
 	.navbar {
 		background-color: rgba(20, 21, 24, 0.95);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* var(--border-default) */
 		padding: 0.75rem 0;
 		position: sticky;
 		top: 0;
@@ -122,13 +121,13 @@
 	.brand a {
 		font-size: 1.25rem;
 		font-weight: 700;
-		color: #7f7bff;
+		color: #7f7bff; /* var(--brand-purple) */
 		text-decoration: none;
 		transition: color 0.2s;
 	}
 
 	.brand a:hover {
-		color: #4df2ff;
+		color: #4df2ff; /* var(--brand-blue) */
 	}
 
 	.nav-links {
@@ -147,7 +146,7 @@
 	.nav-links a {
 		display: block;
 		padding: 0.5rem 1rem;
-		color: rgba(255, 255, 255, 0.7);
+		color: rgba(255, 255, 255, 0.7); /* var(--text-secondary) */
 		text-decoration: none;
 		border-radius: 0.5rem;
 		transition: all 0.2s;
@@ -155,14 +154,14 @@
 	}
 
 	.nav-links a:hover {
-		color: #ffffff;
+		color: #f0f0f0; /* var(--text-primary) */
 		background-color: rgba(127, 123, 255, 0.1);
 	}
 
 	.nav-links a.active {
-		color: #ffffff;
+		color: #f0f0f0; /* var(--text-primary) */
 		background: linear-gradient(to right, rgba(127, 123, 255, 0.2), rgba(77, 242, 255, 0.2));
-		border-bottom: 2px solid #7f7bff;
+		border-bottom: 2px solid #7f7bff; /* var(--brand-purple) */
 	}
 
 	.user-info {
@@ -183,43 +182,19 @@
 	}
 
 	.user-role {
-		padding: 0.25rem 0.75rem;
+		padding: 0.25rem 0.75rem !important;
 		border-radius: 1rem;
 		font-size: 0.75rem;
 		font-weight: 600;
-		background: rgba(255, 255, 255, 0.1);
-		color: rgba(255, 255, 255, 0.8);
-	}
-
-	.user-role.admin {
-		background: linear-gradient(to right, #ff6b6b, #ee5a6f);
-		color: white;
-	}
-
-	.user-role.jury {
-		background: linear-gradient(to right, #4df2ff, #7f7bff);
-		color: #0f1322;
 	}
 
 	.team-challenge {
-		padding: 0.25rem 0.6rem;
+		padding: 0.25rem 0.6rem !important;
 		border-radius: 0.25rem;
 		font-size: 0.7rem;
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.3px;
-	}
-
-	.team-challenge.wellness {
-		background: rgba(54, 195, 153, 0.2);
-		color: #36c399;
-		border: 1px solid rgba(54, 195, 153, 0.3);
-	}
-
-	.team-challenge.commerce {
-		background: rgba(247, 166, 84, 0.2);
-		color: #f7a654;
-		border: 1px solid rgba(247, 166, 84, 0.3);
 	}
 
 	@media (max-width: 768px) {
@@ -237,7 +212,7 @@
 		.user-info {
 			justify-content: center;
 			padding-top: 0.5rem;
-			border-top: 1px solid rgba(255, 255, 255, 0.1);
+			border-top: 1px solid rgba(255, 255, 255, 0.1); /* var(--border-default) */
 			flex-wrap: wrap;
 		}
 

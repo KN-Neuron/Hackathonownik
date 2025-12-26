@@ -3,10 +3,11 @@
 	import Modal from './Modal.svelte';
 	import GradeTeamForm from './GradeTeamForm.svelte';
 	import PdfViewer from './pdf/PdfViewer.svelte';
+	import { Button } from '$lib/components/ui';
 
 	export let team;
 
-	
+
 	let avatarBg = '';
 	let avatarShape = '';
 	let showFormModal = false;
@@ -15,7 +16,14 @@
 	let presentationFiles = [];
 
 	// Constants
-	const avatarColors = ['#543bad', '#36a3db', '#e85c90', '#f7a654', '#36c399', '#8957e5'];
+	const avatarColors = [
+		'var(--brand-purple)',
+		'var(--brand-blue)',
+		'var(--error)',
+		'var(--commerce-color)',
+		'var(--wellness-color)',
+		'var(--info)'
+	];
 
 	onMount(() => {
 		const hash = hashCode(team.id);
@@ -64,12 +72,22 @@
 
 	// Color based on percentage of max score
 	function getScoreColor(score, maxScore = 5) {
-		if (!score) return '#555';
+		if (!score) return 'var(--score-poor)';
 		const percentage = (score / maxScore) * 100;
-		if (percentage >= 90) return '#36c399'; // Green for 90%+
-		if (percentage >= 70) return '#f7a654'; // Orange for 70%+
-		if (percentage >= 50) return '#e85c90'; // Pink for 50%+
-		return '#555'; // Gray for < 50%
+		if (percentage >= 90) return 'var(--score-excellent)'; // Green for 90%+
+		if (percentage >= 70) return 'var(--score-good)'; // Orange for 70%+
+		if (percentage >= 50) return 'var(--score-average)'; // Pink for 50%+
+		return 'var(--score-poor)'; // Gray for < 50%
+	}
+
+	// Get CSS class based on score for standardized styling
+	function getScoreClass(score, maxScore = 5) {
+		if (!score) return 'metric-fill-poor';
+		const percentage = (score / maxScore) * 100;
+		if (percentage >= 90) return 'metric-fill-excellent';
+		if (percentage >= 70) return 'metric-fill-good';
+		if (percentage >= 50) return 'metric-fill-average';
+		return 'metric-fill-poor';
 	}
 
 	async function getPresentationFiles(team) {
@@ -120,7 +138,7 @@
 		return team.innowacyjnosc + team.uzytecznosc + team.prezentacja_koncowa + team.jakosc_implementacji;
 	}
 
-	$: finalGrade = calculateFinalGrade();
+	let finalGrade = $derived(calculateFinalGrade());
 </script>
 
 <div class="team-card">
@@ -161,11 +179,8 @@
 				<div class="metric-label">Innovation</div>
 				<div class="metric-bar">
 					<div
-						class="metric-fill"
-						style="width: {getScoreWidth(team.innowacyjnosc, 5)}; background-color: {getScoreColor(
-							team.innowacyjnosc,
-							5
-						)}"
+						class="metric-fill {getScoreClass(team.innowacyjnosc, 5)}"
+						style="width: {getScoreWidth(team.innowacyjnosc, 5)}"
 					></div>
 				</div>
 				<div class="metric-value">{team.innowacyjnosc != null ? `${team.innowacyjnosc}/5` : '-'}</div>
@@ -175,11 +190,8 @@
 				<div class="metric-label">Usefulness</div>
 				<div class="metric-bar">
 					<div
-						class="metric-fill"
-						style="width: {getScoreWidth(team.uzytecznosc, 5)}; background-color: {getScoreColor(
-							team.uzytecznosc,
-							5
-						)}"
+						class="metric-fill {getScoreClass(team.uzytecznosc, 5)}"
+						style="width: {getScoreWidth(team.uzytecznosc, 5)}"
 					></div>
 				</div>
 				<div class="metric-value">{team.uzytecznosc != null ? `${team.uzytecznosc}/5` : '-'}</div>
@@ -189,11 +201,8 @@
 				<div class="metric-label">Presentation</div>
 				<div class="metric-bar">
 					<div
-						class="metric-fill"
-						style="width: {getScoreWidth(team.prezentacja_koncowa, 5)}; background-color: {getScoreColor(
-							team.prezentacja_koncowa,
-							5
-						)}"
+						class="metric-fill {getScoreClass(team.prezentacja_koncowa, 5)}"
+						style="width: {getScoreWidth(team.prezentacja_koncowa, 5)}"
 					></div>
 				</div>
 				<div class="metric-value">{team.prezentacja_koncowa != null ? `${team.prezentacja_koncowa}/5` : '-'}</div>
@@ -203,11 +212,8 @@
 				<div class="metric-label">Implementation</div>
 				<div class="metric-bar">
 					<div
-						class="metric-fill"
-						style="width: {getScoreWidth(team.jakosc_implementacji, 10)}; background-color: {getScoreColor(
-							team.jakosc_implementacji,
-							10
-						)}"
+						class="metric-fill {getScoreClass(team.jakosc_implementacji, 10)}"
+						style="width: {getScoreWidth(team.jakosc_implementacji, 10)}"
 					></div>
 				</div>
 				<div class="metric-value">{team.jakosc_implementacji != null ? `${team.jakosc_implementacji}/10` : '-'}</div>
@@ -256,18 +262,14 @@
 					</svg>
 					Video Demo
 				</a>
-				<button
-					class="btn btn-secondary"
+				<Button
+					variant="secondary"
 					on:click={showPresentationModalHandler}
-					disabled={loadingPresentation}
+					{...(loadingPresentation ? { loading: true } : {})}
+					class="btn-presentation"
 				>
-					{#if loadingPresentation}
-						<span class="loading loading-spinner loading-xs mr-2"></span>
-						Loading...
-					{:else}
-						View Presentation
-					{/if}
-				</button>
+					{#if !loadingPresentation}View Presentation{/if}
+				</Button>
 
 				<button
 					class="btn btn-download"
@@ -281,13 +283,13 @@
 					Download
 				</button>
 
-				<button
-					class="btn btn-primary"
+				<Button
+					variant={team.isRatedByCurrentJury ? 'success' : 'primary'}
 					on:click={() => (showFormModal = true)}
-					class:already-rated={team.isRatedByCurrentJury}
+					class="btn-rate"
 				>
 					{team.isRatedByCurrentJury ? 'Edit Rating' : 'Rate Team'}
-				</button>
+				</Button>
 			</div>
 		</div>
 	</div>
@@ -296,12 +298,12 @@
 <style>
 	.team-card {
 		display: flex;
-		background-color: #1e1f22;
+		background-color: #1e1f22; /* var(--card-bg) */
 		border-radius: 8px;
 		padding: 16px;
 		margin-bottom: 16px;
-		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-		border: 1px solid #2c2e33;
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); /* var(--card-shadow) */
+		border: 1px solid #2c2e33; /* var(--card-border) */
 		position: relative;
 	}
 
@@ -324,20 +326,20 @@
 
 	.team-header {
 		margin-bottom: 12px;
-		border-bottom: 1px solid #2c2e33;
+		border-bottom: 1px solid #2c2e33; /* var(--border-dark) */
 		padding-bottom: 8px;
 	}
 
 	.team-header h3 {
 		margin: 0 0 4px 0;
 		font-size: 18px;
-		color: #f0f0f0;
+		color: #f0f0f0; /* var(--text-primary) */
 		font-weight: 600;
 	}
 
 	.team-id {
 		font-size: 12px;
-		color: #888;
+		color: rgba(255, 255, 255, 0.5); /* var(--text-tertiary) */
 		font-family: monospace;
 	}
 
@@ -356,13 +358,13 @@
 	.metric-label {
 		width: 100px;
 		font-size: 14px;
-		color: #aaa;
+		color: rgba(255, 255, 255, 0.6); /* var(--text-quaternary) */
 	}
 
 	.metric-bar {
 		flex-grow: 1;
 		height: 8px;
-		background-color: #2c2e33;
+		background-color: #252d42; /* var(--base-300) */
 		border-radius: 4px;
 		overflow: hidden;
 		margin: 0 10px;
@@ -378,7 +380,7 @@
 		min-width: 45px;
 		font-size: 13px;
 		font-weight: 600;
-		color: #f0f0f0;
+		color: #f0f0f0; /* var(--text-primary) */
 		text-align: right;
 		white-space: nowrap;
 	}
@@ -389,7 +391,7 @@
 		gap: 16px;
 		margin-top: auto;
 		padding-top: 12px;
-		border-top: 1px solid #2c2e33;
+		border-top: 1px solid #2c2e33; /* var(--border-dark) */
 	}
 
 	.grade-section {
@@ -403,16 +405,16 @@
 	}
 
 	.grade-label {
-		color: #aaa;
+		color: rgba(255, 255, 255, 0.6); /* var(--text-quaternary) */
 		margin-right: 6px;
 	}
 
 	.grade-value {
-		color: #f0f0f0;
+		color: #f0f0f0; /* var(--text-primary) */
 		font-weight: 600;
 	}
 
-		.rating-status {
+	.rating-status {
 		display: flex;
 		flex-direction: column;
 		align-items: flex-end;
@@ -427,26 +429,26 @@
 	}
 
 	.rating-badge.rated {
-		background-color: #36623d;
-		color: #a3f0b5;
+		background-color: #36c399; /* var(--success) */
+		color: #f0f0f0; /* var(--brand-light) */
 	}
 
 	.rating-badge.not-rated {
-		background-color: #763626;
-		color: #ffcbc0;
+		background-color: #ff6b6b; /* var(--error) */
+		color: #f0f0f0; /* var(--brand-light) */
 	}
 
 	.rating-count {
 		font-size: 12px;
-		color: #aaa;
+		color: rgba(255, 255, 255, 0.6); /* var(--text-quaternary) */
 	}
 
 	.count {
 		font-weight: 600;
-		color: #f0f0f0;
+		color: #f0f0f0; /* var(--text-primary) */
 	}
 
-		.function-buttons {
+	.function-buttons {
 		display: flex;
 		justify-content: space-between;
 		gap: 10px;
@@ -464,15 +466,11 @@
 		display: flex;
 		justify-content: center;
 		align-items: center;
+		gap: 0.5rem;
 	}
 
 	.btn:hover {
 		transform: translateY(-1px);
-	}
-
-	.btn-secondary {
-		background-color: #2c2e33;
-		color: #f0f0f0;
 	}
 
 	.btn-repo {
@@ -503,12 +501,12 @@
 	}
 
 	.btn-primary {
-		background-color: #3b82f6;
+		background-color: var(--btn-primary-bg);
 		color: white;
 	}
 
 	.btn-primary.already-rated {
-		background-color: #36623d;
+		background-color: var(--success);
 	}
 
 	.btn:disabled {

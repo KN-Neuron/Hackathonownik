@@ -1,16 +1,1 @@
-@import 'tailwindcss';
-@plugin '@tailwindcss/forms';
-@plugin '@tailwindcss/typography';
-@plugin 'daisyui';
-
-html {
-	color-scheme: dark;
-}
-
-body {
-	box-sizing: border-box;
-	margin: 0;
-	padding: 0;
-	background-color: black;
-	min-height: 100dvh;
-}
+@import './lib/styles/global.css';
