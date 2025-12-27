@@ -1,11 +1,14 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { get } from 'svelte/store';
+import { page } from '$app/stores';
 
 export function exportRankingToPdf(rankings, totalJuries) {
 	const doc = new jsPDF();
+	const config = get(page).data.eventConfig;
 
 	doc.setFontSize(18);
-	doc.text('Heroes of the Brain 2025 - Team Rankings', 14, 20);
+	doc.text(`${config.name} ${config.year} - Team Rankings`, 14, 20);
 
 	const today = new Date();
 	doc.setFontSize(10);
@@ -45,5 +48,5 @@ export function exportRankingToPdf(rankings, totalJuries) {
 		styles: { textColor: [50, 50, 50] }
 	});
 
-	doc.save('heroes-of-the-brain-rankings.pdf');
+	doc.save(`${config.name.toLowerCase().replace(/ /g, '-')}-rankings.pdf`);
 }

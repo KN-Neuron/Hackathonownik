@@ -1,8 +1,11 @@
 <script lang="ts">
 	import Modal from './Modal.svelte';
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
 
 	export let teamId;
+	const eventConfig = $page.data.eventConfig;
+
 	let ratings = [];
 	let loading = true;
 	let error = '';
@@ -44,12 +47,14 @@
 		}).format(date);
 	}
 
-	function getRatingColor(value) {
-		if (value >= 4) return 'text-success';
-		if (value >= 3) return 'text-warning';
-		if (value >= 2) return 'text-error';
-		return 'text-gray-400';
+	function getRatingColor(value, maxScore = 5) {
+		const percentage = (value / maxScore) * 100;
+		if (percentage >= 70) return 'text-success';
+		if (percentage >= 50) return 'text-warning';
+		return 'text-error';
 	}
+
+	const maxTotalScore = eventConfig.rating_criteria.reduce((acc, curr) => acc + curr.maxScore, 0);
 </script>
 
 <div class="rating-history">
@@ -78,7 +83,9 @@
 					{#each ratings as rating}
 						<tr class="hover:bg-base-200 cursor-pointer" on:click={() => viewRatingDetails(rating)}>
 							<td>{rating.juryName}</td>
-							<td class={getRatingColor(rating.finalGrade)}>{rating.finalGrade.toFixed(1)}</td>
+							<td class={getRatingColor(rating.finalGrade, maxTotalScore)}
+								>{rating.finalGrade.toFixed(1)}</td
+							>
 							<td>{formatDate(rating.created)}</td>
 							<td>
 								<button class="btn btn-xs btn-ghost">View</button>
@@ -103,35 +110,19 @@
 				</div>
 
 				<div class="grid grid-cols-2 gap-4">
-					<div>
-						<span class="font-medium">Innovation:</span>
-						<span class={getRatingColor(selectedRating.innovation)}
-							>{selectedRating.innovation}</span
-						>
-					</div>
-					<div>
-						<span class="font-medium">Usefulness:</span>
-						<span class={getRatingColor(selectedRating.usefulness)}
-							>{selectedRating.usefulness}</span
-						>
-					</div>
-					<div>
-						<span class="font-medium">Presentation:</span>
-						<span class={getRatingColor(selectedRating.finalPresentation)}
-							>{selectedRating.finalPresentation}</span
-						>
-					</div>
-					<div>
-						<span class="font-medium">Implementation:</span>
-						<span class={getRatingColor(selectedRating.implementation)}
-							>{selectedRating.implementation}</span
-						>
-					</div>
+					{#each eventConfig.rating_criteria as criterion}
+						<div>
+							<span class="font-medium">{criterion.name}:</span>
+							<span class={getRatingColor(selectedRating[criterion.key], criterion.maxScore)}
+								>{selectedRating[criterion.key]}</span
+							>
+						</div>
+					{/each}
 				</div>
 
 				<div>
 					<span class="font-medium">Final Grade:</span>
-					<span class={getRatingColor(selectedRating.finalGrade)}
+					<span class={getRatingColor(selectedRating.finalGrade, maxTotalScore)}
 						>{selectedRating.finalGrade.toFixed(1)}</span
 					>
 				</div>

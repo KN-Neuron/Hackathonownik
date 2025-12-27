@@ -16,12 +16,14 @@
 	);
 
 	const { open = false } = $props();
+	const eventConfig = $page.data.eventConfig;
+	const category = $derived(eventConfig.categories.find((c) => c.key === teamCategory));
 </script>
 
 <aside class:open class="bg-base-100">
 	<div class="sidebar-header">
 		<a href="/"
-			><h2 class="text-2xl font-bold text-primary mb-6 text-center">Heroes of the Brain 2025</h2></a
+			><h2 class="text-2xl font-bold text-primary mb-6 text-center">{$page.data.eventConfig.name} {$page.data.eventConfig.year}</h2></a
 		>
 		{#if isAuthenticated}
 			<div class="user-info-sidebar">
@@ -37,13 +39,12 @@
 							? 'Jury'
 							: 'Participant'}
 				</span>
-				{#if isParticipant && teamCategory}
+				{#if isParticipant && teamCategory && category}
 					<span
 						class="team-challenge"
-						class:wellness={teamCategory === 'wellness'}
-						class:commerce={teamCategory === 'commerce'}
+						style="background: color-mix(in srgb, {category.color} 20%, transparent); color: {category.color}; border: 1px solid color-mix(in srgb, {category.color} 30%, transparent);"
 					>
-						{teamCategory === 'wellness' ? 'Wellness Challenge' : 'Commerce Challenge'}
+						{category.name} Challenge
 					</span>
 				{/if}
 			</div>
@@ -106,7 +107,7 @@
 					href="/my-submission"
 					class:active={$page.url.pathname === '/my-submission'}
 				>
-					<SidebarElement text="My Submissions" />
+					<SidebarElement icon={IconNames.Presentation} text="My Submissions" />
 				</a>
 				{#if $page.data.allJuriesConfirmed && $page.data.allAdminsConfirmed}
 					<a class="nav-link" href="/ranking" class:active={$page.url.pathname === '/ranking'}>
@@ -128,7 +129,7 @@
 	</nav>
 
 	<div class="sidebar-footer">
-		<p class="text-sm text-gray-500">© 2025 KN Neuorn</p>
+		<p class="text-sm text-gray-500">© {$page.data.eventConfig.year} {$page.data.eventConfig.organizer}</p>
 	</div>
 </aside>
 

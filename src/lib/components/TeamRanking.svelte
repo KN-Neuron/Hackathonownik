@@ -2,10 +2,12 @@
 	import { onMount } from 'svelte';
 	import JuryRatingDetails from './JuryRatingDetails.svelte';
 	import { browser } from '$app/environment';
+	import { page } from '$app/stores';
 
 	export let rankings = [];
 	export let totalJuries = 0;
-	export let categoryFilter = 'all'; // 'all', 'wellness', or 'commerce'
+	export let categoryFilter = 'all'; 
+	const eventConfig = $page.data.eventConfig;
 
 	let sortField = 'finalGrade';
 	let sortDirection = 'desc';
@@ -28,6 +30,13 @@
 		.sort((a, b) => {
 			const valueA = a[sortField];
 			const valueB = b[sortField];
+			
+			if (typeof valueA === 'string' && typeof valueB === 'string') {
+				return sortDirection === 'desc' 
+					? valueB.localeCompare(valueA) 
+					: valueA.localeCompare(valueB);
+			}
+			
 			return sortDirection === 'desc' ? valueB - valueA : valueA - valueB;
 		})
 		.filter((team) => {
@@ -44,10 +53,11 @@
 		}
 	}
 
-	function getScoreColor(score) {
-		if (score >= 4.5) return 'text-success font-bold';
-		if (score >= 3.5) return 'text-success';
-		if (score >= 2.5) return 'text-warning';
+	function getScoreColor(score, maxScore = 5) {
+		const percentage = (score / maxScore) * 100;
+		if (percentage >= 90) return 'text-success font-bold';
+		if (percentage >= 70) return 'text-success';
+		if (percentage >= 50) return 'text-warning';
 		return 'text-error';
 	}
 
@@ -67,6 +77,8 @@
 			return [];
 		}
 	}
+
+	const maxTotalScore = eventConfig.rating_criteria.reduce((acc, curr) => acc + curr.maxScore, 0);
 
 	async function exportToPdf() {
 		try {
@@ -96,9 +108,9 @@
 			doc.setFont('helvetica');
 
 			doc.setFontSize(18);
-			const categoryTitle = categoryFilter === 'all' ? 'All Categories' :
-				categoryFilter === 'wellness' ? 'Wellness Category' : 'Commerce Category';
-			doc.text(`Heroes of the Brain 2025 - Rankings (${categoryTitle})`, 14, 20);
+			const category = eventConfig.categories.find(c => c.key === categoryFilter);
+			const categoryTitle = category ? `${category.name} Category` : 'All Categories';
+			doc.text(`${eventConfig.name} ${eventConfig.year} - Rankings (${categoryTitle})`, 14, 20);
 
 			doc.setFontSize(10);
 			doc.setTextColor(100, 100, 100);
@@ -109,10 +121,7 @@
 				'Rank',
 				'Team',
 				'Category',
-				'Innovation',
-				'Usefulness',
-				'Presentation',
-				'Implementation',
+				...eventConfig.rating_criteria.map(c => c.name),
 				'Final Grade',
 				'Status'
 			];
@@ -120,11 +129,8 @@
 			const tableRows = sortedRankings.map((team, index) => [
 				index + 1,
 				team.team,
-				team.category ? team.category.charAt(0).toUpperCase() + team.category.slice(1) : 'N/A',
-				team.innovation.toFixed(1),
-				team.usefulness.toFixed(1),
-				team.finalPresentation.toFixed(1),
-				team.implementation.toFixed(1),
+				eventConfig.categories.find(c => c.key === team.category)?.name || 'N/A',
+				...eventConfig.rating_criteria.map(c => team[c.key]?.toFixed(1) || '0.0'),
 				team.finalGrade.toFixed(2),
 				`${team.status === 'final' ? 'Final' : 'Provisional'} (${team.ratingCount}/${totalJuries})`
 			]);
@@ -133,31 +139,34 @@
 				head: [tableColumn],
 				body: tableRows,
 				startY: 40,
-				styles: { fontSize: 9, cellPadding: 3 },
+				styles: { fontSize: 8, cellPadding: 2 },
 				headStyles: { fillColor: [59, 130, 246], textColor: 255 },
 				alternateRowStyles: { fillColor: [245, 247, 250] },
 				columnStyles: {
-					0: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
+					0: { cellWidth: 12, halign: 'center', fontStyle: 'bold' },
 					1: { cellWidth: 'auto', fontStyle: 'bold' },
-					2: { cellWidth: 22 }, // Category column
-					7: { cellWidth: 25, fontStyle: 'bold' }, // Final Grade
-					8: { cellWidth: 35 } // Status
+					2: { cellWidth: 20 }
 				},
 				didDrawCell: (data) => {
-					// Color the Final Grade column (index 7)
-					if (data.column.index === 7 && data.section === 'body') {
+					// Final Grade column is at index: 3 (Rank, Team, Category) + criteria length
+					const finalGradeIdx = 3 + eventConfig.rating_criteria.length;
+					
+					if (data.column.index === finalGradeIdx && data.section === 'body') {
 						const score = parseFloat(data.cell.text[0]);
-						if (score >= 4.5) doc.setTextColor(54, 195, 153);
-						else if (score >= 3.5) doc.setTextColor(54, 195, 153);
-						else if (score >= 2.5) doc.setTextColor(247, 166, 84);
+						const percentage = (score / maxTotalScore) * 100;
+						if (percentage >= 70) doc.setTextColor(54, 195, 153);
+						else if (percentage >= 50) doc.setTextColor(247, 166, 84);
 						else doc.setTextColor(232, 92, 144);
 					}
 					// Color the Category column (index 2)
 					else if (data.column.index === 2 && data.section === 'body') {
-						const category = data.cell.text[0]?.toLowerCase();
-						if (category === 'wellness') doc.setTextColor(54, 195, 153);
-						else if (category === 'commerce') doc.setTextColor(247, 166, 84);
-						else doc.setTextColor(0, 0, 0);
+						const categoryName = data.cell.text[0];
+						const category = eventConfig.categories.find(c => c.name === categoryName);
+						if (category) {
+							// Simple hex to RGB conversion for basic colors
+							if (category.key === 'wellness') doc.setTextColor(54, 195, 153);
+							else if (category.key === 'commerce') doc.setTextColor(247, 166, 84);
+						}
 					}
 					else if (data.section === 'body') {
 						doc.setTextColor(0, 0, 0);
@@ -182,19 +191,13 @@
 
 				const juryColumns = [
 					'Jury',
-					'Innovation',
-					'Usefulness',
-					'Presentation',
-					'Implementation',
+					...eventConfig.rating_criteria.map(c => c.name),
 					'Final Grade'
 				];
 
 				const juryRows = ratings.map((rating) => [
 					rating.juryName,
-					rating.innovation.toString(),
-					rating.usefulness.toString(),
-					rating.finalPresentation.toString(),
-					rating.implementation.toString(),
+					...eventConfig.rating_criteria.map(c => rating[c.key]?.toString() || '0'),
 					rating.finalGrade.toFixed(2)
 				]);
 
@@ -202,19 +205,19 @@
 					head: [juryColumns],
 					body: juryRows,
 					startY: 35,
-					styles: { fontSize: 9, cellPadding: 3 },
+					styles: { fontSize: 8, cellPadding: 2 },
 					headStyles: { fillColor: [100, 100, 100], textColor: 255 },
 					alternateRowStyles: { fillColor: [245, 247, 250] },
 					columnStyles: {
-						0: { cellWidth: 'auto', fontStyle: 'bold' },
-						5: { fontStyle: 'bold' }
+						0: { cellWidth: 'auto', fontStyle: 'bold' }
 					},
 					didDrawCell: (data) => {
-						if (data.column.index === 5 && data.section === 'body') {
+						const lastIdx = 1 + eventConfig.rating_criteria.length;
+						if (data.column.index === lastIdx && data.section === 'body') {
 							const score = parseFloat(data.cell.text[0]);
-							if (score >= 4.5) doc.setTextColor(54, 195, 153);
-							else if (score >= 3.5) doc.setTextColor(54, 195, 153);
-							else if (score >= 2.5) doc.setTextColor(247, 166, 84);
+							const percentage = (score / maxTotalScore) * 100;
+							if (percentage >= 70) doc.setTextColor(54, 195, 153);
+							else if (percentage >= 50) doc.setTextColor(247, 166, 84);
 							else doc.setTextColor(232, 92, 144);
 						} else if (data.section === 'body') {
 							doc.setTextColor(0, 0, 0);
@@ -260,7 +263,7 @@
 				doc.setFontSize(8);
 				doc.setTextColor(150);
 				doc.text(
-					'Heroes of the Brain 2025 © KN Neuron',
+					`${eventConfig.name} ${eventConfig.year} © ${eventConfig.organizer}`,
 					doc.internal.pageSize.getWidth() / 2,
 					doc.internal.pageSize.getHeight() - 10,
 					{
@@ -274,7 +277,7 @@
 				);
 			}
 
-			doc.save(`heroes-of-brain-rankings-${new Date().toISOString().slice(0, 10)}.pdf`);
+			doc.save(`${eventConfig.name.toLowerCase().replace(/ /g, '-')}-rankings-${new Date().toISOString().slice(0, 10)}.pdf`);
 		} catch (err) {
 			console.error('Error exporting PDF:', err);
 			alert('Failed to export PDF. Please try again.');
@@ -297,7 +300,7 @@
 			const url = window.URL.createObjectURL(blob);
 			const a = document.createElement('a');
 			a.href = url;
-			a.download = `heroes-of-brain-rankings-${new Date().toISOString().slice(0, 10)}.md`;
+			a.download = `${eventConfig.name.toLowerCase().replace(/ /g, '-')}-rankings-${new Date().toISOString().slice(0, 10)}.md`;
 			document.body.appendChild(a);
 			a.click();
 
@@ -401,26 +404,11 @@
 					<th class="cursor-pointer" on:click={() => sort('team')}>
 						Team {sortField === 'team' ? (sortDirection === 'desc' ? '↓' : '↑') : ''}
 					</th>
-					<th class="cursor-pointer" on:click={() => sort('innovation')}>
-						Innovation {sortField === 'innovation' ? (sortDirection === 'desc' ? '↓' : '↑') : ''}
-					</th>
-					<th class="cursor-pointer" on:click={() => sort('usefulness')}>
-						Usefulness {sortField === 'usefulness' ? (sortDirection === 'desc' ? '↓' : '↑') : ''}
-					</th>
-					<th class="cursor-pointer" on:click={() => sort('finalPresentation')}>
-						Presentation {sortField === 'finalPresentation'
-							? sortDirection === 'desc'
-								? '↓'
-								: '↑'
-							: ''}
-					</th>
-					<th class="cursor-pointer" on:click={() => sort('implementation')}>
-						Implementation {sortField === 'implementation'
-							? sortDirection === 'desc'
-								? '↓'
-								: '↑'
-							: ''}
-					</th>
+					{#each eventConfig.rating_criteria as criterion}
+						<th class="cursor-pointer" on:click={() => sort(criterion.key)}>
+							{criterion.name} {sortField === criterion.key ? (sortDirection === 'desc' ? '↓' : '↑') : ''}
+						</th>
+					{/each}
 					<th class="cursor-pointer" on:click={() => sort('finalGrade')}>
 						Final Grade {sortField === 'finalGrade' ? (sortDirection === 'desc' ? '↓' : '↑') : ''}
 					</th>
@@ -436,17 +424,17 @@
 							<div class="team-name-cell">
 								<span class="font-semibold">{team.team}</span>
 								{#if categoryFilter === 'all' && team.category}
-									<span class="category-badge {team.category}-badge">{team.category}</span>
+									{@const cat = eventConfig.categories.find(c => c.key === team.category)}
+									{#if cat}
+										<span class="category-badge" style="background: color-mix(in srgb, {cat.color} 20%, transparent); color: {cat.color}; border: 1px solid color-mix(in srgb, {cat.color} 30%, transparent);">{cat.name}</span>
+									{/if}
 								{/if}
 							</div>
 						</td>
-						<td class={getScoreColor(team.innovation)}>{team.innovation.toFixed(1)}</td>
-						<td class={getScoreColor(team.usefulness)}>{team.usefulness.toFixed(1)}</td>
-						<td class={getScoreColor(team.finalPresentation)}
-							>{team.finalPresentation.toFixed(1)}</td
-						>
-						<td class={getScoreColor(team.implementation)}>{team.implementation.toFixed(1)}</td>
-						<td class="font-bold {getScoreColor(team.finalGrade)}">
+						{#each eventConfig.rating_criteria as criterion}
+							<td class={getScoreColor(team[criterion.key], criterion.maxScore)}>{team[criterion.key]?.toFixed(1) || '0.0'}</td>
+						{/each}
+						<td class="font-bold {getScoreColor(team.finalGrade, maxTotalScore)}">
 							{team.finalGrade.toFixed(2)}
 						</td>
 						<td>
@@ -471,7 +459,7 @@
 
 				{#if sortedRankings.length === 0}
 					<tr>
-						<td colspan="9" class="text-center py-8 text-base-content/60">
+						<td colspan={5 + eventConfig.rating_criteria.length} class="text-center py-8 text-base-content/60">
 							No teams found matching the selected filter
 						</td>
 					</tr>
@@ -677,17 +665,5 @@
 		padding: 0.15rem 0.4rem;
 		border-radius: 0.25rem;
 		text-transform: capitalize;
-	}
-
-	.wellness-badge {
-		background: rgba(54, 195, 153, 0.2);
-		color: #36c399;
-		border: 1px solid rgba(54, 195, 153, 0.3);
-	}
-
-	.commerce-badge {
-		background: rgba(247, 166, 84, 0.2);
-		color: #f7a654;
-		border: 1px solid rgba(247, 166, 84, 0.3);
 	}
 </style>

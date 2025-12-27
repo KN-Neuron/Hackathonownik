@@ -2,6 +2,7 @@ import { pbError } from '$lib/pocketbase.svelte';
 import type { Rating } from '$lib/types';
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
+import { appConfig } from '$lib/server/appConfig';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
@@ -80,15 +81,22 @@ export const load: PageServerLoad = async ({ locals }) => {
 			expand: 'jury,team'
 		});
 
-		const processedRatings = ratingsFromDB.map((r) => ({
-			...r,
-			jury: r.expand?.jury?.name || 'Unknown Jury',
-			juryId: r.jury,
-			team: r.expand?.team?.name || 'Unknown Team',
-			teamId: r.expand?.team?.id || '',
-			category: r.expand?.team?.category || 'wellness',
-			finalGrade: r.innovation + r.usefulness + r.finalPresentation + r.implementation
-		}));
+		const processedRatings = ratingsFromDB.map((r) => {
+			let finalGrade = 0;
+			appConfig.event.rating_criteria.forEach((criterion) => {
+				finalGrade += Number(r[criterion.key]) || 0;
+			});
+
+			return {
+				...r,
+				jury: r.expand?.jury?.name || 'Unknown Jury',
+				juryId: r.jury,
+				team: r.expand?.team?.name || 'Unknown Team',
+				teamId: r.expand?.team?.id || '',
+				category: r.expand?.team?.category || appConfig.event.categories[0]?.key || '',
+				finalGrade
+			};
+		});
 
 		// Organize ratings by team
 		const teamRatingsMap = new Map();
@@ -100,18 +108,21 @@ export const load: PageServerLoad = async ({ locals }) => {
 			}
 
 			if (!teamRatingsMap.has(rating.teamId)) {
-				teamRatingsMap.set(rating.teamId, {
+				const teamInit: any = {
 					team: rating.team,
 					teamId: rating.teamId,
 					category: rating.category,
-					innovation: 0,
-					usefulness: 0,
-					implementation: 0,
-					finalPresentation: 0,
 					finalGrade: 0,
 					ratingCount: 0,
 					juryIds: new Set()
+				};
+
+				// Initialize all criteria to 0
+				appConfig.event.rating_criteria.forEach((criterion) => {
+					teamInit[criterion.key] = 0;
 				});
+
+				teamRatingsMap.set(rating.teamId, teamInit);
 			}
 
 			const team = teamRatingsMap.get(rating.teamId);
@@ -122,10 +133,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 				team.ratingCount++;
 
 				// Add this jury's individual scores to team totals
-				team.innovation += rating.innovation;
-				team.usefulness += rating.usefulness;
-				team.implementation += rating.implementation;
-				team.finalPresentation += rating.finalPresentation;
+				appConfig.event.rating_criteria.forEach((criterion) => {
+					team[criterion.key] += rating[criterion.key] || 0;
+				});
 			}
 		}
 
@@ -141,7 +151,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 			}
 
 			// Keep sums instead of averages for metrics
-			team.finalGrade = team.innovation + team.usefulness + team.implementation + team.finalPresentation;
+			let finalGrade = 0;
+			appConfig.event.rating_criteria.forEach((criterion) => {
+				finalGrade += team[criterion.key];
+			});
+			team.finalGrade = finalGrade;
 
 			team.status = count >= totalJuries ? 'final' : 'provisional';
 			team.completionPercent = Math.round((count / totalJuries) * 100);

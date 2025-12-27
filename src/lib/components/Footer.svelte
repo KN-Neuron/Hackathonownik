@@ -1,5 +1,9 @@
+<script>
+    import { page } from '$app/stores';
+</script>
+
 <footer>
-	<p>&copy; 2025 KN Neuron</p>
+	<p>&copy; {$page.data.eventConfig.year} {$page.data.eventConfig.organizer}</p>
 </footer>
 
 <style>

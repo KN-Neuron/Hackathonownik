@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { appConfig } from '$lib/server/appConfig';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) {
@@ -20,23 +21,23 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		});
 
 		const formattedRatings = ratingsList.items.map((rating) => {
-			const finalGrade =
-				Number(rating.innovation) +
-				Number(rating.usefulness) +
-				Number(rating.finalPresentation) +
-				Number(rating.implementation);
-			return {
+			let finalGrade = 0;
+			const ratingData: any = {
 				id: rating.id,
 				juryId: rating.jury,
 				juryName: rating.expand?.jury?.name || 'Unknown Jury',
-				innovation: Number(rating.innovation),
-				usefulness: Number(rating.usefulness),
-				finalPresentation: Number(rating.finalPresentation),
-				implementation: Number(rating.implementation),
 				comments: rating.comments || '',
-				finalGrade,
 				created: rating.created
 			};
+
+			appConfig.event.rating_criteria.forEach((criterion) => {
+				const value = Number(rating[criterion.key]) || 0;
+				finalGrade += value;
+				ratingData[criterion.key] = value;
+			});
+
+			ratingData.finalGrade = finalGrade;
+			return ratingData;
 		});
 
 		return json({ ratings: formattedRatings });

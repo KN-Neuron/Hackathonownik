@@ -21,7 +21,7 @@
 			Don't have email and password? Contact organizers on discord.
 		</span>
 
-		<div class="divider mt-8 mb-8">Heroes of the Brain</div>
+		<div class="divider mt-8 mb-8">{$page.data.eventConfig.name}</div>
 
 		<Input
 			id="email"

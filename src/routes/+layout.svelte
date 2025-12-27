@@ -4,13 +4,17 @@
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import '../app.css';
 
-	let { children } = $props();
+	let { children, data } = $props();
 	let open = $state(false);
 
 	function closeSidebar() {
 		open = false;
 	}
 </script>
+
+<svelte:head>
+	<title>{data.eventConfig.name} {data.eventConfig.year}</title>
+</svelte:head>
 
 <div class="layout-container">
 	<div class="desktop-sidebar">

@@ -51,12 +51,15 @@
 	function isActive(href: string): boolean {
 		return $page.url.pathname === href || $page.url.pathname.startsWith(href + '/');
 	}
+
+	const eventConfig = $page.data.eventConfig;
+	const category = $derived(eventConfig.categories.find((c) => c.key === teamCategory));
 </script>
 
 <nav class="navbar">
 	<div class="container">
 		<div class="brand">
-			<a href="/">Heroes of the Brain 2025</a>
+			<a href="/">{$page.data.eventConfig.name} {$page.data.eventConfig.year}</a>
 		</div>
 
 		<ul class="nav-links">
@@ -83,12 +86,12 @@
 								? 'Jury'
 								: 'Participant'}
 					</Badge>
-					{#if isParticipant && teamCategory}
+					{#if isParticipant && teamCategory && category}
 						<Badge
-							variant={teamCategory === 'wellness' ? 'wellness' : 'commerce'}
+							style="background: color-mix(in srgb, {category.color} 20%, transparent); color: {category.color}; border: 1px solid color-mix(in srgb, {category.color} 30%, transparent);"
 							class="team-challenge"
 						>
-							{teamCategory === 'wellness' ? 'Wellness' : 'Commerce'}
+							{category.name}
 						</Badge>
 					{/if}
 				</div>

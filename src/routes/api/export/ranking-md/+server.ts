@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { appConfig } from '$lib/server/appConfig';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals, url, fetch }) => {
@@ -17,22 +18,30 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 		const { rankings, totalJuries } = rankingData;
 
 		// Create markdown content with better visual structure
-		let markdownContent = `# Heroes of the Brain 2025 - Rankings\n\n`;
+		let markdownContent = `# ${appConfig.event.name} ${appConfig.event.year} - Rankings\n\n`;
 		markdownContent += `**Generated:** ${new Date().toLocaleString()}\n\n`;
 		markdownContent += `**Total Teams:** ${rankings.length} | **Total Juries:** ${totalJuries}\n\n`;
 
 		markdownContent += '## 🏆 Overall Rankings\n\n';
-		markdownContent += '| 🏅 Rank | 🏷️ Team | 📊 Category | 💡 Innovation | 🛠️ Usefulness | 📢 Presentation | 🛠️ Implementation | 🎯 Final Grade | 📋 Status |\n';
-		markdownContent += '|:------:|--------|:----------:|:-----------:|:----------:|:-------------:|:--------------:|:----------:|:------:|\n';
+		
+		const criteriaHeaders = appConfig.event.rating_criteria.map(c => `| ${c.name} `).join('');
+		const criteriaSeparators = appConfig.event.rating_criteria.map(() => `|:-----------:`).join('');
+		
+		markdownContent += `| 🏅 Rank | 🏷️ Team | 📊 Category ${criteriaHeaders}| 🎯 Final Grade | 📋 Status |\n`;
+		markdownContent += `|:------:|--------|:----------:${criteriaSeparators}|:----------:|:------:|\n`;
 
 		rankings.forEach((team, index) => {
 			const statusText = team.status === 'final'
 				? `Final (${team.ratingCount}/${totalJuries})`
 				: `Provisional (${team.ratingCount}/${totalJuries})`;
 
-			const categoryDisplay = team.category ? team.category.charAt(0).toUpperCase() + team.category.slice(1) : 'N/A';
+			const categoryDisplay = appConfig.event.categories.find(c => c.key === team.category)?.name || 'N/A';
+			
+			const criteriaValues = appConfig.event.rating_criteria
+				.map(c => `| \`${team[c.key]?.toFixed(1) || '0.0'}\` `)
+				.join('');
 
-			markdownContent += `| ${index + 1} | **${team.team}** | ${categoryDisplay} | \`${team.innovation.toFixed(1)}\` | \`${team.usefulness.toFixed(1)}\` | \`${team.finalPresentation.toFixed(1)}\` | \`${team.implementation.toFixed(1)}\` | **\`${team.finalGrade.toFixed(2)}\`** | ${statusText} |\n`;
+			markdownContent += `| ${index + 1} | **${team.team}** | ${categoryDisplay} ${criteriaValues}| **\`${team.finalGrade.toFixed(2)}\`** | ${statusText} |\n`;
 		});
 
 		// Add a section for each team with individual jury ratings
@@ -46,11 +55,14 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 					markdownContent += `\n---\n## 📋 Individual Jury Ratings: ${team.team}\n\n`;
 					markdownContent += `> **Average Final Grade:** \`${team.finalGrade.toFixed(2)}\`\n\n`;
 
-					markdownContent += '| 👤 Jury | 💡 Innovation | 🛠️ Usefulness | 📢 Presentation | 🛠️ Implementation | 🎯 Final Grade |\n';
-					markdownContent += '|--------|:-----------:|:----------:|:-------------:|:--------------:|:----------:|\n';
+					markdownContent += `| 👤 Jury ${criteriaHeaders}| 🎯 Final Grade |\n`;
+					markdownContent += `|--------${criteriaSeparators}|:----------:|\n`;
 
 					ratings.forEach(rating => {
-						markdownContent += `| ${rating.juryName} | \`${rating.innovation.toFixed(1)}\` | \`${rating.usefulness.toFixed(1)}\` | \`${rating.finalPresentation.toFixed(1)}\` | \`${rating.implementation.toFixed(1)}\` | **\`${rating.finalGrade.toFixed(2)}\`** |\n`;
+						const juryCriteriaValues = appConfig.event.rating_criteria
+							.map(c => `| \`${rating[c.key]?.toFixed(1) || '0'}\` `)
+							.join('');
+						markdownContent += `| ${rating.juryName} ${juryCriteriaValues}| **\`${rating.finalGrade.toFixed(2)}\`** |\n`;
 					});
 
 					// Add comments section if any jury has comments
@@ -70,14 +82,14 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 		}
 
 		markdownContent += '\n---\n';
-		markdownContent += `*Heroes of the Brain 2025 © KN Neuron*\n`;
+		markdownContent += `*${appConfig.event.name} ${appConfig.event.year} © ${appConfig.event.organizer}*\n`;
 
 		// Set proper UTF-8 encoding for the response - use the markdown content directly
 		// to ensure proper Unicode character handling
 		return new Response(markdownContent, {
 			headers: {
 				'Content-Type': 'text/markdown; charset=utf-8',
-				'Content-Disposition': `attachment; filename="heroes-of-brain-rankings-${new Date().toISOString().slice(0, 10)}.md"`
+				'Content-Disposition': `attachment; filename="${appConfig.event.name.toLowerCase().replace(/ /g, '-')}-rankings-${new Date().toISOString().slice(0, 10)}.md"`
 			}
 		});
 	} catch (err) {

@@ -1,5 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
+import { appConfig } from '$lib/server/appConfig';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
@@ -22,7 +23,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 	try {
 		const teamPresentations = await locals.pb.collection('presentations').getFullList({
 			filter: `team = "${teamId}"`,
-			sort: '-created'
+			sort: '-created',
+			expand: 'team'
 		});
 
 		if (teamPresentations.length === 0) {
@@ -37,9 +39,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 		const formattedSubmission = {
 			id: latestPresentation.id,
-			teamName: locals.user.teamName || 'Your Team',
+			teamName: latestPresentation.expand?.team?.name || 'Your Team',
 			teamId: teamId,
-			category: latestPresentation.expand?.team?.category || 'wellness',
+			category: latestPresentation.expand?.team?.category || appConfig.event.categories[0]?.key || 'wellness',
 			created: latestPresentation.created,
 			updated: latestPresentation.updated,
 			repo_link: latestPresentation.repo_link || null,

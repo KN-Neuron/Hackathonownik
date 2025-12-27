@@ -5,17 +5,18 @@
 
 	export let data;
 
-	const { rankings, totalJuries } = data;
+	const { rankings, totalJuries, eventConfig } = data;
 
 	let icon = IconNames.Ranking;
 	let text = 'Team Rankings';
 
-	// Filter rankings by category
-	$: wellnessRankings = rankings.filter(r => r.category === 'wellness');
-	$: commerceRankings = rankings.filter(r => r.category === 'commerce');
-
 	// Active tab for viewing
 	let activeTab = 'all';
+
+	// Filter rankings by category
+	function getRankingsByCategory(categoryKey: string) {
+		return rankings.filter((r) => r.category === categoryKey);
+	}
 </script>
 
 <div class="page-content">
@@ -32,48 +33,44 @@
 		<button
 			class="tab-btn"
 			class:active={activeTab === 'all'}
-			on:click={() => activeTab = 'all'}
+			on:click={() => (activeTab = 'all')}
 		>
 			All Teams
 			<span class="tab-count">{rankings.length}</span>
 		</button>
-		<button
-			class="tab-btn wellness-tab"
-			class:active={activeTab === 'wellness'}
-			on:click={() => activeTab = 'wellness'}
-		>
-			Wellness
-			<span class="tab-count">{wellnessRankings.length}</span>
-		</button>
-		<button
-			class="tab-btn commerce-tab"
-			class:active={activeTab === 'commerce'}
-			on:click={() => activeTab = 'commerce'}
-		>
-			Commerce
-			<span class="tab-count">{commerceRankings.length}</span>
-		</button>
+
+		{#each eventConfig.categories as category}
+			<button
+				class="tab-btn"
+				style={activeTab === category.key ? `--active-color: ${category.color}` : ''}
+				class:category-active={activeTab === category.key}
+				on:click={() => (activeTab = category.key)}
+			>
+				{category.name}
+				<span class="tab-count">{getRankingsByCategory(category.key).length}</span>
+			</button>
+		{/each}
 	</div>
 
 	<!-- Rankings Content -->
 	{#if activeTab === 'all'}
 		<TeamRanking {rankings} {totalJuries} categoryFilter="all" />
-	{:else if activeTab === 'wellness'}
-		<div class="category-ranking-section">
-			<div class="category-indicator wellness">
-				<span class="category-dot"></span>
-				<span>Wellness Category Rankings</span>
-			</div>
-			<TeamRanking rankings={wellnessRankings} {totalJuries} categoryFilter="wellness" />
-		</div>
-	{:else if activeTab === 'commerce'}
-		<div class="category-ranking-section">
-			<div class="category-indicator commerce">
-				<span class="category-dot"></span>
-				<span>Commerce Category Rankings</span>
-			</div>
-			<TeamRanking rankings={commerceRankings} {totalJuries} categoryFilter="commerce" />
-		</div>
+	{:else}
+		{#each eventConfig.categories as category}
+			{#if activeTab === category.key}
+				<div class="category-ranking-section">
+					<div class="category-indicator" style="color: {category.color}">
+						<span class="category-dot" style="background-color: {category.color}"></span>
+						<span>{category.name} Category Rankings</span>
+					</div>
+					<TeamRanking
+						rankings={getRankingsByCategory(category.key)}
+						{totalJuries}
+						categoryFilter={category.key}
+					/>
+				</div>
+			{/if}
+		{/each}
 	{/if}
 </div>
 
@@ -117,16 +114,10 @@
 		color: #fff;
 	}
 
-	.tab-btn.wellness-tab.active {
-		background: rgba(54, 195, 153, 0.2);
-		border-color: rgba(54, 195, 153, 0.5);
-		color: #36c399;
-	}
-
-	.tab-btn.commerce-tab.active {
-		background: rgba(247, 166, 84, 0.2);
-		border-color: rgba(247, 166, 84, 0.5);
-		color: #f7a654;
+	.tab-btn.category-active {
+		background: color-mix(in srgb, var(--active-color) 20%, transparent);
+		border-color: color-mix(in srgb, var(--active-color) 50%, transparent);
+		color: var(--active-color);
 	}
 
 	.tab-count {
@@ -136,7 +127,8 @@
 		border-radius: 1rem;
 	}
 
-	.tab-btn.active .tab-count {
+	.tab-btn.active .tab-count,
+	.tab-btn.category-active .tab-count {
 		background: rgba(255, 255, 255, 0.2);
 	}
 
@@ -154,26 +146,10 @@
 		font-weight: 500;
 	}
 
-	.category-indicator.wellness {
-		color: #36c399;
-	}
-
-	.category-indicator.commerce {
-		color: #f7a654;
-	}
-
 	.category-dot {
 		width: 8px;
 		height: 8px;
 		border-radius: 50%;
-	}
-
-	.category-indicator.wellness .category-dot {
-		background: #36c399;
-	}
-
-	.category-indicator.commerce .category-dot {
-		background: #f7a654;
 	}
 
 	/* Mobile responsiveness */

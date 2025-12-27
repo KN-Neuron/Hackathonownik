@@ -1,6 +1,7 @@
 <script>
 	import '../../app.css';
 	import { enhance } from '$app/forms';
+	import { page } from '$app/stores';
 
 	let email = $state('');
 	let password = $state('');
@@ -16,7 +17,7 @@
 			<a class="link link-secondary" href="/login">Log in</a>
 		</span>
 
-		<div class="divider my-0 mt-8 mb-8">Heroes of the Brain</div>
+		<div class="divider my-0 mt-8 mb-8">{$page.data.eventConfig.name}</div>
 
 		<label class="form-control flex flex-col mb-4">
 			<div class="label">

@@ -1,28 +1,31 @@
-<script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
 
 	export let teamId: string;
+	const eventConfig = $page.data.eventConfig;
 
-	let innovation = 3;
-	let usefulness = 3;
-	let finalPresentation = 3;
-	let implementation = 5;
+	// Dynamic scores based on criteria
+	let scores = $state(
+		Object.fromEntries(eventConfig.rating_criteria.map((c) => [c.key, Math.floor(c.maxScore / 2)]))
+	);
 
-	let comments = '';
-	let error = '';
-	let existingRating = null;
-	let loading = true;
+	let comments = $state('');
+	let error = $state('');
+	let existingRating = $state(null);
+	let loading = $state(true);
 
 	// Scale constants
 	const minScore = 1;
-	const maxStandardScore = 5; // For innovation, usefulness, presentation
-	const maxImplementationScore = 10;
 
 	// Calculate total score
-	$: totalScore = innovation + usefulness + finalPresentation + implementation;
-	$: maxTotalScore = maxStandardScore * 3 + maxImplementationScore; // 25
+	const totalScore = $derived(
+		Object.values(scores).reduce((acc, curr) => acc + (Number(curr) || 0), 0)
+	);
+	const maxTotalScore = $derived(
+		eventConfig.rating_criteria.reduce((acc, curr) => acc + curr.maxScore, 0)
+	);
 
 	onMount(async () => {
 		try {
@@ -32,10 +35,12 @@
 
 			if (data.found) {
 				existingRating = data.rating;
-				innovation = existingRating.innovation;
-				usefulness = existingRating.usefulness;
-				finalPresentation = existingRating.finalPresentation;
-				implementation = existingRating.implementation;
+				// Load existing scores
+				eventConfig.rating_criteria.forEach((criterion) => {
+					if (existingRating[criterion.key] !== undefined) {
+						scores[criterion.key] = existingRating[criterion.key];
+					}
+				});
 				comments = existingRating.comments ?? '';
 			}
 		} catch (err) {
@@ -50,7 +55,7 @@
 	method="POST"
 	use:enhance={() => {
 		return async ({ result }) => {
-			if (result.type === 'redirect') {
+			if (result.type === 'success' || result.type === 'redirect') {
 				await invalidateAll();
 				window.location.reload();
 			}
@@ -65,7 +70,7 @@
 		</div>
 	{:else}
 		<h2 class="text-2xl font-bold mb-3">Project Grading</h2>
-		<p class="text-gray-400 mb-6">Please grade this project based on the four criteria below</p>
+		<p class="text-gray-400 mb-6">Please grade this project based on the criteria below</p>
 
 		<div class="form-section">
 			<label class="form-control">
@@ -85,108 +90,34 @@
 			</label>
 		</div>
 
-		<!-- Innovation Rating -->
-		<div class="form-section">
-			<div class="label">
-				<span class="label-text font-bold">Innovation (Innowacyjność)</span>
-				<span class="label-text-alt">{innovation}/{maxStandardScore} points</span>
+		{#each eventConfig.rating_criteria as criterion}
+			<div class="form-section">
+				<div class="label">
+					<span class="label-text font-bold">{criterion.name}</span>
+					<span class="label-text-alt">{scores[criterion.key]}/{criterion.maxScore} points</span>
+				</div>
+
+				{#if criterion.description}
+					<p class="text-xs text-gray-500 mb-2">{criterion.description}</p>
+				{/if}
+
+				<input
+					type="range"
+					min={minScore}
+					max={criterion.maxScore}
+					step="1"
+					class="range range-primary"
+					bind:value={scores[criterion.key]}
+					name={criterion.key}
+				/>
+
+				<div class="w-full flex justify-between text-xs px-1 mt-1">
+					{#each Array(criterion.maxScore) as _, i}
+						<span>{i + 1}</span>
+					{/each}
+				</div>
 			</div>
-
-			<input
-				type="range"
-				min={minScore}
-				max={maxStandardScore}
-				step="1"
-				class="range range-primary"
-				bind:value={innovation}
-				name="innovation"
-			/>
-
-			<div class="w-full flex justify-between text-xs px-1 mt-1">
-				{#each Array(maxStandardScore) as _, i}
-					<span>{i + 1}</span>
-				{/each}
-			</div>
-		</div>
-
-		<!-- Usefulness Rating -->
-		<div class="form-section">
-			<div class="label">
-				<span class="label-text font-bold">Usefulness (Użyteczność)</span>
-				<span class="label-text-alt">{usefulness}/{maxStandardScore} points</span>
-			</div>
-
-			<input
-				type="range"
-				min={minScore}
-				max={maxStandardScore}
-				step="1"
-				class="range range-primary"
-				bind:value={usefulness}
-				name="usefulness"
-			/>
-
-			<div class="w-full flex justify-between text-xs px-1 mt-1">
-				{#each Array(maxStandardScore) as _, i}
-					<span>{i + 1}</span>
-				{/each}
-			</div>
-		</div>
-
-		<!-- Final Presentation Rating -->
-		<div class="form-section">
-			<div class="label">
-				<span class="label-text font-bold">Final Presentation (Prezentacja Końcowa)</span>
-				<span class="label-text-alt">{finalPresentation}/{maxStandardScore} points</span>
-			</div>
-
-			<input
-				type="range"
-				min={minScore}
-				max={maxStandardScore}
-				step="1"
-				class="range range-primary"
-				bind:value={finalPresentation}
-				name="finalPresentation"
-			/>
-
-			<div class="w-full flex justify-between text-xs px-1 mt-1">
-				{#each Array(maxStandardScore) as _, i}
-					<span>{i + 1}</span>
-				{/each}
-			</div>
-		</div>
-
-		<!-- Implementation Rating (1-10) -->
-		<div class="form-section">
-			<div class="label">
-				<span class="label-text font-bold">Implementation Quality (Jakość Implementacji)</span>
-				<span class="label-text-alt">{implementation}/{maxImplementationScore} points</span>
-			</div>
-
-			<input
-				type="range"
-				min={minScore}
-				max={maxImplementationScore}
-				step="1"
-				class="range range-primary"
-				bind:value={implementation}
-				name="implementation"
-			/>
-
-			<div class="w-full flex justify-between text-xs px-1 mt-1">
-				<span>1</span>
-				<span>2</span>
-				<span>3</span>
-				<span>4</span>
-				<span>5</span>
-				<span>6</span>
-				<span>7</span>
-				<span>8</span>
-				<span>9</span>
-				<span>10</span>
-			</div>
-		</div>
+		{/each}
 
 		<!-- Comments Section -->
 		<div class="form-section">

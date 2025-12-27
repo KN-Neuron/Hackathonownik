@@ -3,6 +3,7 @@ import type { Actions } from './$types';
 import { pbError } from '$lib/pocketbase.svelte';
 import { HttpStatusCode, Role } from '$lib/utils/utils';
 import type { Rating, User } from '$lib/types';
+import { appConfig } from '$lib/server/appConfig';
 
 export interface TeamWithPresentationUrl {
 	collectionId: string;
@@ -17,13 +18,10 @@ export interface TeamWithPresentationUrl {
 	ratingsCount?: number;
 	isRatedByCurrentJury?: boolean;
 	totalJuries?: number;
-	innowacyjnosc?: number | null;
-	uzytecznosc?: number | null;
-	prezentacja_koncowa?: number | null;
-	jakosc_implementacji?: number | null;
-	ocena?: number | null;
 	name?: string;  // for team name
-	category?: 'wellness' | 'commerce';
+	category?: string;
+	finalGradeDisplay?: number | null;
+	[key: string]: any; // for dynamic criteria
 }
 
 export const load = async ({ locals }) => {
@@ -85,7 +83,7 @@ export const load = async ({ locals }) => {
 			// Find current jury's rating to display in the card
 			const currentJuryRating = ratingsForTeam.items.find((r) => r.jury === locals.user.id);
 
-			teams.push({
+			const teamData: TeamWithPresentationUrl = {
 				...team,
 				presentationUrl,
 				repo_link: pres.repo_link || null,
@@ -93,13 +91,15 @@ export const load = async ({ locals }) => {
 				ratingsCount,
 				isRatedByCurrentJury,
 				totalJuries,
-				// Add current jury's ratings for display
-				innowacyjnosc: currentJuryRating?.innovation ?? null,
-				uzytecznosc: currentJuryRating?.usefulness ?? null,
-				prezentacja_koncowa: currentJuryRating?.finalPresentation ?? null,
-				jakosc_implementacji: currentJuryRating?.implementation ?? null,
-				ocena: currentJuryRating?.finalGrade ?? null
+				finalGradeDisplay: currentJuryRating?.finalGrade ?? null
+			};
+
+			// Add current jury's individual ratings dynamically
+			appConfig.event.rating_criteria.forEach(criterion => {
+				teamData[criterion.key] = currentJuryRating?.[criterion.key] ?? null;
 			});
+
+			teams.push(teamData);
 		}
 		return { teams, totalJuries, currentJuryConfirmed };
 	} catch (error) {
@@ -116,36 +116,27 @@ export const actions: Actions = {
 			throw error(403, 'Insufficient permissions to perform operation');
 		}
 
-		const form = Object.fromEntries(await request.formData()) as {
-			innovation: number;
-			usefulness: number;
-			finalPresentation: number;
-			implementation: number;
-			comments: string;
-			teamId: string;
-		};
+		const formData = await request.formData();
+		const form = Object.fromEntries(formData);
 
 		const rating: Rating = {
-			innovation: Number(form.innovation),
-			usefulness: Number(form.usefulness),
-			finalPresentation: Number(form.finalPresentation),
-			implementation: Number(form.implementation),
-			comments: form.comments,
+			comments: form.comments as string,
 			jury: user.id,
-			team: form.teamId,
-			finalGrade: null
+			team: form.teamId as string,
+			finalGrade: 0
 		};
 
-		rating.finalGrade =
-			Number(rating.innovation) +
-			Number(rating.usefulness) +
-			Number(rating.finalPresentation) +
-			Number(rating.implementation);
+		let finalGrade = 0;
+		appConfig.event.rating_criteria.forEach(criterion => {
+			const value = Number(form[criterion.key]) || 0;
+			rating[criterion.key] = value;
+			finalGrade += value;
+		});
+		rating.finalGrade = finalGrade;
 
 		function allFieldsValid(obj: Rating) {
-			return Object.values(obj).every((value) => {
-				return value !== null && value !== undefined;
-			});
+			// Check if all criteria are present
+			return appConfig.event.rating_criteria.every(c => obj[c.key] !== undefined && obj[c.key] !== null);
 		}
 
 		try {

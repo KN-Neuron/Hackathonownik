@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { HttpStatusCode } from '$lib/utils/utils';
+import { appConfig } from '$lib/server/appConfig';
 
 export const POST: RequestHandler = async ({ locals, request }) => {
 	if (!locals.user) {
@@ -17,22 +18,21 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 			);
 		}
 
-		
-		const finalGrade =
-			Number(data.innovation) +
-			Number(data.usefulness) +
-			Number(data.finalPresentation) +
-			Number(data.implementation);
+		// Calculate dynamic final grade
+		let finalGrade = 0;
+		const updateData: any = {
+			comments: data.comments || ''
+		};
 
-		
-		await locals.pb.collection('ratings').update(data.ratingId, {
-			innovation: Number(data.innovation),
-			usefulness: Number(data.usefulness),
-			finalPresentation: Number(data.finalPresentation),
-			implementation: Number(data.implementation),
-			comments: data.comments || '',
-			finalGrade
+		appConfig.event.rating_criteria.forEach((criterion) => {
+			const value = Number(data[criterion.key]) || 0;
+			finalGrade += value;
+			updateData[criterion.key] = value;
 		});
+
+		updateData.finalGrade = finalGrade;
+
+		await locals.pb.collection('ratings').update(data.ratingId, updateData);
 
 		return json({ success: true, message: 'Rating updated successfully' });
 	} catch (err: any) {

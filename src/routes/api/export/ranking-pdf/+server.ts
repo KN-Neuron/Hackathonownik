@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { appConfig } from '$lib/server/appConfig';
 import type { RequestHandler } from './$types';
 import puppeteer from 'puppeteer';
 
@@ -41,7 +42,7 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 			<head>
 				<meta charset="UTF-8">
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<title>Heroes of the Brain - Rankings</title>
+				<title>${appConfig.event.name} ${appConfig.event.year} - Rankings</title>
 				<style>
 					@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;500;700&display=swap');
 
@@ -107,7 +108,7 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 				</style>
 			</head>
 			<body>
-				<h1>Heroes of the Brain 2025 - Rankings</h1>
+				<h1>${appConfig.event.name} ${appConfig.event.year} - Rankings</h1>
 				<div class="metadata">
 					<p>Generated: ${new Date().toLocaleString()}</p>
 					<p>Total Teams: ${rankings.length} | Total Juries: ${totalJuries}</p>
@@ -118,10 +119,9 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 						<tr>
 							<th>Rank</th>
 							<th>Team</th>
-							<th>Innovation</th>
-							<th>Usefulness</th>
-							<th>Presentation</th>
-							<th>Implementation</th>
+							{#each appConfig.event.rating_criteria as criterion}
+								<th>{criterion.name}</th>
+							{/each}
 							<th>Final Grade</th>
 							<th>Status</th>
 						</tr>
@@ -133,11 +133,14 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 							<tr>
 								<td class="rank">${index + 1}</td>
 								<td class="team">${team.team}</td>
-								<td class="${getRatingColorClass(team.innovation)}">${team.innovation.toFixed(1)}</td>
-								<td class="${getRatingColorClass(team.usefulness)}">${team.usefulness.toFixed(1)}</td>
-								<td class="${getRatingColorClass(team.finalPresentation)}">${team.finalPresentation.toFixed(1)}</td>
-								<td class="${getRatingColorClass(team.implementation)}">${team.implementation.toFixed(1)}</td>
-								<td class="final-grade ${getRatingColorClass(team.finalGrade)}">${team.finalGrade.toFixed(2)}</td>
+								${appConfig.event.rating_criteria
+									.map(
+										(c) => `
+									<td class="${getRatingColorClass(team[c.key], c.maxScore)}">${team[c.key]?.toFixed(1) || '0.0'}</td>
+								`
+									)
+									.join('')}
+								<td class="final-grade ${getRatingColorClass(team.finalGrade, maxTotalScore)}">${team.finalGrade.toFixed(2)}</td>
 								<td class="${team.status === 'final' ? 'status-final' : 'status-provisional'}">
 									${team.status === 'final' ? 'Final' : 'Provisional'} (${team.ratingCount}/${totalJuries})
 								</td>
@@ -149,7 +152,7 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 				</table>
 
 				<div class="footer">
-					<p>Heroes of the Brain 2025 &copy; KN Neuron</p>
+					<p>${appConfig.event.name} ${appConfig.event.year} &copy; ${appConfig.event.organizer}</p>
 				</div>
 			</body>
 			</html>
@@ -189,19 +192,20 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 		return new Response(pdfBuffer, {
 			headers: {
 				'Content-Type': 'application/pdf',
-				'Content-Disposition': `attachment; filename="heroes-of-brain-rankings-${new Date().toISOString().slice(0, 10)}.pdf"`
+				'Content-Disposition': `attachment; filename="${appConfig.event.name.toLowerCase().replace(/ /g, '-')}-rankings-${new Date().toISOString().slice(0, 10)}.pdf"`
 			}
 		});
 	} catch (err) {
 		console.error('Error generating PDF:', err);
-		return json({ error: 'Failed to generate PDF', details: err.message }, { status: 500 });
+		return json({ error: 'Failed to generate PDF', details: (err as any).message }, { status: 500 });
 	}
 };
 
+const maxTotalScore = appConfig.event.rating_criteria.reduce((acc, curr) => acc + curr.maxScore, 0);
 
-function getRatingColorClass(score) {
-	if (score >= 4.5) return 'good';
-	if (score >= 3.5) return 'good';
-	if (score >= 2.5) return 'medium';
+function getRatingColorClass(score, maxScore = 5) {
+	const percentage = (score / maxScore) * 100;
+	if (percentage >= 70) return 'good';
+	if (percentage >= 50) return 'medium';
 	return 'low';
 }

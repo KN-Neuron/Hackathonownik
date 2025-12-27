@@ -2,8 +2,11 @@
 	import { onMount } from 'svelte';
 	import Modal from './Modal.svelte';
 
+	import { page } from '$app/stores';
+
 	export let teamId: string;
 	export let teamName: string;
+	const eventConfig = $page.data.eventConfig;
 
 	let ratings = [];
 	let loading = true;
@@ -32,12 +35,15 @@
 		}
 	}
 
-	function getRatingColor(value) {
-		if (value >= 4.5) return 'text-success font-bold';
-		if (value >= 3.5) return 'text-success';
-		if (value >= 2.5) return 'text-warning';
+	function getRatingColor(value, maxScore = 5) {
+		const percentage = (value / maxScore) * 100;
+		if (percentage >= 90) return 'text-success font-bold';
+		if (percentage >= 70) return 'text-success';
+		if (percentage >= 50) return 'text-warning';
 		return 'text-error';
 	}
+
+	const maxTotalScore = eventConfig.rating_criteria.reduce((acc, curr) => acc + curr.maxScore, 0);
 
 	function formatDate(dateStr) {
 		if (!dateStr) return 'N/A';
@@ -90,10 +96,9 @@
 					<thead>
 						<tr>
 							<th>Jury</th>
-							<th>Innovation</th>
-							<th>Usefulness</th>
-							<th>Presentation</th>
-							<th>Implementation</th>
+							{#each eventConfig.rating_criteria as criterion}
+								<th>{criterion.name}</th>
+							{/each}
 							<th>Final Grade</th>
 							<th>Date</th>
 						</tr>
@@ -102,11 +107,12 @@
 						{#each ratings as rating}
 							<tr class="hover:bg-base-200">
 								<td>{rating.juryName}</td>
-								<td class={getRatingColor(rating.innovation)}>{rating.innovation}</td>
-								<td class={getRatingColor(rating.usefulness)}>{rating.usefulness}</td>
-								<td class={getRatingColor(rating.finalPresentation)}>{rating.finalPresentation}</td>
-								<td class={getRatingColor(rating.implementation)}>{rating.implementation}</td>
-								<td class="font-bold {getRatingColor(rating.finalGrade)}"
+								{#each eventConfig.rating_criteria as criterion}
+									<td class={getRatingColor(rating[criterion.key], criterion.maxScore)}
+										>{rating[criterion.key]}</td
+									>
+								{/each}
+								<td class="font-bold {getRatingColor(rating.finalGrade, maxTotalScore)}"
 									>{rating.finalGrade.toFixed(2)}</td
 								>
 								<td class="text-xs whitespace-nowrap">{formatDate(rating.created)}</td>

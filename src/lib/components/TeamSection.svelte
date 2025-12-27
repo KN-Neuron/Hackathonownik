@@ -1,11 +1,19 @@
 <script lang="ts">
 	import TeamCard from './TeamCard.svelte';
+	import { page } from '$app/stores';
 
 	let { teams } = $props();
+	const eventConfig = $page.data.eventConfig;
 
 	// Group teams by category
-	let wellnessTeams = $derived(teams.filter(t => t.category === 'wellness'));
-	let commerceTeams = $derived(teams.filter(t => t.category === 'commerce'));
+	function getTeamsByCategory(categoryKey: string) {
+		return teams.filter((t) => t.category === categoryKey);
+	}
+
+	const categorizedTeamIds = $derived(new Set(teams.map((t) => t.id)));
+	const uncategorizedTeams = $derived(
+		teams.filter((t) => !eventConfig.categories.some((c) => c.key === t.category))
+	);
 </script>
 
 <section class="teams-section">
@@ -14,42 +22,35 @@
 		<div class="header-line"></div>
 	</div>
 
-	<!-- Wellness Category -->
-	{#if wellnessTeams.length > 0}
+	{#each eventConfig.categories as category}
+		{@const categoryTeams = getTeamsByCategory(category.key)}
+		{#if categoryTeams.length > 0}
+			<div class="category-section">
+				<div class="category-header" style="border-color: {category.color}">
+					<h3 style="color: {category.color}">{category.name}</h3>
+					<span class="category-count">{categoryTeams.length} teams</span>
+				</div>
+				<div class="teams-container">
+					{#each categoryTeams as team}
+						<TeamCard {team} />
+					{/each}
+				</div>
+			</div>
+		{/if}
+	{/each}
+
+	<!-- Fallback: Show uncategorized teams -->
+	{#if uncategorizedTeams.length > 0}
 		<div class="category-section">
-			<div class="category-header wellness">
-				<h3>Wellness</h3>
-				<span class="category-count">{wellnessTeams.length} teams</span>
+			<div class="category-header" style="border-color: #6b7280">
+				<h3 style="color: #6b7280">Other / Uncategorized</h3>
+				<span class="category-count">{uncategorizedTeams.length} teams</span>
 			</div>
 			<div class="teams-container">
-				{#each wellnessTeams as team}
+				{#each uncategorizedTeams as team}
 					<TeamCard {team} />
 				{/each}
 			</div>
-		</div>
-	{/if}
-
-	<!-- Commerce Category -->
-	{#if commerceTeams.length > 0}
-		<div class="category-section">
-			<div class="category-header commerce">
-				<h3>Commerce</h3>
-				<span class="category-count">{commerceTeams.length} teams</span>
-			</div>
-			<div class="teams-container">
-				{#each commerceTeams as team}
-					<TeamCard {team} />
-				{/each}
-			</div>
-		</div>
-	{/if}
-
-	<!-- Fallback: Show all teams if no category is set -->
-	{#if wellnessTeams.length === 0 && commerceTeams.length === 0 && teams.length > 0}
-		<div class="teams-container">
-			{#each teams as team}
-				<TeamCard {team} />
-			{/each}
 		</div>
 	{/if}
 </section>
@@ -94,26 +95,10 @@
 		border-bottom: 2px solid;
 	}
 
-	.category-header.wellness {
-		border-color: #36c399;
-	}
-
-	.category-header.commerce {
-		border-color: #f7a654;
-	}
-
 	.category-header h3 {
 		font-size: 1.25rem;
 		font-weight: 600;
 		margin: 0;
-	}
-
-	.category-header.wellness h3 {
-		color: #36c399;
-	}
-
-	.category-header.commerce h3 {
-		color: #f7a654;
 	}
 
 	.category-count {

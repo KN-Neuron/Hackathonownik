@@ -3,7 +3,8 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 
-	export let text: string = 'Heroes of the Brain 2025';
+	export let data: import('./$types').PageData;
+	export let text: string = `${data.eventConfig.name} ${data.eventConfig.year}`;
 
 	let titleEl: HTMLHeadingElement | null = null;
 	let pathEl: SVGPathElement | null = null;

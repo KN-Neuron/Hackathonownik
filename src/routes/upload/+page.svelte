@@ -17,8 +17,8 @@
 	let fullscreenMode = $state(false);
 	let showDeadlineMessage = $state(false);
 
-	// Check if submission is after deadline (12:00 PM on 30.11.2025)
-	const deadline = new Date('2025-11-30T12:00:00');
+	// Check if submission is after deadline
+	const deadline = new Date(data.eventConfig.deadline);
 	const now = new Date();
 	if (now > deadline) {
 		showDeadlineMessage = true;
@@ -42,7 +42,7 @@
 	{#if showDeadlineMessage}
 		<div class="deadline-notice">
 			<h3>Submission Deadline Passed</h3>
-			<p>The deadline for submitting presentations was on November 30, 2025 at 12:00 PM.</p>
+			<p>The deadline for submitting presentations was on {deadline.toLocaleString()}.</p>
 			<p>No new presentations can be submitted at this time.</p>
 		</div>
 	{:else}
@@ -56,7 +56,7 @@
 				Upload your team's presentation in PDF format. Maximum file size is 40MB. After uploading, your
 				presentation will be available for jury members to review and rate.
 			</p>
-			<p class="deadline-info">Deadline: November 30, 2025 at 12:00 PM</p>
+			<p class="deadline-info">Deadline: {deadline.toLocaleString()}</p>
 		</div>
 
 		<div class="upload-container">

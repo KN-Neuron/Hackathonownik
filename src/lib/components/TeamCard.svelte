@@ -4,9 +4,10 @@
 	import GradeTeamForm from './GradeTeamForm.svelte';
 	import PdfViewer from './pdf/PdfViewer.svelte';
 	import { Button } from '$lib/components/ui';
+	import { page } from '$app/stores';
 
 	export let team;
-
+	const eventConfig = $page.data.eventConfig;
 
 	let avatarBg = '';
 	let avatarShape = '';
@@ -127,17 +128,23 @@
 
 	// Calculate final grade from individual scores
 	function calculateFinalGrade() {
-		const hasAllScores =
-			team.innowacyjnosc != null &&
-			team.uzytecznosc != null &&
-			team.prezentacja_koncowa != null &&
-			team.jakosc_implementacji != null;
+		let total = 0;
+		let hasAll = true;
 
-		if (!hasAllScores) return null;
+		eventConfig.rating_criteria.forEach((criterion) => {
+			if (team[criterion.key] == null) {
+				hasAll = false;
+			} else {
+				total += team[criterion.key];
+			}
+		});
 
-		return team.innowacyjnosc + team.uzytecznosc + team.prezentacja_koncowa + team.jakosc_implementacji;
+		return hasAll ? total : null;
 	}
 
+	const maxTotalScore = $derived(
+		eventConfig.rating_criteria.reduce((acc, curr) => acc + curr.maxScore, 0)
+	);
 	let finalGrade = $derived(calculateFinalGrade());
 </script>
 
@@ -175,56 +182,29 @@
 		</div>
 
 		<div class="metrics">
-			<div class="metric">
-				<div class="metric-label">Innovation</div>
-				<div class="metric-bar">
-					<div
-						class="metric-fill {getScoreClass(team.innowacyjnosc, 5)}"
-						style="width: {getScoreWidth(team.innowacyjnosc, 5)}"
-					></div>
+			{#each eventConfig.rating_criteria as criterion}
+				<div class="metric">
+					<div class="metric-label">{criterion.name}</div>
+					<div class="metric-bar">
+						<div
+							class="metric-fill {getScoreClass(team[criterion.key], criterion.maxScore)}"
+							style="width: {getScoreWidth(team[criterion.key], criterion.maxScore)}"
+						></div>
+					</div>
+					<div class="metric-value">
+						{team[criterion.key] != null ? `${team[criterion.key]}/${criterion.maxScore}` : '-'}
+					</div>
 				</div>
-				<div class="metric-value">{team.innowacyjnosc != null ? `${team.innowacyjnosc}/5` : '-'}</div>
-			</div>
-
-			<div class="metric">
-				<div class="metric-label">Usefulness</div>
-				<div class="metric-bar">
-					<div
-						class="metric-fill {getScoreClass(team.uzytecznosc, 5)}"
-						style="width: {getScoreWidth(team.uzytecznosc, 5)}"
-					></div>
-				</div>
-				<div class="metric-value">{team.uzytecznosc != null ? `${team.uzytecznosc}/5` : '-'}</div>
-			</div>
-
-			<div class="metric">
-				<div class="metric-label">Presentation</div>
-				<div class="metric-bar">
-					<div
-						class="metric-fill {getScoreClass(team.prezentacja_koncowa, 5)}"
-						style="width: {getScoreWidth(team.prezentacja_koncowa, 5)}"
-					></div>
-				</div>
-				<div class="metric-value">{team.prezentacja_koncowa != null ? `${team.prezentacja_koncowa}/5` : '-'}</div>
-			</div>
-
-			<div class="metric">
-				<div class="metric-label">Implementation</div>
-				<div class="metric-bar">
-					<div
-						class="metric-fill {getScoreClass(team.jakosc_implementacji, 10)}"
-						style="width: {getScoreWidth(team.jakosc_implementacji, 10)}"
-					></div>
-				</div>
-				<div class="metric-value">{team.jakosc_implementacji != null ? `${team.jakosc_implementacji}/10` : '-'}</div>
-			</div>
+			{/each}
 		</div>
 
 		<div class="team-footer">
 			<div class="grade-section">
 				<div class="grade">
 					<span class="grade-label">Final Grade:</span>
-					<span class="grade-value">{finalGrade != null ? `${finalGrade}/25` : '-'}</span>
+					<span class="grade-value"
+						>{finalGrade != null ? `${finalGrade}/${maxTotalScore}` : '-'}</span
+					>
 				</div>
 
 				<!-- Rating Status Section -->

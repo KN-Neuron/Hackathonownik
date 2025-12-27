@@ -1,3 +1,4 @@
+import { appConfig } from '$lib/server/appConfig';
 import type { LayoutServerLoad } from './$types';
 
 async function areAllJuriesConfirmed(pb: any): Promise<boolean> {
@@ -50,13 +51,14 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 
 	allJuriesConfirmed = await areAllJuriesConfirmed(locals.pb);
 	allAdminsConfirmed = await areAllAdminsConfirmed(locals.pb);
-	console.log(allAdminsConfirmed);
+	// console.log(allAdminsConfirmed);
 
 	return {
 		user: locals.user,
 		csrfToken: locals.csrfToken,
 		teamCategory,
 		allJuriesConfirmed,
-		allAdminsConfirmed
+		allAdminsConfirmed,
+		eventConfig: appConfig.event
 	};
 };

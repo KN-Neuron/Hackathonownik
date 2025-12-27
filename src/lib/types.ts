@@ -25,18 +25,15 @@ export interface TypedPocketBase extends PocketBase {
 }
 
 export interface Rating {
-	innovation: number;
-	usefulness: number;
-	finalPresentation: number;
-	implementation: number;
 	comments: string;
 	jury: string;
 	team: string;
 	presentation?: string;
 	finalGrade: number | null;
+	[key: string]: any; // Allow dynamic criteria keys
 }
 
-export type TeamCategory = 'wellness' | 'commerce';
+export type TeamCategory = string;
 
 export interface Team {
 	id: string;

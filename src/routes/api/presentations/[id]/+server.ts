@@ -14,37 +14,43 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		throw error(400, 'Presentation ID is required');
 	}
 
-	// Check if user is a jury member or admin (they can always access)
-	if (locals.user.role !== 'jury' && locals.user.role !== 'admin' && !locals.user.admin) {
-		// For participants, check if all teams have been rated
-		try {
-			const presentations = await locals.pb.collection('presentations').getFullList();
-			if (presentations.length === 0) {
-				throw error(403, 'No presentations available');
-			}
-
-			const ratings = await locals.pb.collection('ratings').getFullList();
-			if (ratings.length === 0) {
-				throw error(403, 'Presentations not yet available');
-			}
-
-			const presentationIds = presentations.map((p) => p.id);
-			const ratedPresentationIds = new Set(ratings.map((r) => r.presentation));
-
-			// If not all presentations have been rated, don't allow access
-			if (!presentationIds.every((id) => ratedPresentationIds.has(id))) {
-				throw error(403, 'Presentations not yet available');
-			}
-		} catch (err) {
-			console.error('Error checking access for participant:', err);
-			throw error(403, 'Access not authorized');
-		}
-	}
-
 	try {
 		const presentation = await locals.pb.collection('presentations').getOne(presentationId, {
 			expand: 'team'
 		});
+
+		// Access Control Logic
+		// 1. Admins and Juries always have access
+		const isJuryOrAdmin = locals.user.role === 'jury' || locals.user.role === 'admin' || locals.user.admin;
+		
+		// 2. Team members have access to their OWN presentations
+		const isOwnTeamPresentation = locals.user.team === presentation.team;
+
+		if (!isJuryOrAdmin && !isOwnTeamPresentation) {
+			// 3. For other participants, access is only allowed if ALL teams are rated
+			try {
+				const allPresentations = await locals.pb.collection('presentations').getFullList();
+				// Use Set for unique team IDs, as multiple presentations can exist per team
+				const allTeamIds = new Set(allPresentations.map(p => p.team));
+				
+				const ratings = await locals.pb.collection('ratings').getFullList();
+				const ratedTeamIds = new Set(ratings.map((r) => r.team));
+
+				// Check if every team has at least one rating
+				const allTeamsRated = Array.from(allTeamIds).every(teamId => ratedTeamIds.has(teamId));
+
+				if (!allTeamsRated) {
+					throw error(403, 'Presentations not yet publicly available');
+				}
+			} catch (err) {
+				// If checking fails or throws 403, propagate the error
+				if (err instanceof Error && 'status' in err && (err as any).status === 403) {
+					throw err;
+				}
+				console.error('Error checking global access:', err);
+				throw error(403, 'Access not authorized');
+			}
+		}
 
 		// Get the file name from the presentation record
 		const fileName = presentation.presentation;

@@ -1,5 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
+import { appConfig } from '$lib/server/appConfig';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// Check if user is authenticated
@@ -37,7 +38,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			id: presentation.id,
 			teamName: presentation.expand?.team?.name || 'Unknown Team',
 			teamId: presentation.expand?.team?.id,
-			category: presentation.expand?.team?.category || 'wellness',
+			category: presentation.expand?.team?.category || appConfig.event.categories[0]?.key || 'wellness',
 			created: presentation.created,
 			updated: presentation.updated,
 			repo_link: presentation.repo_link || null,

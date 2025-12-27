@@ -2,6 +2,7 @@ import { FileUploadSecurity } from '$lib/server/security.js';
 import PocketBase from 'pocketbase';
 import type { Actions, PageServerLoad } from './$types';
 import 'dotenv/config';
+import { appConfig } from '$lib/server/appConfig';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// Ensure user is authenticated
@@ -20,14 +21,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 export const actions: Actions = {
 	upload: async ({ request, locals }) => {
-		// 1. Check deadline (12:00 PM on 30.11.2025)
-		const deadline = new Date('2025-12-30T12:00:00');
+		// 1. Check deadline
+		const deadline = new Date(appConfig.event.deadline);
 		const now = new Date();
 		if (now > deadline) {
 			return {
 				success: false,
 				message:
-					'Submission deadline has passed. Presentations can no longer be submitted after November 30, 2025 at 12:00 PM.'
+					`Submission deadline has passed. Presentations can no longer be submitted after ${deadline.toLocaleString()}.`
 			};
 		}
 
