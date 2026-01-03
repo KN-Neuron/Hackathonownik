@@ -2,7 +2,7 @@
 
 **JuryApp** is a modern, comprehensive web application designed to streamline the management of hackathons and competitions. It provides a seamless experience for participants to register and submit their work, while offering a robust interface for juries to evaluate and rate presentations efficiently.
 
-> Currently configured for the **Heroes Of The Brain 2025** event.
+> Currently configured for the **Heroes Of The Brain 2025** - one of the largest stationary neurotechnology hackathon in Europe.
 
 ## 🚀 Key Features
 
@@ -101,6 +101,24 @@ Key sections:
 *   `npm run lint`: Run ESLint and Prettier checks.
 *   `npm run format`: Format code with Prettier.
 *   `npm run test`: Run unit tests with Vitest.
+
+## Screenshots
+![telegram-cloud-photo-size-4-5944844193983302928-y](https://github.com/user-attachments/assets/37384efa-37cd-49f6-ba67-e951b98691fe)
+
+
+### Admin Dashboard
+<img width="1340" height="751" alt="image" src="https://github.com/user-attachments/assets/608333df-03b3-4588-b151-aed807d95802" />
+![telegram-cloud-photo-size-4-5944844193983302816-y](https://github.com/user-attachments/assets/57d0bd51-8518-46ea-b833-31dbb58858cb)
+### Rating
+<img width="1909" height="930" alt="image" src="https://github.com/user-attachments/assets/da9979c4-212c-4c59-b8ca-10e7ff33b0b2" />
+<img width="1907" height="928" alt="image" src="https://github.com/user-attachments/assets/ec5df501-125e-4e63-8a61-d1f941068ce6" />
+
+### Ranking
+<img width="1912" height="931" alt="image" src="https://github.com/user-attachments/assets/eec587a9-4b08-4c8d-8b26-918a44b27997" />
+
+
+
+
 
 ## 📄 License
 
