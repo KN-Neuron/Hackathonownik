@@ -12,6 +12,12 @@ export default defineConfig({
 			outdir: './src/lib/paraglide'
 		})
 	],
+	define: {
+		global: 'globalThis'
+	},
+	server: {
+		allowedHosts: true
+	},
 	test: {
 		projects: [
 			{

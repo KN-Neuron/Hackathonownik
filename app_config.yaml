@@ -1,0 +1,102 @@
+# Configuration for the Event Application
+# This file contains all the specific details for the event.
+# You can modify these values to customize the application for a different event.
+
+event:
+  # The full name of the event (e.g., "Heroes of the Brain")
+  name: "Heroes Of The Brain"
+
+  # The year of the event (e.g., "2025")
+  year: "2025"
+
+  # The organizer of the event (displayed in footers, copyright, etc.)
+  organizer: "KN Neuron"
+
+  # The submission deadline (ISO format)
+  deadline: "2026-11-30T12:00:00"
+
+  # Team Categories
+  # You can define multiple categories here.
+  # key: The internal identifier for the category (must be unique, lowercase, no spaces)
+  # name: The display name of the category
+  # color: The color associated with the category (hex code)
+  categories:
+    - key: "wellness"
+      name: "Wellness"
+      color: "#36c399"
+    - key: "commerce"
+      name: "Commerce"
+      color: "#f7a654"
+
+  # Rating Criteria
+  # Define the criteria used for rating presentations.
+  # key: Internal identifier (must match database field names)
+  # name: Display name for the criteria
+  # maxScore: Maximum points for this criteria
+  # description: Optional description shown to juries
+  rating_criteria:
+    - key: "innovation"
+      name: "Innovation"
+      maxScore: 5
+      description: "How innovative is the solution?"
+    - key: "usefulness"
+      name: "Usefulness"
+      maxScore: 5
+      description: "Is the solution useful and practical?"
+    - key: "finalPresentation"
+      name: "Presentation"
+      maxScore: 5
+      description: "Quality of the final presentation"
+    - key: "implementation"
+      name: "Implementation"
+      maxScore: 10
+      description: "Technical quality of the implementation"
+
+  # Useful links
+  # You can define multiple links here to be displayed on the info page.
+  # title: The title of the link section
+  # description: A short description of what the link is for
+  # url: The URL to navigate to
+  # buttonText: The text displayed on the button
+  links:
+    - title: "Discord"
+      description: "Join our Discord server"
+      url: "https://discord.gg/7vwC65hf"
+      buttonText: "Join Discord →"
+    - title: "Starter Pack"
+      description: "Repository with sample code"
+      url: "https://github.com/KN-Neuron/heroes-of-the-brain-starter-pack"
+      buttonText: "Open Repository →"
+    - title: "WiFi Instructions"
+      description: "How to connect to the university WiFi"
+      url: "https://di.pwr.edu.pl/uslugi/siec/pwrguest"
+      buttonText: "Connection Guide →"
+
+  # Event schedule
+  schedule:
+    - day: "Saturday, November 29"
+      events:
+        - time: "09:00 - 11:00"
+          description: "Participant Registration"
+        - time: "11:30 - 12:00"
+          description: "Opening Lecture"
+        - time: "12:00"
+          description: "Code Work Begins"
+        - time: "17:00"
+          description: "Catering"
+    - day: "Sunday, November 30"
+      events:
+        - time: "until 12:00"
+          description: "Code Work Ends"
+        - time: "12:00 - 12:30"
+          description: "Lecture"
+        - time: "12:30 - 14:00"
+          description: "Project Presentations - Part I"
+        - time: "14:00 - 14:30"
+          description: "Coffee Break"
+        - time: "14:30 - 16:00"
+          description: "Project Presentations - Part II"
+        - time: "16:00 - 16:30"
+          description: "Jury Evaluation"
+        - time: "16:30 - 17:00"
+          description: "Award Ceremony and Event Conclusion"
