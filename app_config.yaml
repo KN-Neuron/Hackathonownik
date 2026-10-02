@@ -12,8 +12,9 @@ event:
   # The organizer of the event (displayed in footers, copyright, etc.)
   organizer: "KN Neuron"
 
-  # The submission deadline (ISO format)
-  deadline: "2026-11-30T12:00:00"
+  # The submission deadline (ISO format). Always include the UTC offset, otherwise the
+  # server's timezone is used: +01:00 is Polish winter time (CET), +02:00 summer time (CEST)
+  deadline: "2026-11-30T12:00:00+01:00"
 
   # Submission requirements
   # required: which items a team must provide for its submission to count as complete.

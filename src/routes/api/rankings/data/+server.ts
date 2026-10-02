@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { canSeeResults } from '$lib/server/access';
+import { canSeeResults, resultsClient } from '$lib/server/access';
 import type { RequestHandler } from './$types';
 import { appConfig } from '$lib/server/appConfig';
 
@@ -13,7 +13,8 @@ export const GET: RequestHandler = async ({ locals }) => {
 	}
 
 	try {
-		const juriesResult = await locals.pb.collection('users').getList(1, 100, {
+		const pb = await resultsClient(locals);
+		const juriesResult = await pb.collection('users').getList(1, 100, {
 			filter: 'role = "jury"'
 		});
 		const totalJuries = juriesResult.totalItems;
@@ -23,7 +24,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 			validJuryIds.add(user.id);
 		});
 
-		const ratingsFromDB = await locals.pb.collection('ratings').getFullList({
+		const ratingsFromDB = await pb.collection('ratings').getFullList({
 			sort: '-created',
 			expand: 'jury,team'
 		});

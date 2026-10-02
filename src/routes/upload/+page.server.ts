@@ -1,9 +1,9 @@
 import { FileUploadSecurity } from '$lib/server/security.js';
-import PocketBase from 'pocketbase';
 import type { Actions, PageServerLoad } from './$types';
 import 'dotenv/config';
 import { appConfig } from '$lib/server/appConfig';
 import { getTeamSubmission } from '$lib/server/submissions';
+import { getAdminClient } from '$lib/server/adminClient';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// Ensure user is authenticated
@@ -149,26 +149,7 @@ export const actions: Actions = {
 				uploadData.append('video_link', newVideoLink);
 			}
 
-			// Use admin client for upload
-			const adminClient = new PocketBase(locals.pb.baseURL);
-
-			// Get credentials from environment variables - ensure they are properly set
-			const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL;
-			const adminPassword = process.env.POCKETBASE_ADMIN_PASSWORD;
-
-			// Validate that admin credentials are properly configured
-			if (!adminEmail || !adminPassword) {
-				console.error(
-					'Missing admin credentials in environment variables. Please set POCKETBASE_ADMIN_EMAIL and POCKETBASE_ADMIN_PASSWORD'
-				);
-				return {
-					success: false,
-					message:
-						'Server configuration error: Missing admin credentials. Please contact the administrator to set up the required environment variables.'
-				};
-			}
-
-			await adminClient.collection('_superusers').authWithPassword(adminEmail, adminPassword);
+			const adminClient = await getAdminClient();
 			await adminClient.collection('presentations').create(uploadData);
 
 			return {

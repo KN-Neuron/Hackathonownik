@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 
-	let { teamId }: { teamId: string } = $props();
+	let { teamId, onsaved }: { teamId: string; onsaved?: () => void } = $props();
 	const eventConfig = $page.data.eventConfig;
 
 	// Dynamic scores based on criteria
@@ -58,8 +58,9 @@
 		error = '';
 		return async ({ result }) => {
 			if (result.type === 'success' || result.type === 'redirect') {
+				// Refresh the team list in place, keeping the scroll position
 				await invalidateAll();
-				window.location.reload();
+				onsaved?.();
 			} else if (result.type === 'failure') {
 				error = (result.data?.error as string) || 'Could not save the rating.';
 			} else if (result.type === 'error') {
@@ -127,15 +128,19 @@
 
 		<!-- Comments Section -->
 		<div class="form-section">
-			<div class="label">
-				<span class="label-text">Comments (Optional)</span>
+			<div class="label flex-col items-start">
+				<span class="label-text">Feedback for the team (optional)</span>
+				<span class="label-text-alt text-base-content/60">
+					Shared with this team only, after the organizers publish the results. For notes just for
+					yourself, use "My private notes" on the team card.
+				</span>
 			</div>
 			<textarea
 				class="textarea textarea-bordered w-full h-24"
 				id="comments"
 				name="comments"
 				bind:value={comments}
-				placeholder="Additional comments about the project..."
+				placeholder="What was good, what could be improved..."
 			></textarea>
 		</div>
 

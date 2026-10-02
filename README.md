@@ -75,6 +75,29 @@ Teams can submit the PDF, the repository link and the video link separately. Eve
 | `video_link`   | url / text               | no       |
 | `submitted_by` | relation → `users` (single) | no    |
 
+### PocketBase: results publishing and jury notes
+
+Results (ranking, scores, feedback) stay hidden from participants until an organizer publishes them in the Admin Dashboard. Publishing requires every jury member to rate all teams and confirm; changing a rating withdraws the confirmation, and ratings are locked once results are published.
+
+Two collections are read and written only by the app through the superuser account. **Leave all of their API rules empty (superuser only):**
+
+| Collection    | Fields                                                                                   |
+| ------------- | ---------------------------------------------------------------------------------------- |
+| `event_state` | `results_published` (bool), `results_published_at` (date)                                |
+| `jury_notes`  | `jury` (relation → `users`, single), `team` (relation → `teams`, single), `content` (text) |
+
+Participants can log in to PocketBase directly with their own credentials, so the `ratings` collection must not be readable by them. Recommended API rules for `ratings`:
+
+- List / View: `@request.auth.role = "jury" || @request.auth.role = "admin"`
+- Create / Update: `(@request.auth.role = "jury" || @request.auth.role = "admin") && jury = @request.auth.id`
+- Delete: `@request.auth.role = "admin"`
+
+Users must not be able to change their own role or team. Recommended Update rule for `users`:
+
+- `id = @request.auth.id && @request.body.role:isset = false && @request.body.team:isset = false && @request.body.admin:isset = false`
+
+The `comments` field of a rating is the feedback for the team: the team sees it (without jury names) after results are published.
+
 ### Steps
 
 1.  **Clone the repository:**

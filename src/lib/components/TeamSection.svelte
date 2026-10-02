@@ -2,7 +2,7 @@
 	import TeamCard from './TeamCard.svelte';
 	import { page } from '$app/stores';
 
-	let { teams } = $props();
+	let { teams, locked = false } = $props();
 	const eventConfig = $page.data.eventConfig;
 
 	// Group teams by category
@@ -31,8 +31,8 @@
 					<span class="category-count">{categoryTeams.length} teams</span>
 				</div>
 				<div class="teams-container">
-					{#each categoryTeams as team}
-						<TeamCard {team} />
+					{#each categoryTeams as team (team.id)}
+						<TeamCard {team} {locked} />
 					{/each}
 				</div>
 			</div>
@@ -47,8 +47,8 @@
 				<span class="category-count">{uncategorizedTeams.length} teams</span>
 			</div>
 			<div class="teams-container">
-				{#each uncategorizedTeams as team}
-					<TeamCard {team} />
+				{#each uncategorizedTeams as team (team.id)}
+					<TeamCard {team} {locked} />
 				{/each}
 			</div>
 		</div>

@@ -1,6 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { Role } from '$lib/utils/utils';
+import { getRatingProgress, getResultsState } from '$lib/server/results';
 
 export const POST: RequestHandler = async ({ locals, request }) => {
 	if (!locals.user || (locals.user.role !== Role.Jury && locals.user.role !== Role.Admin)) {
@@ -10,9 +11,31 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 	try {
 		const { confirmed } = await request.json();
 
+		if ((await getResultsState()).published) {
+			return json(
+				{ success: false, message: 'Results are already published.' },
+				{ status: 409 }
+			);
+		}
+
+		// Confirming means "all my ratings are final", so every team must be rated first
+		if (confirmed) {
+			const progress = await getRatingProgress(locals.pb);
+			const me = progress.juries.find((j) => j.id === locals.user!.id);
+			if (me && me.ratedTeams < progress.totalTeams) {
+				return json(
+					{
+						success: false,
+						message: `You have rated ${me.ratedTeams} of ${progress.totalTeams} teams.`
+					},
+					{ status: 400 }
+				);
+			}
+		}
+
 		// Update the user's confirmedRating field
 		await locals.pb.collection('users').update(locals.user.id, {
-			confirmedRating: confirmed
+			confirmedRating: confirmed === true
 		});
 
 		return json({ success: true, confirmed });
