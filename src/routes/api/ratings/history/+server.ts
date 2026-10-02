@@ -1,10 +1,15 @@
 import { json } from '@sveltejs/kit';
+import { canSeeResults } from '$lib/server/access';
 import { pbError } from '$lib/pocketbase.svelte';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) {
 		return json({ error: 'Not authorized' }, { status: 401 });
+	}
+
+	if (!(await canSeeResults(locals))) {
+		return json({ error: 'Results are not public yet' }, { status: 403 });
 	}
 
 	const teamId = url.searchParams.get('teamId');
@@ -14,14 +19,12 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	}
 
 	try {
-		
 		const ratingsList = await locals.pb.collection('ratings').getList(1, 100, {
-			filter: `team = "${teamId}"`,
+			filter: locals.pb.filter('team = {:team}', { team: teamId }),
 			sort: '-created',
 			expand: 'jury'
 		});
 
-		
 		const formattedRatings = ratingsList.items.map((rating) => {
 			return {
 				...rating,

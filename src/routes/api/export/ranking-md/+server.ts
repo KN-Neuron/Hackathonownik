@@ -1,10 +1,15 @@
 import { json } from '@sveltejs/kit';
+import { canSeeResults } from '$lib/server/access';
 import { appConfig } from '$lib/server/appConfig';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 	if (!locals.user) {
 		return json({ error: 'Not authorized' }, { status: 401 });
+	}
+
+	if (!(await canSeeResults(locals))) {
+		return json({ error: 'Results are not public yet' }, { status: 403 });
 	}
 
 	try {

@@ -3,18 +3,19 @@
 	import Modal from './Modal.svelte';
 	import GradeTeamForm from './GradeTeamForm.svelte';
 	import PdfViewer from './pdf/PdfViewer.svelte';
+	import SubmissionChecklist from './SubmissionChecklist.svelte';
 	import { Button } from '$lib/components/ui';
 	import { page } from '$app/stores';
 
-	export let team;
+	let { team } = $props();
 	const eventConfig = $page.data.eventConfig;
 
-	let avatarBg = '';
-	let avatarShape = '';
-	let showFormModal = false;
-	let showPresentationModal = false;
-	let loadingPresentation = false;
-	let presentationFiles = [];
+	let avatarBg = $state('');
+	let avatarShape = $state('');
+	let showFormModal = $state(false);
+	let showPresentationModal = $state(false);
+	let loadingPresentation = $state(false);
+	let presentationFiles = $state<File[]>([]);
 
 	// Constants
 	const avatarColors = [
@@ -181,6 +182,14 @@
 			<span class="team-id">ID: {team.id}</span>
 		</div>
 
+		<div class="submission-status">
+			<SubmissionChecklist
+				submission={team.submission}
+				required={eventConfig.submission.required}
+				mode="jury"
+			/>
+		</div>
+
 		<div class="metrics">
 			{#each eventConfig.rating_criteria as criterion}
 				<div class="metric">
@@ -220,52 +229,74 @@
 			</div>
 
 			<div class="function-buttons">
-				<a
-					href={team.repo_link}
-					target="_blank"
-					rel="noopener noreferrer"
-					class="btn btn-repo"
-				>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
-					</svg>
-					Repository
-				</a>
-				<a
-					href={team.video_link}
-					target="_blank"
-					rel="noopener noreferrer"
-					class="btn btn-video"
-				>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<polygon points="5 3 19 12 5 21 5 3"></polygon>
-					</svg>
-					Video Demo
-				</a>
-				<Button
-					variant="secondary"
-					on:click={showPresentationModalHandler}
-					{...(loadingPresentation ? { loading: true } : {})}
-					class="btn-presentation"
-				>
-					{#if !loadingPresentation}View Presentation{/if}
-				</Button>
+				{#if team.repo_link}
+					<a href={team.repo_link} target="_blank" rel="noopener noreferrer" class="btn btn-repo">
+						<svg
+							width="16"
+							height="16"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+						>
+							<path
+								d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+							></path>
+						</svg>
+						Repository
+					</a>
+				{:else}
+					<span class="btn btn-missing">No repository</span>
+				{/if}
+				{#if team.video_link}
+					<a href={team.video_link} target="_blank" rel="noopener noreferrer" class="btn btn-video">
+						<svg
+							width="16"
+							height="16"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+						>
+							<polygon points="5 3 19 12 5 21 5 3"></polygon>
+						</svg>
+						Video Demo
+					</a>
+				{:else}
+					<span class="btn btn-missing">No video</span>
+				{/if}
+				{#if team.presentationUrl}
+					<Button
+						variant="secondary"
+						onclick={showPresentationModalHandler}
+						{...loadingPresentation ? { loading: true } : {}}
+						class="btn-presentation"
+					>
+						{#if !loadingPresentation}View Presentation{/if}
+					</Button>
 
-				<button
-					class="btn btn-download"
-					on:click={downloadPresentation}
-				>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-						<polyline points="7,10 12,15 17,10"></polyline>
-						<line x1="12" y1="15" x2="12" y2="3"></line>
-					</svg>
-					Download
-				</button>
+					<button class="btn btn-download" onclick={downloadPresentation}>
+						<svg
+							width="16"
+							height="16"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+						>
+							<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+							<polyline points="7,10 12,15 17,10"></polyline>
+							<line x1="12" y1="15" x2="12" y2="3"></line>
+						</svg>
+						Download
+					</button>
+				{:else}
+					<span class="btn btn-missing">No PDF</span>
+				{/if}
 
 				<Button
 					variant={team.isRatedByCurrentJury ? 'success' : 'primary'}
-					on:click={() => (showFormModal = true)}
+					onclick={() => (showFormModal = true)}
 					class="btn-rate"
 				>
 					{team.isRatedByCurrentJury ? 'Edit Rating' : 'Rate Team'}
@@ -285,6 +316,16 @@
 		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); /* var(--card-shadow) */
 		border: 1px solid #2c2e33; /* var(--card-border) */
 		position: relative;
+	}
+
+	.submission-status {
+		margin: 0.5rem 0 0.75rem;
+	}
+
+	.btn-missing {
+		background: rgba(255, 255, 255, 0.08);
+		color: rgba(255, 255, 255, 0.5);
+		cursor: default;
 	}
 
 	.team-avatar {

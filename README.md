@@ -50,6 +50,7 @@ event:
 
 Key sections:
 -   **`event`**: Basic info (name, organizer, deadlines).
+-   **`submission.required`**: Items a team must provide for a complete submission (`presentation`, `repo`, `video`).
 -   **`categories`**: Define competition tracks/categories.
 -   **`rating_criteria`**: Customize the scoring metrics and weights.
 -   **`schedule`**: Define the event timeline displayed to users.
@@ -61,6 +62,18 @@ Key sections:
 
 *   Node.js (v18+ recommended) or Bun
 *   A running [PocketBase](https://pocketbase.io/) instance.
+
+### PocketBase `presentations` collection
+
+Teams can submit the PDF, the repository link and the video link separately. Every save creates a record with only the items that changed, and the app shows the newest version of each item. The collection needs:
+
+| Field          | Type                     | Required |
+| -------------- | ------------------------ | -------- |
+| `team`         | relation → `teams`       | yes      |
+| `presentation` | file (PDF)               | **no**   |
+| `repo_link`    | url / text               | no       |
+| `video_link`   | url / text               | no       |
+| `submitted_by` | relation → `users` (single) | no    |
 
 ### Steps
 
@@ -81,7 +94,7 @@ Key sections:
     Create a `.env` file in the root directory (use `.env.example` as a template) and configure your PocketBase URL.
 
     ```env
-    PUBLIC_POCKETBASE_URL=http://127.0.0.1:8090
+    POCKETBASE_URL=http://127.0.0.1:8090
     ```
 
 4.  **Start the Development Server:**

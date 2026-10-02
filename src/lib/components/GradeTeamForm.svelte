@@ -1,9 +1,10 @@
+<script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 
-	export let teamId: string;
+	let { teamId }: { teamId: string } = $props();
 	const eventConfig = $page.data.eventConfig;
 
 	// Dynamic scores based on criteria
@@ -54,10 +55,15 @@
 <form
 	method="POST"
 	use:enhance={() => {
+		error = '';
 		return async ({ result }) => {
 			if (result.type === 'success' || result.type === 'redirect') {
 				await invalidateAll();
 				window.location.reload();
+			} else if (result.type === 'failure') {
+				error = (result.data?.error as string) || 'Could not save the rating.';
+			} else if (result.type === 'error') {
+				error = result.error?.message || 'Could not save the rating.';
 			}
 		};
 	}}

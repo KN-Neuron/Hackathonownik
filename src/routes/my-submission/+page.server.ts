@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
-import { appConfig } from '$lib/server/appConfig';
+import { getTeamSubmission } from '$lib/server/submissions';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
@@ -15,57 +15,20 @@ export const load: PageServerLoad = async ({ locals }) => {
 	if (!teamId) {
 		return {
 			submission: null,
-			user: locals.user,
-			error: 'You are not associated with any team.'
+			error: 'You are not associated with any team. Ask the organizers to add you to your team.'
 		};
 	}
 
 	try {
-		const teamPresentations = await locals.pb.collection('presentations').getFullList({
-			filter: `team = "${teamId}"`,
-			sort: '-created',
-			expand: 'team'
-		});
-
-		if (teamPresentations.length === 0) {
-			return {
-				submission: null,
-				user: locals.user,
-				error: 'No submissions found for your team.'
-			};
-		}
-
-		const latestPresentation = teamPresentations[0];
-
-		const formattedSubmission = {
-			id: latestPresentation.id,
-			teamName: latestPresentation.expand?.team?.name || 'Your Team',
-			teamId: teamId,
-			category: latestPresentation.expand?.team?.category || appConfig.event.categories[0]?.key || 'wellness',
-			created: latestPresentation.created,
-			updated: latestPresentation.updated,
-			repo_link: latestPresentation.repo_link || null,
-			video_link: latestPresentation.video_link || null,
-			presentationUrl: `/api/presentations/${latestPresentation.id}`,
-			allPresentations: teamPresentations.map((p) => ({
-				id: p.id,
-				created: p.created,
-				updated: p.updated
-			}))
-		};
-
 		return {
-			submission: formattedSubmission,
-			user: locals.user,
+			submission: await getTeamSubmission(locals.pb, teamId),
 			error: null
 		};
 	} catch (err) {
 		console.error('Error fetching team submission:', err);
 		return {
 			submission: null,
-			user: locals.user,
 			error: 'An error occurred while fetching your submission.'
 		};
 	}
 };
-

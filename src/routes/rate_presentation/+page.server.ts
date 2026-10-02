@@ -1,24 +1,23 @@
-import { error, redirect } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import { pbError } from '$lib/pocketbase.svelte';
-import { HttpStatusCode, Role } from '$lib/utils/utils';
-import type { Rating, User } from '$lib/types';
+import { HttpStatusCode } from '$lib/utils/utils';
+import type { Rating, TeamSubmission, User } from '$lib/types';
 import { appConfig } from '$lib/server/appConfig';
+import { getTeamSubmissions } from '$lib/server/submissions';
+import { isJuryOrAdmin } from '$lib/server/access';
+import { parseScores } from '$lib/server/ratings';
 
 export interface TeamWithPresentationUrl {
-	collectionId: string;
-	collectionName: string;
-	created: string;
 	id: string;
-	team: string;
-	updated: string;
 	presentationUrl: string | null;
+	submission: TeamSubmission;
 	repo_link?: string | null;
 	video_link?: string | null;
 	ratingsCount?: number;
 	isRatedByCurrentJury?: boolean;
 	totalJuries?: number;
-	name?: string;  // for team name
+	name?: string; // for team name
 	category?: string;
 	finalGradeDisplay?: number | null;
 	[key: string]: any; // for dynamic criteria
@@ -46,56 +45,50 @@ export const load = async ({ locals }) => {
 		const currentJuryConfirmed = currentUser.confirmedRating || false;
 
 		const teams: TeamWithPresentationUrl[] = [];
-		const presentations = await pb.collection('presentations').getFullList({ sort: '-created' });
 
-		const newestPresentations = [];
-		const uniqueTeams = new Set();
-		for (const pres of presentations) {
-			if (pres.team && !uniqueTeams.has(pres.team)) {
-				newestPresentations.push(pres);
-				uniqueTeams.add(pres.team);
-			}
+		// Merge partial uploads so the jury sees the newest PDF, repo and video of each team
+		const [submissions, allRatings] = await Promise.all([
+			getTeamSubmissions(pb),
+			pb.collection('ratings').getFullList()
+		]);
+
+		const ratingsByTeam = new Map<string, typeof allRatings>();
+		for (const rating of allRatings) {
+			const list = ratingsByTeam.get(rating.team) ?? [];
+			list.push(rating);
+			ratingsByTeam.set(rating.team, list);
 		}
 
-		for (const pres of newestPresentations) {
-			const team = await pb.collection('teams').getOne(pres.team);
-
-			// Use secure API endpoint instead of direct PocketBase URL
-			const presentationUrl = pres.presentation
-				? `/api/presentations/${pres.id}`
-				: null;
-
-			const ratingsForTeam = await pb.collection('ratings').getList(1, 1000, {
-				filter: `team="${team.id}"`,
-				expand: 'jury'
-			});
+		for (const submission of submissions) {
+			const ratingsForTeam = ratingsByTeam.get(submission.teamId) ?? [];
 
 			const uniqueJuries = new Set();
-			ratingsForTeam.items.forEach((rating) => {
+			ratingsForTeam.forEach((rating) => {
 				if (rating.jury && validJuryIds.has(rating.jury)) {
 					uniqueJuries.add(rating.jury);
 				}
 			});
 			const ratingsCount = uniqueJuries.size;
 
-			const isRatedByCurrentJury = ratingsForTeam.items.some((r) => r.jury === locals.user.id);
-
 			// Find current jury's rating to display in the card
-			const currentJuryRating = ratingsForTeam.items.find((r) => r.jury === locals.user.id);
+			const currentJuryRating = ratingsForTeam.find((r) => r.jury === locals.user.id);
 
 			const teamData: TeamWithPresentationUrl = {
-				...team,
-				presentationUrl,
-				repo_link: pres.repo_link || null,
-				video_link: pres.video_link || null,
+				id: submission.teamId,
+				name: submission.teamName,
+				category: submission.category,
+				presentationUrl: submission.presentation?.url ?? null,
+				repo_link: submission.repo?.url ?? null,
+				video_link: submission.video?.url ?? null,
+				submission,
 				ratingsCount,
-				isRatedByCurrentJury,
+				isRatedByCurrentJury: Boolean(currentJuryRating),
 				totalJuries,
 				finalGradeDisplay: currentJuryRating?.finalGrade ?? null
 			};
 
 			// Add current jury's individual ratings dynamically
-			appConfig.event.rating_criteria.forEach(criterion => {
+			appConfig.event.rating_criteria.forEach((criterion) => {
 				teamData[criterion.key] = currentJuryRating?.[criterion.key] ?? null;
 			});
 
@@ -110,46 +103,45 @@ export const load = async ({ locals }) => {
 
 export const actions: Actions = {
 	default: async ({ locals, request }) => {
-		const user: User = locals.user;
+		const user = locals.user as User | null;
 
-		if (user.role !== Role.Jury && user.role !== Role.Admin) {
+		if (!isJuryOrAdmin(user)) {
 			throw error(403, 'Insufficient permissions to perform operation');
 		}
 
 		const formData = await request.formData();
 		const form = Object.fromEntries(formData);
+		const teamId = typeof form.teamId === 'string' ? form.teamId : '';
 
-		const rating: Rating = {
-			comments: form.comments as string,
-			jury: user.id,
-			team: form.teamId as string,
-			finalGrade: 0
-		};
-
-		let finalGrade = 0;
-		appConfig.event.rating_criteria.forEach(criterion => {
-			const value = Number(form[criterion.key]) || 0;
-			rating[criterion.key] = value;
-			finalGrade += value;
-		});
-		rating.finalGrade = finalGrade;
-
-		function allFieldsValid(obj: Rating) {
-			// Check if all criteria are present
-			return appConfig.event.rating_criteria.every(c => obj[c.key] !== undefined && obj[c.key] !== null);
+		if (!teamId) {
+			return fail(HttpStatusCode.BadRequest, { error: 'Missing team' });
 		}
 
-		try {
-			if (allFieldsValid(rating)) {
-				const existingRatings = await locals.pb.collection('ratings').getList(1, 1, {
-					filter: `jury = "${user.id}" && team = "${form.teamId}"`
-				});
+		const parsed = parseScores(form);
+		if (!parsed.ok) {
+			return fail(HttpStatusCode.BadRequest, { error: parsed.error });
+		}
 
-				if (existingRatings.totalItems > 0) {
-					await locals.pb.collection('ratings').update(existingRatings.items[0].id, rating);
-				} else {
-					await locals.pb.collection('ratings').create(rating);
-				}
+		const rating: Rating = {
+			comments: typeof form.comments === 'string' ? form.comments : '',
+			jury: user!.id,
+			team: teamId,
+			...parsed.scores,
+			finalGrade: parsed.finalGrade
+		};
+
+		try {
+			const existingRatings = await locals.pb.collection('ratings').getList(1, 1, {
+				filter: locals.pb.filter('jury = {:jury} && team = {:team}', {
+					jury: user!.id,
+					team: teamId
+				})
+			});
+
+			if (existingRatings.totalItems > 0) {
+				await locals.pb.collection('ratings').update(existingRatings.items[0].id, rating);
+			} else {
+				await locals.pb.collection('ratings').create(rating);
 			}
 		} catch (err: unknown) {
 			console.error('Error in action:', err);
