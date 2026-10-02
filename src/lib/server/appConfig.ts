@@ -50,3 +50,9 @@ appConfig.event.submission = {
 		(SUBMISSION_ITEMS as readonly string[]).includes(item)
 	)
 };
+
+if (!/(Z|[+-]\d{2}:\d{2})$/.test(appConfig.event.deadline)) {
+	console.warn(
+		`app_config.yaml: deadline "${appConfig.event.deadline}" has no UTC offset and will be read in the server's timezone`
+	);
+}

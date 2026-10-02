@@ -1,84 +1,96 @@
 <script lang="ts">
 	import TeamSection from '$lib/components/TeamSection.svelte';
-	import { onMount } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
 
-	export let data;
-	let { teams, currentJuryConfirmed } = data;
+	let { data } = $props();
+	let teams = $derived(data.teams);
 
-	let showConfirmationModal = false;
-	let allTeamsRated = false;
-	let juryConfirmed = currentJuryConfirmed; // Initialize with the server value
-	let showTopConfirmationButton = false;
+	let showConfirmationModal = $state(false);
+	let confirmationError = $state('');
+	let filter = $state<'all' | 'todo' | 'done'>('all');
 
-	// Check if all teams have been rated by the current jury
-	$: {
-		const ratedTeams = teams.filter((team) => team.isRatedByCurrentJury);
-		allTeamsRated = ratedTeams.length > 0 && ratedTeams.length === teams.length;
-
-		// If all teams are rated but jury hasn't confirmed, show top button
-		if (allTeamsRated && !juryConfirmed) {
-			showTopConfirmationButton = true;
-		}
-	}
-
-	async function fetchConfirmationStatus() {
-		try {
-			const response = await fetch('/api/jury/confirm-grading');
-			const result = await response.json();
-			juryConfirmed = result.confirmed;
-
-			// If jury has confirmed, hide the top button
-			if (juryConfirmed) {
-				showTopConfirmationButton = false;
-			}
-		} catch (error) {
-			console.error('Error fetching confirmation status:', error);
-		}
-	}
+	let ratedCount = $derived(teams.filter((team) => team.isRatedByCurrentJury).length);
+	let allTeamsRated = $derived(teams.length > 0 && ratedCount === teams.length);
+	let progressPercent = $derived(teams.length ? Math.round((ratedCount / teams.length) * 100) : 0);
+	let visibleTeams = $derived(
+		filter === 'todo'
+			? teams.filter((team) => !team.isRatedByCurrentJury)
+			: filter === 'done'
+				? teams.filter((team) => team.isRatedByCurrentJury)
+				: teams
+	);
 
 	async function handleConfirmation(confirmed: boolean) {
+		confirmationError = '';
 		try {
-			await fetch('/api/jury/confirm-grading', {
+			const response = await fetch('/api/jury/confirm-grading', {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
+				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ confirmed })
 			});
-
-			juryConfirmed = confirmed;
+			const result = await response.json().catch(() => ({}));
+			if (!response.ok || result.success === false) {
+				confirmationError = result.message || 'Could not update the confirmation.';
+				return;
+			}
 			showConfirmationModal = false;
-			showTopConfirmationButton = false; // Hide the button after confirmation
+			await invalidateAll();
 		} catch (error) {
 			console.error('Error updating confirmation:', error);
+			confirmationError = 'Could not update the confirmation.';
 		}
 	}
-
-	async function openConfirmationModal() {
-		// Always open the confirmation modal when button is clicked
-		showConfirmationModal = true;
-	}
-
-	onMount(() => {
-		// Server already provides initial confirmation status, but we keep the fetch for real-time updates
-		fetchConfirmationStatus();
-	});
 </script>
 
-<!-- Top confirmation section -->
-{#if showTopConfirmationButton}
+<div class="jury-progress">
+	<div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+		<span class="font-semibold">You rated {ratedCount} of {teams.length} teams</span>
+		<div class="join">
+			<button
+				class="btn btn-sm join-item"
+				class:btn-active={filter === 'all'}
+				onclick={() => (filter = 'all')}>All ({teams.length})</button
+			>
+			<button
+				class="btn btn-sm join-item"
+				class:btn-active={filter === 'todo'}
+				onclick={() => (filter = 'todo')}>Not rated ({teams.length - ratedCount})</button
+			>
+			<button
+				class="btn btn-sm join-item"
+				class:btn-active={filter === 'done'}
+				onclick={() => (filter = 'done')}>Rated ({ratedCount})</button
+			>
+		</div>
+	</div>
+	<progress class="progress progress-success w-full" value={progressPercent} max="100"></progress>
+</div>
+
+{#if data.resultsPublished}
+	<div class="confirmation-top-section confirmed">
+		<div class="confirmation-banner confirmed">
+			<h3>Results are published</h3>
+			<p>Ratings are locked and can no longer be changed.</p>
+		</div>
+	</div>
+{:else if data.currentJuryConfirmed}
+	<div class="confirmation-top-section confirmed">
+		<div class="confirmation-banner confirmed">
+			<h3>Your ratings are confirmed</h3>
+			<p>
+				Organizers will publish the results once every jury member confirms. Changing any rating
+				withdraws your confirmation.
+			</p>
+		</div>
+	</div>
+{:else if allTeamsRated}
 	<div class="confirmation-top-section">
 		<div class="confirmation-banner">
 			<h3>You've rated all teams!</h3>
-			<p>Remember to confirm your ratings so they become visible to participants.</p>
-			<button class="btn btn-confirm" on:click={openConfirmationModal}> Confirm My Ratings </button>
-		</div>
-	</div>
-{:else if juryConfirmed}
-	<div class="confirmation-top-section confirmed">
-		<div class="confirmation-banner confirmed">
-			<h3>All Ratings Confirmed</h3>
-			<p>Your ratings have been confirmed and are visible to participants.</p>
+			<p>Confirm your ratings as final so the organizers can publish the results.</p>
+			<button class="btn btn-confirm" onclick={() => (showConfirmationModal = true)}>
+				Confirm My Ratings
+			</button>
 		</div>
 	</div>
 {/if}
@@ -89,21 +101,32 @@
 		<div class="modal-content">
 			<h3>Confirm Your Ratings</h3>
 			<p>You have rated all teams. Do you confirm these ratings as final?</p>
+			{#if confirmationError}
+				<p class="text-error">{confirmationError}</p>
+			{/if}
 			<div class="modal-buttons">
-				<button class="btn btn-primary" on:click={() => handleConfirmation(true)}>
+				<button class="btn btn-primary" onclick={() => handleConfirmation(true)}>
 					Yes, Confirm
 				</button>
-				<button class="btn btn-secondary" on:click={() => handleConfirmation(false)}>
-					No, Not Yet
+				<button class="btn btn-secondary" onclick={() => (showConfirmationModal = false)}>
+					Not Yet
 				</button>
 			</div>
 		</div>
 	</div>
 {/if}
 
-<TeamSection {teams} />
+<TeamSection teams={visibleTeams} locked={data.resultsPublished} />
 
 <style>
+	.jury-progress {
+		margin-bottom: 1rem;
+		padding: 1rem;
+		border-radius: 0.75rem;
+		background: rgba(255, 255, 255, 0.04);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+	}
+
 	.modal-overlay {
 		position: fixed;
 		top: 0;

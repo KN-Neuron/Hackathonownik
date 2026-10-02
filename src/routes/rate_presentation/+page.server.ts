@@ -7,6 +7,8 @@ import { appConfig } from '$lib/server/appConfig';
 import { getTeamSubmissions } from '$lib/server/submissions';
 import { isJuryOrAdmin } from '$lib/server/access';
 import { parseScores } from '$lib/server/ratings';
+import { getResultsState } from '$lib/server/results';
+import { getJuryNotes } from '$lib/server/juryNotes';
 
 export interface TeamWithPresentationUrl {
 	id: string;
@@ -27,6 +29,9 @@ export const load = async ({ locals }) => {
 	if (!locals.user) {
 		throw redirect(303, '/login');
 	}
+	if (!isJuryOrAdmin(locals.user)) {
+		throw redirect(303, '/');
+	}
 	try {
 		const pb = locals.pb;
 
@@ -43,6 +48,13 @@ export const load = async ({ locals }) => {
 		// Get current jury's confirmation status
 		const currentUser = await pb.collection('users').getOne(locals.user.id);
 		const currentJuryConfirmed = currentUser.confirmedRating || false;
+		const [{ published: resultsPublished }, notes] = await Promise.all([
+			getResultsState(),
+			getJuryNotes(locals.user.id).catch((e) => {
+				console.error('Error loading jury notes:', e);
+				return {} as Record<string, string>;
+			})
+		]);
 
 		const teams: TeamWithPresentationUrl[] = [];
 
@@ -84,7 +96,8 @@ export const load = async ({ locals }) => {
 				ratingsCount,
 				isRatedByCurrentJury: Boolean(currentJuryRating),
 				totalJuries,
-				finalGradeDisplay: currentJuryRating?.finalGrade ?? null
+				finalGradeDisplay: currentJuryRating?.finalGrade ?? null,
+				notes: notes[submission.teamId] ?? ''
 			};
 
 			// Add current jury's individual ratings dynamically
@@ -94,10 +107,10 @@ export const load = async ({ locals }) => {
 
 			teams.push(teamData);
 		}
-		return { teams, totalJuries, currentJuryConfirmed };
+		return { teams, totalJuries, currentJuryConfirmed, resultsPublished };
 	} catch (error) {
 		console.error('Error fetching data:', error);
-		return { teams: [], totalJuries: 0, currentJuryConfirmed: false };
+		return { teams: [], totalJuries: 0, currentJuryConfirmed: false, resultsPublished: false };
 	}
 };
 
@@ -115,6 +128,12 @@ export const actions: Actions = {
 
 		if (!teamId) {
 			return fail(HttpStatusCode.BadRequest, { error: 'Missing team' });
+		}
+
+		if ((await getResultsState()).published) {
+			return fail(HttpStatusCode.Forbidden, {
+				error: 'Results are already published, ratings can no longer be changed.'
+			});
 		}
 
 		const parsed = parseScores(form);
@@ -143,12 +162,18 @@ export const actions: Actions = {
 			} else {
 				await locals.pb.collection('ratings').create(rating);
 			}
+
+			// A changed rating needs to be confirmed again before results can be published
+			const current = await locals.pb.collection('users').getOne(user!.id);
+			if (current.confirmedRating) {
+				await locals.pb.collection('users').update(user!.id, { confirmedRating: false });
+			}
 		} catch (err: unknown) {
 			console.error('Error in action:', err);
 			pbError(err);
 			throw error(HttpStatusCode.InternalServerError, 'Failed to create rating');
 		}
 
-		throw redirect(HttpStatusCode.SeeOther, '/rate_presentation');
+		return { success: true };
 	}
 };

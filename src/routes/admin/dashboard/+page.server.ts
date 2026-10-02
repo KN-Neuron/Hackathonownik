@@ -1,4 +1,7 @@
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
+import { appConfig } from '$lib/server/appConfig';
+import { getRatingProgress, getResultsState, setResultsPublished } from '$lib/server/results';
+import { getTeamSubmissions } from '$lib/server/submissions';
 import type { Actions, PageServerLoad } from './$types';
 import { InputValidator } from '$lib/server/security';
 
@@ -40,11 +43,39 @@ export const load: PageServerLoad = async ({ locals }) => {
 			throw error(500, 'Could not load user data');
 		}
 
+		const [progress, resultsState, submissions] = await Promise.all([
+			getRatingProgress(locals.pb),
+			getResultsState(),
+			getTeamSubmissions(locals.pb)
+		]);
+
+		// Every registered team, including teams that haven't submitted anything yet
+		const submissionByTeam = new Map(submissions.map((s) => [s.teamId, s]));
+		const required = appConfig.event.submission.required;
+		const submissionOverview = teams
+			.map((team) => {
+				const submission = submissionByTeam.get(team.id) ?? null;
+				return {
+					teamId: team.id,
+					teamName: team.name,
+					category: team.category,
+					presentation: Boolean(submission?.presentation),
+					repo: Boolean(submission?.repo),
+					video: Boolean(submission?.video),
+					missing: submission ? submission.missing : required,
+					lastUpdated: submission?.lastUpdated ?? null
+				};
+			})
+			.sort((a, b) => b.missing.length - a.missing.length || a.teamName.localeCompare(b.teamName));
+
 		return {
 			users,
 			teams,
 			presentations,
 			ratings,
+			progress,
+			resultsState,
+			submissionOverview,
 			user: locals.user,
 			csrfToken: locals.csrfToken
 		};
@@ -54,7 +85,58 @@ export const load: PageServerLoad = async ({ locals }) => {
 	}
 };
 
+async function checkAdminForm(locals: App.Locals, formData: FormData) {
+	try {
+		locals.security.isAdmin();
+	} catch (e: any) {
+		return e.body?.message || 'Unauthorized';
+	}
+	const csrfToken = formData.get('csrf_token');
+	if (!locals.csrfToken || locals.csrfToken !== csrfToken) {
+		return 'Invalid security token';
+	}
+	return null;
+}
+
 export const actions: Actions = {
+	publishResults: async ({ locals, request }) => {
+		const formData = await request.formData();
+		const authError = await checkAdminForm(locals, formData);
+		if (authError) return fail(403, { success: false, message: authError });
+
+		// Publishing early would leak a provisional ranking, so it needs an explicit override
+		const force = formData.get('force') === 'true';
+		const progress = await getRatingProgress(locals.pb);
+		if (!progress.readyToPublish && !force) {
+			return fail(400, {
+				success: false,
+				message: 'Not every jury member has rated all teams and confirmed.'
+			});
+		}
+
+		try {
+			await setResultsPublished(true);
+			return { success: true, message: 'Results published' };
+		} catch (e) {
+			console.error('Error publishing results:', e);
+			return fail(500, { success: false, message: 'Could not publish results' });
+		}
+	},
+
+	unpublishResults: async ({ locals, request }) => {
+		const formData = await request.formData();
+		const authError = await checkAdminForm(locals, formData);
+		if (authError) return fail(403, { success: false, message: authError });
+
+		try {
+			await setResultsPublished(false);
+			return { success: true, message: 'Results hidden again' };
+		} catch (e) {
+			console.error('Error unpublishing results:', e);
+			return fail(500, { success: false, message: 'Could not hide results' });
+		}
+	},
+
 	// Delete presentation (tylko admin)
 	deletePresentation: async ({ locals, request }) => {
 		try {

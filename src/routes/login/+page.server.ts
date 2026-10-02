@@ -2,6 +2,14 @@ import { redirect, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { SecureCookieHandler } from '$lib/server/secure-cookie';
 import type { ClientResponseError } from 'pocketbase';
+import { isAdmin } from '$lib/server/access';
+
+// Where each role starts after logging in
+function homeFor(user: { admin?: boolean; role?: string } | null): string {
+	if (isAdmin(user)) return '/admin/dashboard';
+	if (user?.role === 'jury') return '/rate_presentation';
+	return '/my-submission';
+}
 
 export const load: PageServerLoad = async ({ locals }) => {
 	locals.user && redirect(303, '/');
@@ -35,8 +43,15 @@ export const actions = {
 			});
 		}
 
-		// Redirect to the requested page or home
-		const redirectTo = url.searchParams.get('redirect') ?? '/';
-		throw redirect(303, redirectTo);
+		// Only follow local paths, so a crafted link can't send users to another site
+		const requested = url.searchParams.get('redirect');
+		const isLocalPath =
+			requested?.startsWith('/') && !requested.startsWith('//') && !requested.includes('\\');
+		throw redirect(
+			303,
+			isLocalPath
+				? requested!
+				: homeFor(locals.pb.authStore.record as { admin?: boolean; role?: string } | null)
+		);
 	}
 } satisfies Actions;

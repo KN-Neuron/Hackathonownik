@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { canSeeResults } from '$lib/server/access';
+import { isJuryOrAdmin } from '$lib/server/access';
 import { pbError } from '$lib/pocketbase.svelte';
 import type { RequestHandler } from './$types';
 
@@ -8,8 +8,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		return json({ error: 'Not authorized' }, { status: 401 });
 	}
 
-	if (!(await canSeeResults(locals))) {
-		return json({ error: 'Results are not public yet' }, { status: 403 });
+	if (!isJuryOrAdmin(locals.user)) {
+		return json({ error: 'Not authorized' }, { status: 403 });
 	}
 
 	const teamId = url.searchParams.get('teamId');

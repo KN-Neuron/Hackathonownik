@@ -4,19 +4,14 @@ import { type Handle, redirect } from '@sveltejs/kit';
 import type { TypedPocketBase } from '$lib/types';
 import { Security, CSRFProtection, SECURITY_HEADERS, rateLimiters } from '$lib/server/security';
 import { SecureCookieHandler } from '$lib/server/secure-cookie';
-import { areAllJuriesConfirmed, areAllTeamsRated } from '$lib/server/access';
-
-const POCKETBASE_URL = process.env.POCKETBASE_URL || 'https://hotb-pb.knneuron.pl/';
+import { areResultsPublic } from '$lib/server/access';
+import { POCKETBASE_URL } from '$lib/server/adminClient';
 
 // ============================================
 // ROUTE ACCESS CONTROL
 // ============================================
 
-async function checkRouteAccess(
-	pathname: string,
-	user: any,
-	pb: TypedPocketBase
-): Promise<boolean> {
+async function checkRouteAccess(pathname: string, user: any): Promise<boolean> {
 	const publicRoutes = ['/login', '/'];
 	if (publicRoutes.includes(pathname)) {
 		return true;
@@ -40,16 +35,13 @@ async function checkRouteAccess(
 		}
 
 		if (pathname === '/presentations' || pathname.startsWith('/presentations/')) {
-			// Participants can see presentations after all teams are rated
-			const allRated = await areAllTeamsRated(pb);
-			return allRated;
+			// Participants can see other teams' presentations once results are published
+			return areResultsPublic();
 		}
 
 		if (pathname === '/ranking' || pathname.startsWith('/ranking/')) {
-			// Participants can see rankings after all teams are rated AND all juries have confirmed
-			const allRated = await areAllTeamsRated(pb);
-			const allConfirmed = await areAllJuriesConfirmed(pb);
-			return allRated && allConfirmed;
+			// Participants can see rankings only after an organizer publishes the results
+			return areResultsPublic();
 		}
 
 		return false;
@@ -110,7 +102,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		pathname.startsWith('/paraglide-demo');
 
 	if (!skipAccessControl) {
-		const hasAccess = await checkRouteAccess(pathname, event.locals.user, pb);
+		const hasAccess = await checkRouteAccess(pathname, event.locals.user);
 
 		if (!hasAccess) {
 			if (!event.locals.user) {

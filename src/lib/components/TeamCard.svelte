@@ -7,7 +7,7 @@
 	import { Button } from '$lib/components/ui';
 	import { page } from '$app/stores';
 
-	let { team } = $props();
+	let { team, locked = false } = $props();
 	const eventConfig = $page.data.eventConfig;
 
 	let avatarBg = $state('');
@@ -16,6 +16,37 @@
 	let showPresentationModal = $state(false);
 	let loadingPresentation = $state(false);
 	let presentationFiles = $state<File[]>([]);
+
+	// Private notes: autosaved shortly after the jury member stops typing
+	let notes = $state(team.notes ?? '');
+	let notesStatus = $state<'idle' | 'saving' | 'saved' | 'error'>('idle');
+	let notesTimer: ReturnType<typeof setTimeout> | undefined;
+
+	function onNotesInput() {
+		notesStatus = 'idle';
+		clearTimeout(notesTimer);
+		notesTimer = setTimeout(saveNotes, 800);
+	}
+
+	function flushNotes() {
+		if (notesTimer) saveNotes();
+	}
+
+	async function saveNotes() {
+		clearTimeout(notesTimer);
+		notesTimer = undefined;
+		notesStatus = 'saving';
+		try {
+			const response = await fetch('/api/jury/notes', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ teamId: team.id, content: notes })
+			});
+			notesStatus = response.ok ? 'saved' : 'error';
+		} catch {
+			notesStatus = 'error';
+		}
+	}
 
 	// Constants
 	const avatarColors = [
@@ -151,7 +182,7 @@
 
 <div class="team-card">
 	<Modal bind:show={showFormModal}>
-		<GradeTeamForm teamId={team.id} />
+		<GradeTeamForm teamId={team.id} onsaved={() => (showFormModal = false)} />
 	</Modal>
 
 	<Modal bind:show={showPresentationModal}>
@@ -189,6 +220,24 @@
 				mode="jury"
 			/>
 		</div>
+
+		<details class="jury-notes" open={Boolean(notes)}>
+			<summary>
+				My private notes
+				<span class="notes-status">
+					{#if notesStatus === 'saving'}Saving…{:else if notesStatus === 'saved'}Saved{:else if notesStatus === 'error'}Not
+						saved – check your connection{/if}
+				</span>
+			</summary>
+			<textarea
+				class="textarea textarea-bordered w-full"
+				rows="4"
+				placeholder="Only you can see these notes. Use them during the presentation."
+				bind:value={notes}
+				oninput={onNotesInput}
+				onblur={flushNotes}
+			></textarea>
+		</details>
 
 		<div class="metrics">
 			{#each eventConfig.rating_criteria as criterion}
@@ -294,13 +343,17 @@
 					<span class="btn btn-missing">No PDF</span>
 				{/if}
 
-				<Button
-					variant={team.isRatedByCurrentJury ? 'success' : 'primary'}
-					onclick={() => (showFormModal = true)}
-					class="btn-rate"
-				>
-					{team.isRatedByCurrentJury ? 'Edit Rating' : 'Rate Team'}
-				</Button>
+				{#if locked}
+					<span class="btn btn-missing">Ratings locked</span>
+				{:else}
+					<Button
+						variant={team.isRatedByCurrentJury ? 'success' : 'primary'}
+						onclick={() => (showFormModal = true)}
+						class="btn-rate"
+					>
+						{team.isRatedByCurrentJury ? 'Edit Rating' : 'Rate Team'}
+					</Button>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -320,6 +373,25 @@
 
 	.submission-status {
 		margin: 0.5rem 0 0.75rem;
+	}
+
+	.jury-notes {
+		margin: 0 0 0.75rem;
+	}
+
+	.jury-notes summary {
+		cursor: pointer;
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: rgba(255, 255, 255, 0.8);
+		margin-bottom: 0.4rem;
+	}
+
+	.notes-status {
+		margin-left: 0.5rem;
+		font-weight: 400;
+		font-size: 0.75rem;
+		color: rgba(255, 255, 255, 0.5);
 	}
 
 	.btn-missing {

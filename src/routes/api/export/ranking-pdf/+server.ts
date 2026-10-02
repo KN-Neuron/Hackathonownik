@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { canSeeResults } from '$lib/server/access';
+import { isJuryOrAdmin } from '$lib/server/access';
 import { appConfig } from '$lib/server/appConfig';
 import type { RequestHandler } from './$types';
 import puppeteer from 'puppeteer';
@@ -10,8 +10,9 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 		return json({ error: 'Not authorized' }, { status: 401 });
 	}
 
-	if (!(await canSeeResults(locals))) {
-		return json({ error: 'Results are not public yet' }, { status: 403 });
+	// Exports include every team's feedback, so they stay internal
+	if (!isJuryOrAdmin(locals.user)) {
+		return json({ error: 'Not authorized' }, { status: 403 });
 	}
 
 	try {

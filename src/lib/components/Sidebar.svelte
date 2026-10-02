@@ -109,7 +109,7 @@
 				>
 					<SidebarElement icon={IconNames.Presentation} text="My Submissions" />
 				</a>
-				{#if $page.data.allJuriesConfirmed && $page.data.allAdminsConfirmed}
+				{#if $page.data.resultsPublished}
 					<a class="nav-link" href="/ranking" class:active={$page.url.pathname === '/ranking'}>
 						<SidebarElement icon={IconNames.Ranking} text="Rankings" />
 					</a>

@@ -2,10 +2,10 @@
 	import HeaderText from '$lib/components/HeaderText.svelte';
 	import { IconNames } from '$lib/utils/utils';
 
-	let { data } = $props();
-	console.log(data);
-	console.log(data.users);
-	console.log(data.ratings);
+	import { enhance } from '$app/forms';
+
+	let { data, form } = $props();
+	let forcePublish = $state(false);
 
 	const juries = $derived(
 		(() => {
@@ -63,6 +63,128 @@
 				<span class="text-success">{confirmedRatings}</span> of
 				<span class="text-primary"> {totalJuries}</span> juries confirmed
 			</div>
+		</div>
+	</div>
+
+	<!-- Results Publishing -->
+	<div class="results-section mt-8">
+		<div class="section-header">
+			<h2 class="text-2xl font-bold mb-2">Results</h2>
+			<p class="text-base-content/70">
+				Participants see the ranking, scores and feedback only after you publish them.
+			</p>
+		</div>
+
+		{#if form?.message}
+			<div class="alert mt-4 {form.success ? 'alert-success' : 'alert-error'}">
+				<span>{form.message}</span>
+			</div>
+		{/if}
+
+		<div class="bg-base-200 rounded-lg p-4 mt-4 shadow">
+			{#if data.resultsState.published}
+				<div class="flex flex-wrap items-center justify-between gap-4">
+					<div>
+						<span class="badge badge-success">Published</span>
+						{#if data.resultsState.publishedAt}
+							<span class="text-sm text-base-content/70 ml-2">
+								since {new Date(data.resultsState.publishedAt).toLocaleString()}
+							</span>
+						{/if}
+						<p class="text-sm text-base-content/70 mt-2">Ratings are locked for the jury.</p>
+					</div>
+					<form method="POST" action="?/unpublishResults" use:enhance>
+						<input type="hidden" name="csrf_token" value={data.csrfToken} />
+						<button
+							class="btn btn-outline btn-warning"
+							onclick={(e) => {
+								if (!confirm('Hide the results from participants again?')) e.preventDefault();
+							}}>Unpublish</button
+						>
+					</form>
+				</div>
+			{:else}
+				<div class="flex flex-wrap items-start justify-between gap-4">
+					<div>
+						<span class="badge badge-ghost">Not published</span>
+						<p class="text-sm mt-2">
+							{data.progress.confirmedCount} of {data.progress.juries.length} jury members confirmed
+							· {data.progress.totalTeams} teams to rate
+						</p>
+						<ul class="text-sm mt-2 space-y-1">
+							{#each data.progress.juries as jury (jury.id)}
+								<li>
+									<span class={jury.confirmed ? 'text-success' : 'text-warning'}>
+										{jury.confirmed ? '✓' : '…'}
+									</span>
+									{jury.name}: rated {jury.ratedTeams}/{data.progress.totalTeams}{jury.confirmed
+										? ', confirmed'
+										: ''}
+								</li>
+							{/each}
+						</ul>
+					</div>
+					<form method="POST" action="?/publishResults" use:enhance class="flex flex-col gap-2">
+						<input type="hidden" name="csrf_token" value={data.csrfToken} />
+						{#if !data.progress.readyToPublish}
+							<label class="label cursor-pointer gap-2 justify-start">
+								<input
+									type="checkbox"
+									class="checkbox checkbox-sm checkbox-warning"
+									name="force"
+									value="true"
+									bind:checked={forcePublish}
+								/>
+								<span class="label-text text-sm">Publish anyway (not everyone is done)</span>
+							</label>
+						{/if}
+						<button
+							class="btn btn-primary"
+							disabled={!data.progress.readyToPublish && !forcePublish}
+							onclick={(e) => {
+								if (!confirm('Publish the results to all participants now?')) e.preventDefault();
+							}}>Publish results</button
+						>
+					</form>
+				</div>
+			{/if}
+		</div>
+	</div>
+
+	<!-- Submissions Overview -->
+	<div class="submissions-section mt-8">
+		<div class="section-header">
+			<h2 class="text-2xl font-bold mb-2">Submissions</h2>
+			<p class="text-base-content/70">
+				{data.submissionOverview.filter((t) => t.missing.length === 0).length} of
+				{data.submissionOverview.length} teams complete. Incomplete teams are listed first.
+			</p>
+		</div>
+		<div class="overflow-x-auto bg-base-200 rounded-lg mt-4">
+			<table class="table table-sm w-full">
+				<thead>
+					<tr>
+						<th>Team</th>
+						<th>PDF</th>
+						<th>Repo</th>
+						<th>Video</th>
+						<th>Last change</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each data.submissionOverview as team (team.teamId)}
+						<tr class={team.missing.length ? 'text-warning' : ''}>
+							<td class="font-medium">{team.teamName}</td>
+							<td>{team.presentation ? '✓' : '✗'}</td>
+							<td>{team.repo ? '✓' : '✗'}</td>
+							<td>{team.video ? '✓' : '✗'}</td>
+							<td class="text-base-content/70">
+								{team.lastUpdated ? new Date(team.lastUpdated).toLocaleString() : 'nothing yet'}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
 		</div>
 	</div>
 
@@ -134,7 +256,7 @@
 									<button
 										type="submit"
 										class="btn btn-primary btn-sm w-full"
-										on:click={(e) => {
+										onclick={(e) => {
 											if (!confirm(`Confirm rating for ${jury.name || jury.email}?`)) {
 												e.preventDefault();
 											}
@@ -165,7 +287,7 @@
 			<p class="text-base-content/70">Quick access to administrative functions</p>
 		</div>
 
-		<div class="admin-actions-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+		<div class="admin-actions-grid grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
 			<a href="/presentations" class="card bg-base-200 hover:bg-base-300 transition-colors duration-200 rounded-lg p-4 shadow">
 				<div class="card-body items-center text-center">
 					<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -186,15 +308,6 @@
 				</div>
 			</a>
 
-			<a href="/upload" class="card bg-base-200 hover:bg-base-300 transition-colors duration-200 rounded-lg p-4 shadow">
-				<div class="card-body items-center text-center">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-					</svg>
-					<h3 class="card-title">Upload Files</h3>
-					<p class="text-sm text-base-content/60">Manage file uploads</p>
-				</div>
-			</a>
 
 			<a href="/admin/system-info" class="card bg-base-200 hover:bg-base-300 transition-colors duration-200 rounded-lg p-4 shadow">
 				<div class="card-body items-center text-center">

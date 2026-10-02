@@ -3,70 +3,22 @@ import type { Rating } from '$lib/types';
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { appConfig } from '$lib/server/appConfig';
+import { canSeeResults, isJuryOrAdmin, resultsClient } from '$lib/server/access';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
 		throw redirect(303, '/login');
 	}
 
-	// Check access based on user role
-	// Juries can always see rankings, participants only when all teams are rated AND confirmed
-	if (locals.user.role === 'participant' || locals.user.team) {
-		// For participants, check if all presentations have been rated by at least one jury
-		// and all juries have confirmed their ratings
-		try {
-			const presentations = await locals.pb.collection('presentations').getFullList();
-			if (presentations.length === 0) {
-				// No presentations, so no rankings to show
-				return {
-					rankings: [],
-					totalJuries: 0
-				};
-			}
-
-			const ratings = await locals.pb.collection('ratings').getFullList();
-			if (ratings.length === 0) {
-				// No ratings yet, so don't show rankings to participants
-				throw redirect(303, '/upload');  // Redirect participant back to upload page
-			}
-
-			// Get unique team IDs from presentations (to handle multiple presentations for same team)
-			const uniqueTeamIds = new Set();
-			for (const pres of presentations) {
-				if (pres.team && !uniqueTeamIds.has(pres.team)) {
-					uniqueTeamIds.add(pres.team);
-				}
-			}
-
-			// Get unique team IDs that have been rated
-			const ratedTeamIds = new Set(ratings.map((r: any) => r.team));
-
-			// If not all teams have been rated yet, don't show rankings to participants
-			if (Array.from(uniqueTeamIds).some((teamId) => !ratedTeamIds.has(teamId))) {
-				throw redirect(303, '/upload');  // Redirect participant back to upload page
-			}
-
-			// Check if all juries have confirmed their ratings
-			const juries = await locals.pb.collection('users').getFullList({
-				filter: 'role = "jury"'
-			});
-
-			if (juries.length > 0) {
-				const confirmedJuries = juries.filter((jury) => jury.confirmedRating === true);
-				if (confirmedJuries.length !== juries.length) {
-					// Not all juries have confirmed their ratings
-					throw redirect(303, '/upload');  // Redirect participant back to upload page
-				}
-			}
-		} catch (err) {
-			console.error('Error checking ratings status:', err);
-			throw redirect(303, '/upload');
-		}
+	// Jury and admins always see the ranking; participants only once an organizer publishes it
+	if (!(await canSeeResults(locals))) {
+		throw redirect(303, isJuryOrAdmin(locals.user) ? '/' : '/my-submission');
 	}
-	// Juries and admins can always access rankings
+
+	const pb = await resultsClient(locals);
 
 	try {
-		const juriesResult = await locals.pb.collection('users').getList(1, 100, {
+		const juriesResult = await pb.collection('users').getList(1, 100, {
 			filter: 'role = "jury"'
 		});
 		const totalJuries = juriesResult.totalItems;
@@ -76,7 +28,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			validJuryIds.add(user.id);
 		});
 
-		const ratingsFromDB = await locals.pb.collection('ratings').getFullList({
+		const ratingsFromDB = await pb.collection('ratings').getFullList({
 			sort: '-created',
 			expand: 'jury,team'
 		});
