@@ -1,6 +1,9 @@
 <script>
+	/** @type {boolean} */
 	export let show = false;
+	/** @type {import('svelte').Snippet | null} */
 	export let header = null;
+	/** @type {import('svelte').Snippet | null} */
 	export let children = null;
 	export let wide = false; 
 	export let fullHeight = false; 

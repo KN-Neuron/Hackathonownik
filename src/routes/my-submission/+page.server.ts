@@ -2,6 +2,24 @@ import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { getTeamSubmission } from '$lib/server/submissions';
 import { getResultsState, getTeamFeedback } from '$lib/server/results';
+import { getAdminClient } from '$lib/server/adminClient';
+import { appConfig } from '$lib/server/appConfig';
+
+// Where to send participants who need help from the organizers (Discord link if configured)
+function organizerContactUrl(): string {
+	const discord = appConfig.event.links?.find((link) => /discord/i.test(link.title + link.url));
+	return discord?.url ?? '/info';
+}
+
+async function getTeamMembers(teamId: string): Promise<string[]> {
+	const pb = await getAdminClient();
+	const members = await pb.collection('users').getFullList({
+		filter: pb.filter('team = {:team}', { team: teamId }),
+		fields: 'name,email',
+		sort: 'name'
+	});
+	return members.map((m) => m.name || m.email);
+}
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
@@ -12,21 +30,30 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw redirect(303, '/presentations');
 	}
 
+	const contactUrl = organizerContactUrl();
 	const teamId = locals.user.team;
 	if (!teamId) {
 		return {
 			submission: null,
-			error: 'You are not associated with any team. Ask the organizers to add you to your team.'
+			members: [],
+			contactUrl,
+			error: 'You are not assigned to a team yet, so you cannot submit a project.'
 		};
 	}
 
 	try {
-		const [submission, { published }] = await Promise.all([
+		const [submission, { published }, members] = await Promise.all([
 			getTeamSubmission(locals.pb, teamId),
-			getResultsState()
+			getResultsState(),
+			getTeamMembers(teamId).catch((e) => {
+				console.error('Error fetching team members:', e);
+				return [] as string[];
+			})
 		]);
 		return {
 			submission,
+			members,
+			contactUrl,
 			// Feedback from the jury reaches the team only after results are published
 			feedback: published ? await getTeamFeedback(teamId) : null,
 			error: null
@@ -35,6 +62,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		console.error('Error fetching team submission:', err);
 		return {
 			submission: null,
+			members: [],
+			contactUrl,
 			error: 'An error occurred while fetching your submission.'
 		};
 	}

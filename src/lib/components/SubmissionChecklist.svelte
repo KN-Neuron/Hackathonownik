@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/stores';
 	import {
 		SUBMISSION_ITEMS,
 		SUBMISSION_ITEM_LABELS,
@@ -23,6 +24,15 @@
 
 	let missing = $derived(submission ? submission.missing : required);
 
+	// Warn participants with an incomplete submission during the last 24 hours
+	const deadline = new Date($page.data.eventConfig.deadline).getTime();
+	let deadlineSoon = $derived(
+		mode === 'participant' &&
+			missing.length > 0 &&
+			deadline > Date.now() &&
+			deadline - Date.now() < 24 * 3_600_000
+	);
+
 	function formatDate(dateStr: string) {
 		return new Date(dateStr).toLocaleString();
 	}
@@ -41,6 +51,12 @@
 			</span>
 		{/if}
 	</div>
+
+	{#if deadlineSoon}
+		<div class="alert alert-warning mb-3 text-sm">
+			Submissions close at {new Date(deadline).toLocaleString()} and your submission is still incomplete.
+		</div>
+	{/if}
 
 	<ul>
 		{#each SUBMISSION_ITEMS as item (item)}

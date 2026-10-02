@@ -24,8 +24,11 @@
 	<HeaderText {icon} {text} />
 
 	{#if data.error}
-		<div class="alert alert-error">
+		<div class="alert alert-error flex flex-wrap justify-between">
 			<span>{data.error}</span>
+			<a href={data.contactUrl} target="_blank" rel="noopener noreferrer" class="btn btn-sm">
+				Contact the organizers
+			</a>
 		</div>
 	{:else}
 		{#if submission}
@@ -41,6 +44,19 @@
 				{/if}
 				<span class="last-updated">Last change: {formatDate(submission.lastUpdated)}</span>
 			</div>
+		{/if}
+
+		{#if data.members.length > 0}
+			<p class="members">
+				<span class="members-label">Team members:</span>
+				{data.members.join(', ')}
+				<span class="members-help">
+					Someone missing or in the wrong team?
+					<a href={data.contactUrl} target="_blank" rel="noopener noreferrer" class="link"
+						>Tell the organizers</a
+					>.
+				</span>
+			</p>
 		{/if}
 
 		{#if data.feedback}
@@ -150,6 +166,21 @@
 	.last-updated {
 		margin-left: auto;
 		font-size: 0.85rem;
+		color: rgba(255, 255, 255, 0.6);
+	}
+
+	.members {
+		margin: -0.75rem 0 0;
+		font-size: 0.9rem;
+	}
+
+	.members-label {
+		font-weight: 600;
+	}
+
+	.members-help {
+		display: block;
+		font-size: 0.8rem;
 		color: rgba(255, 255, 255, 0.6);
 	}
 
