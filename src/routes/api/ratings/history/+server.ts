@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { isJuryOrAdmin } from '$lib/server/access';
+import { canSeeInternalResults } from '$lib/server/access';
 import { pbError } from '$lib/pocketbase.svelte';
 import type { RequestHandler } from './$types';
 
@@ -8,7 +8,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		return json({ error: 'Not authorized' }, { status: 401 });
 	}
 
-	if (!isJuryOrAdmin(locals.user)) {
+	if (!(await canSeeInternalResults(locals))) {
 		return json({ error: 'Not authorized' }, { status: 403 });
 	}
 

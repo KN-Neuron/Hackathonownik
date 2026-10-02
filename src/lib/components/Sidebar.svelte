@@ -98,9 +98,11 @@
 				>
 					<SidebarElement icon={IconNames.Rate} text="Rate Presentations" />
 				</a>
-				<a class="nav-link" href="/ranking" class:active={$page.url.pathname === '/ranking'}>
-					<SidebarElement icon={IconNames.Ranking} text="Rankings" />
-				</a>
+				{#if $page.data.rankingVisible}
+					<a class="nav-link" href="/ranking" class:active={$page.url.pathname === '/ranking'}>
+						<SidebarElement icon={IconNames.Ranking} text="Rankings" />
+					</a>
+				{/if}
 			{:else if user?.role === 'participant' || user?.team}
 				<a class="nav-link" href="/upload" class:active={$page.url.pathname === '/upload'}>
 					<SidebarElement icon={IconNames.Upload} text="Submit Project" />
@@ -113,7 +115,7 @@
 				>
 					<SidebarElement icon={IconNames.Presentation} text="My Submission" />
 				</a>
-				{#if $page.data.resultsPublished}
+				{#if $page.data.rankingVisible}
 					<a class="nav-link" href="/ranking" class:active={$page.url.pathname === '/ranking'}>
 						<SidebarElement icon={IconNames.Ranking} text="Rankings" />
 					</a>
