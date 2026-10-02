@@ -4,6 +4,7 @@
 	import GradeTeamForm from './GradeTeamForm.svelte';
 	import PdfViewer from './pdf/PdfViewer.svelte';
 	import SubmissionChecklist from './SubmissionChecklist.svelte';
+	import { toEmbedUrl } from '$lib/utils/videoEmbed';
 	import { Button } from '$lib/components/ui';
 	import { page } from '$app/stores';
 
@@ -16,6 +17,8 @@
 	let showPresentationModal = $state(false);
 	let loadingPresentation = $state(false);
 	let presentationFiles = $state<File[]>([]);
+	let showVideoModal = $state(false);
+	let videoEmbedUrl = $derived(team.video_link ? toEmbedUrl(team.video_link) : null);
 
 	// Private notes: autosaved shortly after the jury member stops typing
 	let notes = $state(team.notes ?? '');
@@ -185,6 +188,25 @@
 		<GradeTeamForm teamId={team.id} onsaved={() => (showFormModal = false)} />
 	</Modal>
 
+	<Modal bind:show={showVideoModal} wide={true}>
+		{#snippet header()}
+			<h2>Video Demo: {team.name}</h2>
+		{/snippet}
+		{#if showVideoModal && videoEmbedUrl}
+			<div class="video-frame">
+				<iframe
+					src={videoEmbedUrl}
+					title="Video demo of {team.name}"
+					allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+					allowfullscreen
+				></iframe>
+			</div>
+			<a href={team.video_link} target="_blank" rel="noopener noreferrer" class="link text-sm">
+				Open in a new tab
+			</a>
+		{/if}
+	</Modal>
+
 	<Modal bind:show={showPresentationModal}>
 		{#snippet header()}
 			<h2>Team Presentation: {team.name}</h2>
@@ -297,7 +319,21 @@
 				{:else}
 					<span class="btn btn-missing">No repository</span>
 				{/if}
-				{#if team.video_link}
+				{#if videoEmbedUrl}
+					<button class="btn btn-video" onclick={() => (showVideoModal = true)}>
+						<svg
+							width="16"
+							height="16"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+						>
+							<polygon points="5 3 19 12 5 21 5 3"></polygon>
+						</svg>
+						Watch Video
+					</button>
+				{:else if team.video_link}
 					<a href={team.video_link} target="_blank" rel="noopener noreferrer" class="btn btn-video">
 						<svg
 							width="16"
@@ -392,6 +428,22 @@
 		font-weight: 400;
 		font-size: 0.75rem;
 		color: rgba(255, 255, 255, 0.5);
+	}
+
+	.video-frame {
+		position: relative;
+		width: 100%;
+		aspect-ratio: 16 / 9;
+		margin-bottom: 0.5rem;
+	}
+
+	.video-frame iframe {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		border: 0;
+		border-radius: 0.5rem;
 	}
 
 	.btn-missing {

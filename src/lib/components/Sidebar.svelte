@@ -1,5 +1,6 @@
 <script>
 	import SidebarElement from '$lib/components/SidebarElement.svelte';
+	import DeadlineCountdown from '$lib/components/DeadlineCountdown.svelte';
 	import { IconNames } from '$lib/utils/utils';
 	import { page } from '$app/stores';
 
@@ -46,6 +47,9 @@
 					>
 						{category.name} Challenge
 					</span>
+				{/if}
+				{#if isParticipant}
+					<DeadlineCountdown deadline={eventConfig.deadline} />
 				{/if}
 			</div>
 		{/if}
@@ -99,7 +103,7 @@
 				</a>
 			{:else if user?.role === 'participant' || user?.team}
 				<a class="nav-link" href="/upload" class:active={$page.url.pathname === '/upload'}>
-					<SidebarElement icon={IconNames.Upload} text="Upload Presentation" />
+					<SidebarElement icon={IconNames.Upload} text="Submit Project" />
 				</a>
 
 				<a
@@ -107,7 +111,7 @@
 					href="/my-submission"
 					class:active={$page.url.pathname === '/my-submission'}
 				>
-					<SidebarElement icon={IconNames.Presentation} text="My Submissions" />
+					<SidebarElement icon={IconNames.Presentation} text="My Submission" />
 				</a>
 				{#if $page.data.resultsPublished}
 					<a class="nav-link" href="/ranking" class:active={$page.url.pathname === '/ranking'}>
