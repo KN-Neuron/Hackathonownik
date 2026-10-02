@@ -10,9 +10,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw redirect(303, '/login');
 	}
 
-	// Jury and admins always see the ranking; participants only once an organizer publishes it
+	// Admins always; jury once everyone confirmed; participants once an organizer publishes it
 	if (!(await canSeeResults(locals))) {
-		throw redirect(303, isJuryOrAdmin(locals.user) ? '/' : '/my-submission');
+		throw redirect(303, isJuryOrAdmin(locals.user) ? '/rate_presentation' : '/my-submission');
 	}
 
 	const pb = await resultsClient(locals);

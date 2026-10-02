@@ -1,5 +1,6 @@
 import { appConfig } from '$lib/server/appConfig';
 import { getResultsState } from '$lib/server/results';
+import { canSeeResults } from '$lib/server/access';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
@@ -19,6 +20,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		csrfToken: locals.csrfToken,
 		teamCategory,
 		resultsPublished: locals.user ? (await getResultsState()).published : false,
+		rankingVisible: locals.user ? await canSeeResults(locals) : false,
 		eventConfig: appConfig.event
 	};
 };

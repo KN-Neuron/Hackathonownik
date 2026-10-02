@@ -32,13 +32,15 @@
 		} else if (user.role === 'jury') {
 			links.push(
 				{ href: '/presentations', label: 'View Presentations' },
-				{ href: '/rate_presentation', label: 'Rate Presentations' },
-				{ href: '/ranking', label: 'Rankings' }
+				{ href: '/rate_presentation', label: 'Rate Presentations' }
 			);
+			if ($page.data.rankingVisible) {
+				links.push({ href: '/ranking', label: 'Rankings' });
+			}
 		} else if (user.role === 'participant' || user.team) {
 			links.push({ href: '/upload', label: 'Submit Project' });
 			links.push({ href: '/my-submission', label: 'My Submission' });
-			if ($page.data.resultsPublished) {
+			if ($page.data.rankingVisible) {
 				links.push({ href: '/ranking', label: 'Rankings' });
 			}
 		}

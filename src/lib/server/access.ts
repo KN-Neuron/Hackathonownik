@@ -1,7 +1,7 @@
 import type PocketBase from 'pocketbase';
 import { Role } from '$lib/utils/utils';
 import { getAdminClient } from './adminClient';
-import { getResultsState } from './results';
+import { getRatingProgress, getResultsState } from './results';
 
 type MaybeUser = { admin?: boolean; role?: string } | null | undefined;
 
@@ -18,11 +18,28 @@ export async function areResultsPublic(): Promise<boolean> {
 	return (await getResultsState()).published;
 }
 
-/** Jury and admins always see results; participants only after they are published. */
+/**
+ * Admins always see results. The jury sees them once every jury member has rated all teams and
+ * confirmed, so a live ranking can't influence ratings. Participants only after publishing.
+ */
 export async function canSeeResults(locals: App.Locals): Promise<boolean> {
 	if (!locals.user) return false;
-	if (isJuryOrAdmin(locals.user)) return true;
-	return areResultsPublic();
+	if (isAdmin(locals.user)) return true;
+	if (await areResultsPublic()) return true;
+	if (isJuryOrAdmin(locals.user)) {
+		try {
+			return (await getRatingProgress(locals.pb)).readyToPublish;
+		} catch (e) {
+			console.error('Error checking rating progress:', e);
+			return false;
+		}
+	}
+	return false;
+}
+
+/** Exports and raw rating history include every team's feedback: jury and admins only. */
+export async function canSeeInternalResults(locals: App.Locals): Promise<boolean> {
+	return isJuryOrAdmin(locals.user) && (await canSeeResults(locals));
 }
 
 /**
