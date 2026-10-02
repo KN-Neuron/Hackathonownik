@@ -1,9 +1,10 @@
+<script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 
-	export let teamId: string;
+	let { teamId }: { teamId: string } = $props();
 	const eventConfig = $page.data.eventConfig;
 
 	// Dynamic scores based on criteria

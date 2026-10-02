@@ -15,6 +15,16 @@ event:
   # The submission deadline (ISO format)
   deadline: "2026-11-30T12:00:00"
 
+  # Submission requirements
+  # required: which items a team must provide for its submission to count as complete.
+  # Allowed values: presentation (PDF), repo (repository link), video (demo video link)
+  # Teams can add each item separately; the jury always sees the latest version of every item.
+  submission:
+    required:
+      - presentation
+      - repo
+      - video
+
   # Team Categories
   # You can define multiple categories here.
   # key: The internal identifier for the category (must be unique, lowercase, no spaces)

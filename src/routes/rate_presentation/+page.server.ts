@@ -2,23 +2,20 @@ import { error, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import { pbError } from '$lib/pocketbase.svelte';
 import { HttpStatusCode, Role } from '$lib/utils/utils';
-import type { Rating, User } from '$lib/types';
+import type { Rating, TeamSubmission, User } from '$lib/types';
 import { appConfig } from '$lib/server/appConfig';
+import { getTeamSubmissions } from '$lib/server/submissions';
 
 export interface TeamWithPresentationUrl {
-	collectionId: string;
-	collectionName: string;
-	created: string;
 	id: string;
-	team: string;
-	updated: string;
 	presentationUrl: string | null;
+	submission: TeamSubmission;
 	repo_link?: string | null;
 	video_link?: string | null;
 	ratingsCount?: number;
 	isRatedByCurrentJury?: boolean;
 	totalJuries?: number;
-	name?: string;  // for team name
+	name?: string; // for team name
 	category?: string;
 	finalGradeDisplay?: number | null;
 	[key: string]: any; // for dynamic criteria
@@ -46,56 +43,50 @@ export const load = async ({ locals }) => {
 		const currentJuryConfirmed = currentUser.confirmedRating || false;
 
 		const teams: TeamWithPresentationUrl[] = [];
-		const presentations = await pb.collection('presentations').getFullList({ sort: '-created' });
 
-		const newestPresentations = [];
-		const uniqueTeams = new Set();
-		for (const pres of presentations) {
-			if (pres.team && !uniqueTeams.has(pres.team)) {
-				newestPresentations.push(pres);
-				uniqueTeams.add(pres.team);
-			}
+		// Merge partial uploads so the jury sees the newest PDF, repo and video of each team
+		const [submissions, allRatings] = await Promise.all([
+			getTeamSubmissions(pb),
+			pb.collection('ratings').getFullList()
+		]);
+
+		const ratingsByTeam = new Map<string, typeof allRatings>();
+		for (const rating of allRatings) {
+			const list = ratingsByTeam.get(rating.team) ?? [];
+			list.push(rating);
+			ratingsByTeam.set(rating.team, list);
 		}
 
-		for (const pres of newestPresentations) {
-			const team = await pb.collection('teams').getOne(pres.team);
-
-			// Use secure API endpoint instead of direct PocketBase URL
-			const presentationUrl = pres.presentation
-				? `/api/presentations/${pres.id}`
-				: null;
-
-			const ratingsForTeam = await pb.collection('ratings').getList(1, 1000, {
-				filter: `team="${team.id}"`,
-				expand: 'jury'
-			});
+		for (const submission of submissions) {
+			const ratingsForTeam = ratingsByTeam.get(submission.teamId) ?? [];
 
 			const uniqueJuries = new Set();
-			ratingsForTeam.items.forEach((rating) => {
+			ratingsForTeam.forEach((rating) => {
 				if (rating.jury && validJuryIds.has(rating.jury)) {
 					uniqueJuries.add(rating.jury);
 				}
 			});
 			const ratingsCount = uniqueJuries.size;
 
-			const isRatedByCurrentJury = ratingsForTeam.items.some((r) => r.jury === locals.user.id);
-
 			// Find current jury's rating to display in the card
-			const currentJuryRating = ratingsForTeam.items.find((r) => r.jury === locals.user.id);
+			const currentJuryRating = ratingsForTeam.find((r) => r.jury === locals.user.id);
 
 			const teamData: TeamWithPresentationUrl = {
-				...team,
-				presentationUrl,
-				repo_link: pres.repo_link || null,
-				video_link: pres.video_link || null,
+				id: submission.teamId,
+				name: submission.teamName,
+				category: submission.category,
+				presentationUrl: submission.presentation?.url ?? null,
+				repo_link: submission.repo?.url ?? null,
+				video_link: submission.video?.url ?? null,
+				submission,
 				ratingsCount,
-				isRatedByCurrentJury,
+				isRatedByCurrentJury: Boolean(currentJuryRating),
 				totalJuries,
 				finalGradeDisplay: currentJuryRating?.finalGrade ?? null
 			};
 
 			// Add current jury's individual ratings dynamically
-			appConfig.event.rating_criteria.forEach(criterion => {
+			appConfig.event.rating_criteria.forEach((criterion) => {
 				teamData[criterion.key] = currentJuryRating?.[criterion.key] ?? null;
 			});
 
@@ -127,7 +118,7 @@ export const actions: Actions = {
 		};
 
 		let finalGrade = 0;
-		appConfig.event.rating_criteria.forEach(criterion => {
+		appConfig.event.rating_criteria.forEach((criterion) => {
 			const value = Number(form[criterion.key]) || 0;
 			rating[criterion.key] = value;
 			finalGrade += value;
@@ -136,7 +127,9 @@ export const actions: Actions = {
 
 		function allFieldsValid(obj: Rating) {
 			// Check if all criteria are present
-			return appConfig.event.rating_criteria.every(c => obj[c.key] !== undefined && obj[c.key] !== null);
+			return appConfig.event.rating_criteria.every(
+				(c) => obj[c.key] !== undefined && obj[c.key] !== null
+			);
 		}
 
 		try {
