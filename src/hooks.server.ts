@@ -98,8 +98,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const skipAccessControl =
 		pathname.startsWith('/_app') ||
 		pathname.startsWith('/api/') ||
-		pathname.includes('.') ||
-		pathname.startsWith('/paraglide-demo');
+		pathname.includes('.');
 
 	if (!skipAccessControl) {
 		const hasAccess = await checkRouteAccess(pathname, event.locals.user);
