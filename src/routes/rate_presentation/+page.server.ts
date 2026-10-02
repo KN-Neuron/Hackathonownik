@@ -1,10 +1,12 @@
-import { error, redirect } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import { pbError } from '$lib/pocketbase.svelte';
-import { HttpStatusCode, Role } from '$lib/utils/utils';
+import { HttpStatusCode } from '$lib/utils/utils';
 import type { Rating, TeamSubmission, User } from '$lib/types';
 import { appConfig } from '$lib/server/appConfig';
 import { getTeamSubmissions } from '$lib/server/submissions';
+import { isJuryOrAdmin } from '$lib/server/access';
+import { parseScores } from '$lib/server/ratings';
 
 export interface TeamWithPresentationUrl {
 	id: string;
@@ -101,48 +103,45 @@ export const load = async ({ locals }) => {
 
 export const actions: Actions = {
 	default: async ({ locals, request }) => {
-		const user: User = locals.user;
+		const user = locals.user as User | null;
 
-		if (user.role !== Role.Jury && user.role !== Role.Admin) {
+		if (!isJuryOrAdmin(user)) {
 			throw error(403, 'Insufficient permissions to perform operation');
 		}
 
 		const formData = await request.formData();
 		const form = Object.fromEntries(formData);
+		const teamId = typeof form.teamId === 'string' ? form.teamId : '';
 
-		const rating: Rating = {
-			comments: form.comments as string,
-			jury: user.id,
-			team: form.teamId as string,
-			finalGrade: 0
-		};
-
-		let finalGrade = 0;
-		appConfig.event.rating_criteria.forEach((criterion) => {
-			const value = Number(form[criterion.key]) || 0;
-			rating[criterion.key] = value;
-			finalGrade += value;
-		});
-		rating.finalGrade = finalGrade;
-
-		function allFieldsValid(obj: Rating) {
-			// Check if all criteria are present
-			return appConfig.event.rating_criteria.every(
-				(c) => obj[c.key] !== undefined && obj[c.key] !== null
-			);
+		if (!teamId) {
+			return fail(HttpStatusCode.BadRequest, { error: 'Missing team' });
 		}
 
-		try {
-			if (allFieldsValid(rating)) {
-				const existingRatings = await locals.pb.collection('ratings').getList(1, 1, {
-					filter: `jury = "${user.id}" && team = "${form.teamId}"`
-				});
+		const parsed = parseScores(form);
+		if (!parsed.ok) {
+			return fail(HttpStatusCode.BadRequest, { error: parsed.error });
+		}
 
-				if (existingRatings.totalItems > 0) {
-					await locals.pb.collection('ratings').update(existingRatings.items[0].id, rating);
-				} else {
-					await locals.pb.collection('ratings').create(rating);
-				}
+		const rating: Rating = {
+			comments: typeof form.comments === 'string' ? form.comments : '',
+			jury: user!.id,
+			team: teamId,
+			...parsed.scores,
+			finalGrade: parsed.finalGrade
+		};
+
+		try {
+			const existingRatings = await locals.pb.collection('ratings').getList(1, 1, {
+				filter: locals.pb.filter('jury = {:jury} && team = {:team}', {
+					jury: user!.id,
+					team: teamId
+				})
+			});
+
+			if (existingRatings.totalItems > 0) {
+				await locals.pb.collection('ratings').update(existingRatings.items[0].id, rating);
+			} else {
+				await locals.pb.collection('ratings').create(rating);
 			}
 		} catch (err: unknown) {
 			console.error('Error in action:', err);

@@ -94,7 +94,7 @@ Teams can submit the PDF, the repository link and the video link separately. Eve
     Create a `.env` file in the root directory (use `.env.example` as a template) and configure your PocketBase URL.
 
     ```env
-    PUBLIC_POCKETBASE_URL=http://127.0.0.1:8090
+    POCKETBASE_URL=http://127.0.0.1:8090
     ```
 
 4.  **Start the Development Server:**

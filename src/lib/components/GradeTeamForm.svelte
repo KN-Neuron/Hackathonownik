@@ -55,10 +55,15 @@
 <form
 	method="POST"
 	use:enhance={() => {
+		error = '';
 		return async ({ result }) => {
 			if (result.type === 'success' || result.type === 'redirect') {
 				await invalidateAll();
 				window.location.reload();
+			} else if (result.type === 'failure') {
+				error = (result.data?.error as string) || 'Could not save the rating.';
+			} else if (result.type === 'error') {
+				error = result.error?.message || 'Could not save the rating.';
 			}
 		};
 	}}
