@@ -60,7 +60,7 @@ Key sections:
 
 ### Prerequisites
 
-*   Node.js (v18+ recommended) or Bun
+*   Node.js (v18+ recommended) and npm (the repository's only lockfile is `package-lock.json`)
 *   A running [PocketBase](https://pocketbase.io/) instance.
 
 ### PocketBase `presentations` collection
@@ -109,8 +109,6 @@ The `comments` field of a rating is the feedback for the team: the team sees it 
 2.  **Install dependencies:**
     ```bash
     npm install
-    # or
-    bun install
     ```
 
 3.  **Environment Configuration:**
