@@ -12,7 +12,8 @@
 			if (!data?.users || !Array.isArray(data.users)) {
 				return [];
 			}
-			return data.users.filter((user) => user.role == 'jury' || user.role == 'admin');
+			// Only jury ratings count, so admins aren't listed as jury members
+			return data.users.filter((user) => user.role == 'jury');
 		})()
 	);
 

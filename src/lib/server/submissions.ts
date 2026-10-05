@@ -1,6 +1,6 @@
-import type PocketBase from 'pocketbase';
 import type { Presentation, SubmissionEntry, SubmissionItem, TeamSubmission } from '$lib/types';
 import { appConfig } from './appConfig';
+import { getAdminClient } from './adminClient';
 
 function submitterName(record: Presentation): string | null {
 	const user = record.expand?.submitted_by;
@@ -69,11 +69,15 @@ export function mergeTeamRecords(
 	};
 }
 
-/** Merged submissions of every team (or a single one), newest activity first. */
+/**
+ * Merged submissions of every team (or a single one), newest activity first.
+ * Reads as superuser so submitter names resolve even when users can't see each other;
+ * callers must check access (participants: own team only; jury/admin pages: role).
+ */
 export async function getTeamSubmissions(
-	pb: PocketBase,
 	options: { teamId?: string } = {}
 ): Promise<TeamSubmission[]> {
+	const pb = await getAdminClient();
 	const records = await pb.collection('presentations').getFullList<Presentation>({
 		sort: '-created',
 		expand: 'team,submitted_by',
@@ -92,10 +96,7 @@ export async function getTeamSubmissions(
 	return Array.from(byTeam.values()).map((teamRecords) => mergeTeamRecords(teamRecords, required));
 }
 
-export async function getTeamSubmission(
-	pb: PocketBase,
-	teamId: string
-): Promise<TeamSubmission | null> {
-	const [submission] = await getTeamSubmissions(pb, { teamId });
+export async function getTeamSubmission(teamId: string): Promise<TeamSubmission | null> {
+	const [submission] = await getTeamSubmissions({ teamId });
 	return submission ?? null;
 }

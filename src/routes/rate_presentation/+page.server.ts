@@ -60,7 +60,7 @@ export const load = async ({ locals }) => {
 
 		// Merge partial uploads so the jury sees the newest PDF, repo and video of each team
 		const [submissions, allRatings] = await Promise.all([
-			getTeamSubmissions(pb),
+			getTeamSubmissions(),
 			pb.collection('ratings').getFullList()
 		]);
 

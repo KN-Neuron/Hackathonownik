@@ -15,7 +15,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	// Merge every team's partial uploads, so the jury sees the newest PDF, repo and video
 	try {
-		const submissions = await getTeamSubmissions(locals.pb);
+		const submissions = await getTeamSubmissions();
 
 		const formattedPresentations = submissions.map((submission) => ({
 			id: submission.teamId,

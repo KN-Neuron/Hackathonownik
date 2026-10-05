@@ -46,7 +46,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		const [progress, resultsState, submissions] = await Promise.all([
 			getRatingProgress(locals.pb),
 			getResultsState(),
-			getTeamSubmissions(locals.pb)
+			getTeamSubmissions()
 		]);
 
 		// Every registered team, including teams that haven't submitted anything yet

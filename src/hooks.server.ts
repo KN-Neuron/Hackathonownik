@@ -65,6 +65,8 @@ async function checkRouteAccess(pathname: string, user: any): Promise<boolean> {
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const pb = new PocketBase(POCKETBASE_URL) as TypedPocketBase;
+	// Loads of the same request run in parallel; the SDK would otherwise cancel duplicate queries
+	pb.autoCancellation(false);
 
 	// Try to load session using our secure cookie first
 	const secureSession = SecureCookieHandler.getSessionFromCookie(event);
@@ -96,9 +98,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// Skip access control for static files and API routes
 	const skipAccessControl =
-		pathname.startsWith('/_app') ||
-		pathname.startsWith('/api/') ||
-		pathname.includes('.');
+		pathname.startsWith('/_app') || pathname.startsWith('/api/') || pathname.includes('.');
 
 	if (!skipAccessControl) {
 		const hasAccess = await checkRouteAccess(pathname, event.locals.user);
