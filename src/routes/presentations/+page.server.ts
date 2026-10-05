@@ -1,21 +1,25 @@
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { getTeamSubmissions } from '$lib/server/submissions';
+import { isJuryOrAdmin, juryCategories } from '$lib/server/access';
 
-export const load: PageServerLoad = async ({ locals }) => {
-	// Check if user is authenticated
+export const load: PageServerLoad = async ({ locals, url }) => {
 	if (!locals.user) {
 		throw redirect(303, '/login');
 	}
 
-	// Check if user is a jury member or admin
-	if (locals.user.role !== 'jury' && locals.user.role !== 'admin' && !locals.user.admin) {
+	if (!isJuryOrAdmin(locals.user)) {
 		throw redirect(303, '/');
 	}
 
-	// Merge every team's partial uploads, so the jury sees the newest PDF, repo and video
+	// Jurors see only their categories, admins all of them
+	const categories = juryCategories(locals.user);
+	const requested = url.searchParams.get('category');
+	const category =
+		requested && categories.includes(requested) ? requested : (categories[0] ?? null);
+
 	try {
-		const submissions = await getTeamSubmissions();
+		const submissions = category ? await getTeamSubmissions({ categories: [category] }) : [];
 
 		const formattedPresentations = submissions.map((submission) => ({
 			id: submission.teamId,
@@ -30,15 +34,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 			submission
 		}));
 
-		return {
-			presentations: formattedPresentations,
-			user: locals.user
-		};
+		return { categories, category, presentations: formattedPresentations };
 	} catch (err) {
 		console.error('Error fetching presentations:', err);
-		return {
-			presentations: [],
-			user: locals.user
-		};
+		return { categories, category, presentations: [] };
 	}
 };

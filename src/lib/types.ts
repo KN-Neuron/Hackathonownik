@@ -15,7 +15,9 @@ export interface User {
 	username: string;
 	verified: boolean;
 	role: string;
-	confirmedRating?: boolean;
+	// Categories a jury member rates, and the ones whose ratings they confirmed as final
+	jury_categories?: string[];
+	confirmed_categories?: string[];
 	team?: string;
 }
 
@@ -28,9 +30,9 @@ export interface Rating {
 	comments: string;
 	jury: string;
 	team: string;
-	presentation?: string;
+	// Points per criterion of the team's category
+	scores: Record<string, number>;
 	finalGrade: number | null;
-	[key: string]: any; // Allow dynamic criteria keys
 }
 
 export type TeamCategory = string;
@@ -72,6 +74,21 @@ export interface Presentation {
 
 export const SUBMISSION_ITEMS = ['presentation', 'repo', 'video'] as const;
 export type SubmissionItem = (typeof SUBMISSION_ITEMS)[number];
+
+export interface RatingCriterion {
+	key: string;
+	name: string;
+	maxScore: number;
+	description?: string;
+}
+
+export interface EventCategory {
+	key: string;
+	name: string;
+	color: string;
+	rating_criteria: RatingCriterion[];
+	submission: { required: SubmissionItem[] };
+}
 
 export const SUBMISSION_ITEM_LABELS: Record<SubmissionItem, string> = {
 	presentation: 'Presentation (PDF)',

@@ -1,77 +1,34 @@
 <script lang="ts">
 	import HeaderText from '$lib/components/HeaderText.svelte';
 	import TeamRanking from '$lib/components/TeamRanking.svelte';
+	import CategoryTabs from '$lib/components/CategoryTabs.svelte';
 	import { IconNames } from '$lib/utils/utils';
 
-	export let data;
-
-	const { rankings, totalJuries, eventConfig } = data;
+	let { data } = $props();
 
 	let icon = IconNames.Ranking;
 	let text = 'Team Rankings';
-
-	// Active tab for viewing
-	let activeTab = 'all';
-
-	// Filter rankings by category
-	function getRankingsByCategory(categoryKey: string) {
-		return rankings.filter((r) => r.category === categoryKey);
-	}
 </script>
 
 <div class="page-content">
 	<HeaderText {icon} {text} />
 	<div class="mb-4">
 		<p class="text-base-content/70">
-			View all team ratings and their completion status. Teams with ratings from all juries are
-			marked as final.
+			Each category is ranked separately by the average score of its jurors. A team is final once
+			every juror of its category rated it.
 		</p>
 	</div>
 
-	<!-- Category Tabs -->
-	<div class="category-tabs">
-		<button
-			class="tab-btn"
-			class:active={activeTab === 'all'}
-			on:click={() => (activeTab = 'all')}
-		>
-			All Teams
-			<span class="tab-count">{rankings.length}</span>
-		</button>
+	<CategoryTabs keys={data.categories} selected={data.category} />
 
-		{#each eventConfig.categories as category}
-			<button
-				class="tab-btn"
-				style={activeTab === category.key ? `--active-color: ${category.color}` : ''}
-				class:category-active={activeTab === category.key}
-				on:click={() => (activeTab = category.key)}
-			>
-				{category.name}
-				<span class="tab-count">{getRankingsByCategory(category.key).length}</span>
-			</button>
-		{/each}
-	</div>
-
-	<!-- Rankings Content -->
-	{#if activeTab === 'all'}
-		<TeamRanking {rankings} {totalJuries} categoryFilter="all" />
-	{:else}
-		{#each eventConfig.categories as category}
-			{#if activeTab === category.key}
-				<div class="category-ranking-section">
-					<div class="category-indicator" style="color: {category.color}">
-						<span class="category-dot" style="background-color: {category.color}"></span>
-						<span>{category.name} Category Rankings</span>
-					</div>
-					<TeamRanking
-						rankings={getRankingsByCategory(category.key)}
-						{totalJuries}
-						categoryFilter={category.key}
-					/>
-				</div>
-			{/if}
-		{/each}
-	{/if}
+	{#key data.category}
+		<TeamRanking
+			rankings={data.rankings}
+			totalJuries={data.totalJuries}
+			criteria={data.criteria}
+			categoryFilter={data.category}
+		/>
+	{/key}
 </div>
 
 <style>

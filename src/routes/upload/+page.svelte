@@ -43,7 +43,7 @@
 		<div class="checklist-wrapper">
 			<SubmissionChecklist
 				submission={data.submission}
-				required={data.eventConfig.submission.required}
+				required={data.required}
 			/>
 		</div>
 	{/if}
@@ -188,7 +188,7 @@
 						<li>Only PDF files are accepted, maximum file size: 40MB</li>
 						<li>
 							Required for a complete submission:
-							{data.eventConfig.submission.required
+							{data.required
 								.map((item: SubmissionItem) => SUBMISSION_ITEM_LABELS[item])
 								.join(', ')}
 						</li>

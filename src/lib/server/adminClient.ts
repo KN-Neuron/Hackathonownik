@@ -24,6 +24,12 @@ export async function getAdminClient(): Promise<PocketBase> {
 
 	const pb = new PocketBase(POCKETBASE_URL);
 	pb.autoCancellation(false);
+	// A rejected token (password change, revoked session, new database) makes the next call log
+	// in again; a valid superuser never gets 401/403, PocketBase answers both for a bad token
+	pb.afterSend = (response, data) => {
+		if ((response.status === 401 || response.status === 403) && client === pb) client = null;
+		return data;
+	};
 	await pb.collection('_superusers').authWithPassword(email, password);
 	client = pb;
 	return pb;

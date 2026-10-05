@@ -6,17 +6,18 @@ event:
   # The full name of the event (e.g., "Heroes of the Brain")
   name: "Heroes Of The Brain"
 
-  # The year of the event (e.g., "2025")
-  year: "2025"
+  # The year of the event (e.g., "2026")
+  year: "2026"
 
   # The organizer of the event (displayed in footers, copyright, etc.)
   organizer: "KN Neuron"
 
   # The submission deadline (ISO format). Always include the UTC offset, otherwise the
   # server's timezone is used: +01:00 is Polish winter time (CET), +02:00 summer time (CEST)
-  deadline: "2026-11-30T12:00:00+01:00"
+  # TODO: confirm the exact hour work ends on Sunday with the organizers
+  deadline: "2026-11-15T12:00:00+01:00"
 
-  # Submission requirements
+  # Submission requirements (default for categories that don't set their own)
   # required: which items a team must provide for its submission to count as complete.
   # Allowed values: presentation (PDF), repo (repository link), video (demo video link)
   # Teams can add each item separately; the jury always sees the latest version of every item.
@@ -27,21 +28,55 @@ event:
       - video
 
   # Team Categories
-  # You can define multiple categories here.
-  # key: The internal identifier for the category (must be unique, lowercase, no spaces)
+  # key: The internal identifier for the category (must be unique, lowercase, no spaces).
+  #      Teams store it in teams.category and jurors in users.jury_categories.
   # name: The display name of the category
   # color: The color associated with the category (hex code)
+  # rating_criteria: optional, overrides the default rating_criteria below for this category
+  # submission.required: optional, overrides the default submission requirements above
+  # Every category is rated by its own jurors and its results are published separately.
   categories:
-    - key: "wellness"
-      name: "Wellness"
+    - key: "adaptive"
+      name: "Adaptive Systems"
       color: "#36c399"
-    - key: "commerce"
-      name: "Commerce"
+    - key: "handsfree"
+      name: "Hands-free Interaction"
+      color: "#4df2ff"
+    - key: "fnirs"
+      name: "Breath, Brain and Body (fNIRS)"
       color: "#f7a654"
+      # Data analysis challenge: no app demo video
+      submission:
+        required:
+          - presentation
+          - repo
+      # TODO: placeholder criteria, confirm with the category's organizers
+      rating_criteria:
+        - key: "methodology"
+          name: "Methodology"
+          maxScore: 10
+          description: "Soundness of the signal processing and analysis"
+        - key: "results"
+          name: "Results"
+          maxScore: 10
+          description: "Quality and validation of the findings"
+        - key: "insight"
+          name: "Insight"
+          maxScore: 5
+          description: "What the findings tell us about the body"
+        - key: "finalPresentation"
+          name: "Presentation"
+          maxScore: 5
+          description: "Quality of the final presentation"
+    - key: "neurogaming"
+      name: "Neurogaming"
+      color: "#f472b6"
+    - key: "neurorehab"
+      name: "BCI in Neurorehabilitation, Entertainment and Art"
+      color: "#a78bfa"
 
-  # Rating Criteria
-  # Define the criteria used for rating presentations.
-  # key: Internal identifier (must match database field names)
+  # Rating Criteria (default for categories that don't set their own)
+  # key: Internal identifier, unique within a category (scores are stored per key)
   # name: Display name for the criteria
   # maxScore: Maximum points for this criteria
   # description: Optional description shown to juries
@@ -85,29 +120,18 @@ event:
 
   # Event schedule
   schedule:
-    - day: "Saturday, November 29"
+    - day: "Saturday, November 14"
       events:
-        - time: "09:00 - 11:00"
+        - time: "09:00 - 10:00"
           description: "Participant Registration"
-        - time: "11:30 - 12:00"
-          description: "Opening Lecture"
-        - time: "12:00"
+        - time: "10:00 - 10:30"
+          description: "Official Opening"
+        - time: "10:30"
           description: "Code Work Begins"
-        - time: "17:00"
+        - time: "17:30"
           description: "Catering"
-    - day: "Sunday, November 30"
+    # TODO: Sunday's agenda isn't published yet
+    - day: "Sunday, November 15"
       events:
-        - time: "until 12:00"
+        - time: "12:00"
           description: "Code Work Ends"
-        - time: "12:00 - 12:30"
-          description: "Lecture"
-        - time: "12:30 - 14:00"
-          description: "Project Presentations - Part I"
-        - time: "14:00 - 14:30"
-          description: "Coffee Break"
-        - time: "14:30 - 16:00"
-          description: "Project Presentations - Part II"
-        - time: "16:00 - 16:30"
-          description: "Jury Evaluation"
-        - time: "16:30 - 17:00"
-          description: "Award Ceremony and Event Conclusion"

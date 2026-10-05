@@ -3,6 +3,7 @@
 	import { browser } from '$app/environment';
 	import PdfViewer from '$lib/components/pdf/PdfViewer.svelte';
 	import SubmissionChecklist from '$lib/components/SubmissionChecklist.svelte';
+	import CategoryTabs from '$lib/components/CategoryTabs.svelte';
 	import type { TeamSubmission } from '$lib/types';
 
 	let { data } = $props<{
@@ -18,6 +19,8 @@
 				video_link: string | null;
 				submission: TeamSubmission;
 			}[];
+			categories: string[];
+			category: string | null;
 			user: any;
 			eventConfig: any;
 		};
@@ -26,7 +29,7 @@
 	let selectedPresentationFiles = $state<File[]>([]);
 	let showPresentationModal = $state(false);
 	let currentTeamName = $state('');
-	let presentations = $state(data.presentations);
+	let presentations = $derived(data.presentations);
 	let isLoading = $state(false);
 	let loadingPresentationId = $state<string | null>(null);
 	let currentPage = $state(1);
@@ -143,6 +146,8 @@
 		<p>View all submitted presentations</p>
 	</div>
 
+	<CategoryTabs keys={data.categories} selected={data.category} />
+
 	{#if presentations.length > 0}
 		{#each data.eventConfig.categories as category}
 			{@const categoryPresentations = getPresentationsByCategory(category.key)}
@@ -174,7 +179,7 @@
 									</p>
 									<SubmissionChecklist
 										submission={presentation.submission}
-										required={data.eventConfig.submission.required}
+										required={category.submission.required}
 										mode="jury"
 									/>
 									<div class="links-container">

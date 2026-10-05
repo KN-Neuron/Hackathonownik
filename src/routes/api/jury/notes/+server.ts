@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { isJuryOrAdmin } from '$lib/server/access';
+import { canJudgeCategory, getTeamCategory, isJuryOrAdmin } from '$lib/server/access';
 import { MAX_NOTE_LENGTH, saveJuryNote } from '$lib/server/juryNotes';
 
 // Save the logged-in jury member's private note for a team
@@ -18,6 +18,10 @@ export const PUT: RequestHandler = async ({ locals, request }) => {
 	}
 	if (content.length > MAX_NOTE_LENGTH) {
 		return json({ error: `Notes can have at most ${MAX_NOTE_LENGTH} characters` }, { status: 400 });
+	}
+
+	if (!canJudgeCategory(locals.user, await getTeamCategory(teamId))) {
+		return json({ error: 'This team is not in your category' }, { status: 403 });
 	}
 
 	try {

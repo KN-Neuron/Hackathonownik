@@ -75,7 +75,7 @@
 			</div>
 		{/if}
 
-		<SubmissionChecklist {submission} required={eventConfig.submission.required} />
+		<SubmissionChecklist {submission} required={data.required} />
 
 		{#if submission}
 			<div class="history-section">

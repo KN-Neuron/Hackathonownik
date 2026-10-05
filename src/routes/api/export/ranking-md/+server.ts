@@ -1,105 +1,75 @@
 import { json } from '@sveltejs/kit';
-import { canSeeInternalResults } from '$lib/server/access';
-import { appConfig } from '$lib/server/appConfig';
+import { canSeeInternalResults, resultsClient } from '$lib/server/access';
+import { appConfig, getCategory } from '$lib/server/appConfig';
+import { getCategoryRanking } from '$lib/server/ranking';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ locals, url, fetch }) => {
+// Markdown export of one category's ranking with every jury rating: ?category=<key>
+export const GET: RequestHandler = async ({ locals, url }) => {
 	if (!locals.user) {
 		return json({ error: 'Not authorized' }, { status: 401 });
 	}
 
 	// Exports include every team's feedback, so they stay internal
-	if (!(await canSeeInternalResults(locals))) {
+	const category = url.searchParams.get('category');
+	if (!(await canSeeInternalResults(locals, category))) {
 		return json({ error: 'Not authorized' }, { status: 403 });
 	}
 
 	try {
-		// Fetch main rankings data
-		const rankingResponse = await fetch('/api/rankings/data');
-		if (!rankingResponse.ok) {
-			throw new Error('Failed to fetch rankings data');
-		}
+		const { criteria, rankings, totalJuries } = await getCategoryRanking(category!);
+		const categoryName = getCategory(category)?.name ?? category;
+		const pb = await resultsClient();
 
-		const rankingData = await rankingResponse.json();
-		const { rankings, totalJuries } = rankingData;
+		const header = criteria.map((c) => `| ${c.name} `).join('');
+		const separator = criteria.map(() => '|:-----------:').join('');
 
-		// Create markdown content with better visual structure
-		let markdownContent = `# ${appConfig.event.name} ${appConfig.event.year} - Rankings\n\n`;
-		markdownContent += `**Generated:** ${new Date().toLocaleString()}\n\n`;
-		markdownContent += `**Total Teams:** ${rankings.length} | **Total Juries:** ${totalJuries}\n\n`;
-
-		markdownContent += '## 🏆 Overall Rankings\n\n';
-		
-		const criteriaHeaders = appConfig.event.rating_criteria.map(c => `| ${c.name} `).join('');
-		const criteriaSeparators = appConfig.event.rating_criteria.map(() => `|:-----------:`).join('');
-		
-		markdownContent += `| 🏅 Rank | 🏷️ Team | 📊 Category ${criteriaHeaders}| 🎯 Final Grade | 📋 Status |\n`;
-		markdownContent += `|:------:|--------|:----------:${criteriaSeparators}|:----------:|:------:|\n`;
+		let md = `# ${appConfig.event.name} ${appConfig.event.year} – ${categoryName}\n\n`;
+		md += `**Generated:** ${new Date().toLocaleString()}\n\n`;
+		md += `**Teams:** ${rankings.length} | **Jurors:** ${totalJuries}\n\n`;
+		md += '## Ranking (average of the jury scores)\n\n';
+		md += `| Rank | Team ${header}| Total | Status |\n`;
+		md += `|:----:|------${separator}|:-----:|:------:|\n`;
 
 		rankings.forEach((team, index) => {
-			const statusText = team.status === 'final'
-				? `Final (${team.ratingCount}/${totalJuries})`
-				: `Provisional (${team.ratingCount}/${totalJuries})`;
-
-			const categoryDisplay = appConfig.event.categories.find(c => c.key === team.category)?.name || 'N/A';
-			
-			const criteriaValues = appConfig.event.rating_criteria
-				.map(c => `| \`${team[c.key]?.toFixed(1) || '0.0'}\` `)
-				.join('');
-
-			markdownContent += `| ${index + 1} | **${team.team}** | ${categoryDisplay} ${criteriaValues}| **\`${team.finalGrade.toFixed(2)}\`** | ${statusText} |\n`;
+			const values = criteria.map((c) => `| ${team.scores[c.key].toFixed(2)} `).join('');
+			md += `| ${index + 1} | **${team.team}** ${values}| **${team.finalGrade.toFixed(2)}** | ${team.status} (${team.ratingCount}/${totalJuries}) |\n`;
 		});
 
-		// Add a section for each team with individual jury ratings
 		for (const team of rankings) {
-			const teamRatingsResponse = await fetch(`/api/ratings/team-details?teamId=${team.teamId}`);
-			if (teamRatingsResponse.ok) {
-				const teamRatingsData = await teamRatingsResponse.json();
-				const ratings = teamRatingsData.ratings || [];
+			const ratings = await pb.collection('ratings').getFullList({
+				filter: pb.filter('team = {:team}', { team: team.teamId }),
+				expand: 'jury'
+			});
+			if (!ratings.length) continue;
 
-				if (ratings.length > 0) {
-					markdownContent += `\n---\n## 📋 Individual Jury Ratings: ${team.team}\n\n`;
-					markdownContent += `> **Average Final Grade:** \`${team.finalGrade.toFixed(2)}\`\n\n`;
+			md += `\n---\n## ${team.team}\n\n`;
+			md += `| Juror ${header}| Total |\n|-------${separator}|:-----:|\n`;
+			for (const rating of ratings) {
+				const values = criteria.map((c) => `| ${Number(rating.scores?.[c.key]) || 0} `).join('');
+				md += `| ${rating.expand?.jury?.name || 'Unknown'} ${values}| ${rating.finalGrade ?? 0} |\n`;
+			}
 
-					markdownContent += `| 👤 Jury ${criteriaHeaders}| 🎯 Final Grade |\n`;
-					markdownContent += `|--------${criteriaSeparators}|:----------:|\n`;
-
-					ratings.forEach(rating => {
-						const juryCriteriaValues = appConfig.event.rating_criteria
-							.map(c => `| \`${rating[c.key]?.toFixed(1) || '0'}\` `)
-							.join('');
-						markdownContent += `| ${rating.juryName} ${juryCriteriaValues}| **\`${rating.finalGrade.toFixed(2)}\`** |\n`;
-					});
-
-					// Add comments section if any jury has comments
-					const ratingsWithComments = ratings.filter(r => r.comments && r.comments.trim());
-					if (ratingsWithComments.length > 0) {
-						markdownContent += `\n### 💬 Jury Comments:\n\n`;
-						ratingsWithComments.forEach(rating => {
-							if (rating.comments && rating.comments.trim()) {
-								markdownContent += `- **${rating.juryName}:** ${rating.comments}\n\n`;
-							}
-						});
-					}
-
-					markdownContent += '\n';
-				}
+			const feedback = ratings.filter((r) => r.comments?.trim());
+			if (feedback.length) {
+				md += '\n**Feedback:**\n\n';
+				feedback.forEach(
+					(r) => (md += `- **${r.expand?.jury?.name || 'Unknown'}:** ${r.comments}\n`)
+				);
 			}
 		}
 
-		markdownContent += '\n---\n';
-		markdownContent += `*${appConfig.event.name} ${appConfig.event.year} © ${appConfig.event.organizer}*\n`;
+		md += `\n---\n*${appConfig.event.name} ${appConfig.event.year} © ${appConfig.event.organizer}*\n`;
 
-		// Set proper UTF-8 encoding for the response - use the markdown content directly
-		// to ensure proper Unicode character handling
-		return new Response(markdownContent, {
+		const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+		return new Response(md, {
 			headers: {
 				'Content-Type': 'text/markdown; charset=utf-8',
-				'Content-Disposition': `attachment; filename="${appConfig.event.name.toLowerCase().replace(/ /g, '-')}-rankings-${new Date().toISOString().slice(0, 10)}.md"`
+				'Content-Disposition': `attachment; filename="${slug(appConfig.event.name)}-${category}-ranking.md"`
 			}
 		});
 	} catch (err) {
 		console.error('Error generating markdown:', err);
-		return json({ error: 'Failed to generate markdown', details: err.message }, { status: 500 });
+		return json({ error: 'Failed to generate markdown' }, { status: 500 });
 	}
 };

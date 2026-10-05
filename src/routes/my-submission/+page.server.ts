@@ -3,7 +3,8 @@ import { redirect } from '@sveltejs/kit';
 import { getTeamSubmission } from '$lib/server/submissions';
 import { getResultsState, getTeamFeedback } from '$lib/server/results';
 import { getAdminClient } from '$lib/server/adminClient';
-import { appConfig } from '$lib/server/appConfig';
+import { appConfig, requiredFor } from '$lib/server/appConfig';
+import { getTeamCategory } from '$lib/server/access';
 
 // Where to send participants who need help from the organizers (Discord link if configured)
 function organizerContactUrl(): string {
@@ -37,23 +38,27 @@ export const load: PageServerLoad = async ({ locals }) => {
 			submission: null,
 			members: [],
 			contactUrl,
+			required: [],
 			error: 'You are not assigned to a team yet, so you cannot submit a project.'
 		};
 	}
 
 	try {
-		const [submission, { published }, members] = await Promise.all([
+		const [submission, state, members, category] = await Promise.all([
 			getTeamSubmission(teamId),
 			getResultsState(),
 			getTeamMembers(teamId).catch((e) => {
 				console.error('Error fetching team members:', e);
 				return [] as string[];
-			})
+			}),
+			getTeamCategory(teamId)
 		]);
+		const published = Boolean(category && state.publishedCategories.includes(category));
 		return {
 			submission,
 			members,
 			contactUrl,
+			required: requiredFor(category),
 			// Feedback from the jury reaches the team only after results are published
 			feedback: published ? await getTeamFeedback(teamId) : null,
 			error: null
@@ -64,6 +69,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			submission: null,
 			members: [],
 			contactUrl,
+			required: [],
 			error: 'An error occurred while fetching your submission.'
 		};
 	}

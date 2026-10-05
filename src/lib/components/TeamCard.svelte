@@ -5,6 +5,7 @@
 	import PdfViewer from './pdf/PdfViewer.svelte';
 	import SubmissionChecklist from './SubmissionChecklist.svelte';
 	import { toEmbedUrl } from '$lib/utils/videoEmbed';
+	import type { EventCategory, RatingCriterion } from '$lib/types';
 	import { Button } from '$lib/components/ui';
 	import { page } from '$app/stores';
 
@@ -161,31 +162,22 @@
 		}
 	}
 
-	// Calculate final grade from individual scores
-	function calculateFinalGrade() {
-		let total = 0;
-		let hasAll = true;
-
-		eventConfig.rating_criteria.forEach((criterion) => {
-			if (team[criterion.key] == null) {
-				hasAll = false;
-			} else {
-				total += team[criterion.key];
-			}
-		});
-
-		return hasAll ? total : null;
-	}
-
-	const maxTotalScore = $derived(
-		eventConfig.rating_criteria.reduce((acc, curr) => acc + curr.maxScore, 0)
+	// Criteria and required items come from the team's category
+	const category = $derived(
+		(eventConfig.categories as EventCategory[]).find((c) => c.key === team.category)
 	);
-	let finalGrade = $derived(calculateFinalGrade());
+	const criteria = $derived(category?.rating_criteria ?? eventConfig.rating_criteria);
+	const maxTotalScore = $derived(
+		criteria.reduce((acc: number, c: RatingCriterion) => acc + c.maxScore, 0)
+	);
+	// This juror's scores (null until rated)
+	const score = (key: string): number | null => team.scores?.[key] ?? null;
+	let finalGrade = $derived(team.scores ? team.finalGradeDisplay : null);
 </script>
 
 <div class="team-card">
 	<Modal bind:show={showFormModal}>
-		<GradeTeamForm teamId={team.id} onsaved={() => (showFormModal = false)} />
+		<GradeTeamForm teamId={team.id} {criteria} onsaved={() => (showFormModal = false)} />
 	</Modal>
 
 	<Modal bind:show={showVideoModal} wide={true}>
@@ -238,7 +230,7 @@
 		<div class="submission-status">
 			<SubmissionChecklist
 				submission={team.submission}
-				required={eventConfig.submission.required}
+				required={category?.submission.required ?? eventConfig.submission.required}
 				mode="jury"
 			/>
 		</div>
@@ -262,17 +254,17 @@
 		</details>
 
 		<div class="metrics">
-			{#each eventConfig.rating_criteria as criterion}
+			{#each criteria as criterion (criterion.key)}
 				<div class="metric">
 					<div class="metric-label">{criterion.name}</div>
 					<div class="metric-bar">
 						<div
-							class="metric-fill {getScoreClass(team[criterion.key], criterion.maxScore)}"
-							style="width: {getScoreWidth(team[criterion.key], criterion.maxScore)}"
+							class="metric-fill {getScoreClass(score(criterion.key), criterion.maxScore)}"
+							style="width: {getScoreWidth(score(criterion.key), criterion.maxScore)}"
 						></div>
 					</div>
 					<div class="metric-value">
-						{team[criterion.key] != null ? `${team[criterion.key]}/${criterion.maxScore}` : '-'}
+						{score(criterion.key) != null ? `${score(criterion.key)}/${criterion.maxScore}` : '-'}
 					</div>
 				</div>
 			{/each}

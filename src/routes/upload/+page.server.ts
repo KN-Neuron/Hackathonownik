@@ -1,7 +1,8 @@
 import { FileUploadSecurity } from '$lib/server/security.js';
 import type { Actions, PageServerLoad } from './$types';
 import 'dotenv/config';
-import { appConfig } from '$lib/server/appConfig';
+import { appConfig, requiredFor } from '$lib/server/appConfig';
+import { getTeamCategory } from '$lib/server/access';
 import { getTeamSubmission } from '$lib/server/submissions';
 import { getAdminClient } from '$lib/server/adminClient';
 
@@ -28,7 +29,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return {
 		csrfToken: locals.csrfToken,
 		hasTeam: Boolean(teamId),
-		submission
+		submission,
+		// What this team's category requires
+		required: requiredFor(teamId ? await getTeamCategory(teamId) : null)
 	};
 };
 

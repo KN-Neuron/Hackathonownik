@@ -48,8 +48,8 @@ event:
 
 Key sections:
 -   **`event`**: Basic info (name, organizer, deadlines).
--   **`submission.required`**: Items a team must provide for a complete submission (`presentation`, `repo`, `video`).
--   **`categories`**: Define competition tracks/categories.
+-   **`submission.required`**: Items a team must provide for a complete submission (`presentation`, `repo`, `video`); a category can override it.
+-   **`categories`**: Competition tracks; each one can override `rating_criteria` and `submission.required`, and is rated and published separately.
 -   **`rating_criteria`**: Customize the scoring metrics and weights.
 -   **`schedule`**: Define the event timeline displayed to users.
 -   **`links`**: Add useful external links (Discord, Wiki, etc.).
@@ -61,40 +61,30 @@ Key sections:
 *   Node.js (v18+ recommended) and npm (the repository's only lockfile is `package-lock.json`)
 *   A running [PocketBase](https://pocketbase.io/) instance.
 
-### PocketBase `presentations` collection
+### PocketBase setup
 
-Teams can submit the PDF, the repository link and the video link separately. Every save creates a record with only the items that changed, and the app shows the newest version of each item. The collection needs:
+Participants and jurors can log in to PocketBase directly with their own credentials, so its API rules matter: the app checks access itself and reads everything sensitive through the superuser account (`POCKETBASE_ADMIN_EMAIL` / `POCKETBASE_ADMIN_PASSWORD`).
 
-| Field          | Type                     | Required |
-| -------------- | ------------------------ | -------- |
-| `team`         | relation → `teams`       | yes      |
-| `presentation` | file (PDF)               | **no**   |
-| `repo_link`    | url / text               | no       |
-| `video_link`   | url / text               | no       |
-| `submitted_by` | relation → `users` (single) | no    |
+**How it works**
+- Every category (`app_config.yaml`) is rated by its own jurors, with its own criteria and required submission items.
+- Organizers assign jurors to categories and move teams between categories in the Admin Dashboard.
+- Results stay hidden until an organizer publishes a category. Publishing requires every juror of the category to rate all of its teams and confirm; changing a rating withdraws the confirmation, and ratings are locked once the category is published. Jurors see their category's ranking once all of its jurors confirmed.
+- Teams submit the PDF, the repository link and the video link separately; every save stores only what changed and the app shows the newest version of each item.
 
-### PocketBase: results publishing and jury notes
+**Collections** (empty rule = superuser only)
 
-Results (ranking, scores, feedback) stay hidden from participants until an organizer publishes them in the Admin Dashboard. Publishing requires every jury member to rate all teams and confirm; changing a rating withdraws the confirmation, and ratings are locked once results are published.
+| Collection      | Fields                                                                                                                  | List / View rule                                                                           | Create / Update / Delete             |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------ |
+| `users` (auth)  | `name`, `role` (text: participant / jury / admin), `team` (relation → `teams`), `jury_categories` (json), `confirmed_categories` (json) | `id = @request.auth.id \|\| @request.auth.role = "admin"`                                     | empty (organizers manage accounts)   |
+| `teams`         | `name` (text), `category` (text, a category key)                                                                        | `@request.auth.id != ""`                                                                   | empty                                |
+| `presentations` | `team` (relation → `teams`, required), `presentation` (file, PDF, **optional**), `repo_link`, `video_link` (text), `submitted_by` (relation → `users`) | `team = @request.auth.team \|\| @request.auth.role = "admin"`                                 | empty                                |
+| `ratings`       | `jury` (relation → `users`), `team` (relation → `teams`), `scores` (json), `finalGrade` (number), `comments` (text)  | `@request.auth.role = "admin" \|\| (@request.auth.role = "jury" && jury = @request.auth.id)`   | Create/Update: `(@request.auth.role = "jury" \|\| @request.auth.role = "admin") && jury = @request.auth.id`; Delete: `@request.auth.role = "admin"` |
+| `event_state`   | `published_categories` (json), `published_at` (json)                                                                    | empty                                                                                      | empty                                |
+| `jury_notes`    | `jury` (relation → `users`), `team` (relation → `teams`), `content` (text)                                             | empty                                                                                      | empty                                |
 
-Two collections are read and written only by the app through the superuser account. **Leave all of their API rules empty (superuser only):**
+Users must not be able to update their own record: they could change their role, team or jury categories.
 
-| Collection    | Fields                                                                                   |
-| ------------- | ---------------------------------------------------------------------------------------- |
-| `event_state` | `results_published` (bool), `results_published_at` (date)                                |
-| `jury_notes`  | `jury` (relation → `users`, single), `team` (relation → `teams`, single), `content` (text) |
-
-Participants can log in to PocketBase directly with their own credentials, so the `ratings` collection must not be readable by them. Recommended API rules for `ratings`:
-
-- List / View: `@request.auth.role = "jury" || @request.auth.role = "admin"`
-- Create / Update: `(@request.auth.role = "jury" || @request.auth.role = "admin") && jury = @request.auth.id`
-- Delete: `@request.auth.role = "admin"`
-
-Users must not be able to change their own role or team. Recommended Update rule for `users`:
-
-- `id = @request.auth.id && @request.body.role:isset = false && @request.body.team:isset = false && @request.body.admin:isset = false`
-
-The `comments` field of a rating is the feedback for the team: the team sees it (without jury names) after results are published.
+The `comments` field of a rating is the feedback for the team: the team sees it (without jury names) after its category is published.
 
 ### Steps
 

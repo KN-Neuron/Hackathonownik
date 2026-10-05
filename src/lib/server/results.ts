@@ -1,39 +1,54 @@
-import type PocketBase from 'pocketbase';
 import { getAdminClient } from './adminClient';
+import { appConfig } from './appConfig';
 
 // Single-record collection, superuser-only (no API rules), so only the app can read or change it
 const STATE_COLLECTION = 'event_state';
 
 export interface ResultsState {
-	published: boolean;
-	publishedAt: string | null;
+	// Categories whose results participants can see
+	publishedCategories: string[];
+	publishedAt: Record<string, string>;
 }
 
-/** Fails closed: if the state can't be read, results count as unpublished. */
+/** Fails closed: if the state can't be read, no category counts as published. */
 export async function getResultsState(): Promise<ResultsState> {
 	try {
 		const pb = await getAdminClient();
 		const { items } = await pb.collection(STATE_COLLECTION).getList(1, 1);
 		const record = items[0];
 		return {
-			published: record?.results_published === true,
-			publishedAt: record?.results_published_at || null
+			publishedCategories: Array.isArray(record?.published_categories)
+				? record.published_categories
+				: [],
+			publishedAt:
+				record?.published_at && typeof record.published_at === 'object' ? record.published_at : {}
 		};
 	} catch (e) {
 		console.error('Error reading results state:', e);
-		return { published: false, publishedAt: null };
+		return { publishedCategories: [], publishedAt: {} };
 	}
 }
 
-export async function setResultsPublished(published: boolean): Promise<void> {
+export async function setCategoryPublished(category: string, published: boolean): Promise<void> {
 	const pb = await getAdminClient();
-	const data = {
-		results_published: published,
-		results_published_at: published ? new Date().toISOString() : null
-	};
 	const { items } = await pb.collection(STATE_COLLECTION).getList(1, 1);
-	if (items[0]) {
-		await pb.collection(STATE_COLLECTION).update(items[0].id, data);
+	const current = items[0];
+	const categories = new Set<string>(
+		Array.isArray(current?.published_categories) ? current.published_categories : []
+	);
+	const publishedAt: Record<string, string> = { ...(current?.published_at || {}) };
+
+	if (published) {
+		categories.add(category);
+		publishedAt[category] = new Date().toISOString();
+	} else {
+		categories.delete(category);
+		delete publishedAt[category];
+	}
+
+	const data = { published_categories: [...categories], published_at: publishedAt };
+	if (current) {
+		await pb.collection(STATE_COLLECTION).update(current.id, data);
 	} else {
 		await pb.collection(STATE_COLLECTION).create(data);
 	}
@@ -46,47 +61,86 @@ export interface JuryProgress {
 	ratedTeams: number;
 }
 
-export interface RatingProgress {
+export interface CategoryProgress {
+	category: string;
 	totalTeams: number;
 	juries: JuryProgress[];
 	confirmedCount: number;
-	// Every jury rated every team with a submission and confirmed
+	// Every assigned jury member rated every team of the category and confirmed
 	readyToPublish: boolean;
 }
 
-/** How far the jury is: teams to rate are the teams with at least one submission. */
-export async function getRatingProgress(pb: PocketBase): Promise<RatingProgress> {
-	const [presentations, ratings, juryUsers] = await Promise.all([
-		pb.collection('presentations').getFullList({ fields: 'team' }),
+export interface ProgressInput {
+	// Teams with at least one submission, with their current category
+	teams: { id: string; category: string }[];
+	ratings: { jury: string; team: string }[];
+	juries: {
+		id: string;
+		name?: string;
+		email?: string;
+		jury_categories?: unknown;
+		confirmed_categories?: unknown;
+	}[];
+}
+
+const asList = (value: unknown): string[] => (Array.isArray(value) ? value : []);
+
+/** Rating progress per configured category. */
+export function computeProgress(input: ProgressInput): Record<string, CategoryProgress> {
+	const progress: Record<string, CategoryProgress> = {};
+
+	for (const { key } of appConfig.event.categories) {
+		const teamIds = new Set(input.teams.filter((t) => t.category === key).map((t) => t.id));
+		const juries = input.juries
+			.filter((jury) => asList(jury.jury_categories).includes(key))
+			.map((jury) => ({
+				id: jury.id,
+				name: jury.name || jury.email || jury.id,
+				confirmed: asList(jury.confirmed_categories).includes(key),
+				ratedTeams: new Set(
+					input.ratings.filter((r) => r.jury === jury.id && teamIds.has(r.team)).map((r) => r.team)
+				).size
+			}));
+
+		progress[key] = {
+			category: key,
+			totalTeams: teamIds.size,
+			juries,
+			confirmedCount: juries.filter((j) => j.confirmed).length,
+			readyToPublish:
+				juries.length > 0 &&
+				teamIds.size > 0 &&
+				juries.every((j) => j.confirmed && j.ratedTeams === teamIds.size)
+		};
+	}
+
+	return progress;
+}
+
+/** Progress of every category. Reads as superuser; it only exposes counts. */
+export async function getRatingProgress(): Promise<Record<string, CategoryProgress>> {
+	const pb = await getAdminClient();
+	const [presentations, ratings, juries] = await Promise.all([
+		pb
+			.collection('presentations')
+			.getFullList({ fields: 'team,expand.team.category', expand: 'team' }),
 		pb.collection('ratings').getFullList({ fields: 'jury,team' }),
-		pb.collection('users').getFullList({ filter: 'role = "jury"' })
+		pb.collection('users').getFullList({
+			filter: 'role = "jury"',
+			fields: 'id,name,email,jury_categories,confirmed_categories'
+		})
 	]);
 
-	const teamIds = new Set(presentations.map((p) => p.team).filter(Boolean));
+	const teams = new Map<string, string>();
+	for (const p of presentations) {
+		if (p.team) teams.set(p.team, p.expand?.team?.category ?? '');
+	}
 
-	const juries = juryUsers.map((jury) => {
-		const rated = new Set(
-			ratings.filter((r) => r.jury === jury.id && teamIds.has(r.team)).map((r) => r.team)
-		);
-		return {
-			id: jury.id,
-			name: jury.name || jury.email,
-			confirmed: jury.confirmedRating === true,
-			ratedTeams: rated.size
-		};
+	return computeProgress({
+		teams: [...teams].map(([id, category]) => ({ id, category })),
+		ratings: ratings.map((r) => ({ jury: r.jury, team: r.team })),
+		juries
 	});
-
-	const confirmedCount = juries.filter((j) => j.confirmed).length;
-
-	return {
-		totalTeams: teamIds.size,
-		juries,
-		confirmedCount,
-		readyToPublish:
-			juries.length > 0 &&
-			teamIds.size > 0 &&
-			juries.every((j) => j.confirmed && j.ratedTeams === teamIds.size)
-	};
 }
 
 /** Jury feedback for one team, without jury names. Only call once results are published. */

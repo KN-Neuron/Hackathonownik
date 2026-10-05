@@ -1,5 +1,5 @@
 import type { Presentation, SubmissionEntry, SubmissionItem, TeamSubmission } from '$lib/types';
-import { appConfig } from './appConfig';
+import { requiredFor } from './appConfig';
 import { getAdminClient } from './adminClient';
 
 function submitterName(record: Presentation): string | null {
@@ -55,7 +55,8 @@ export function mergeTeamRecords(
 	return {
 		teamId: newest.team,
 		teamName: newest.expand?.team?.name || 'Unknown Team',
-		category: newest.expand?.team?.category || appConfig.event.categories[0]?.key || 'wellness',
+		// Teams without a valid category are shown to admins only
+		category: newest.expand?.team?.category || '',
 		...latest,
 		missing,
 		complete: missing.length === 0,
@@ -75,7 +76,7 @@ export function mergeTeamRecords(
  * callers must check access (participants: own team only; jury/admin pages: role).
  */
 export async function getTeamSubmissions(
-	options: { teamId?: string } = {}
+	options: { teamId?: string; categories?: string[] } = {}
 ): Promise<TeamSubmission[]> {
 	const pb = await getAdminClient();
 	const records = await pb.collection('presentations').getFullList<Presentation>({
@@ -92,8 +93,13 @@ export async function getTeamSubmissions(
 		byTeam.set(record.team, list);
 	}
 
-	const required = appConfig.event.submission.required;
-	return Array.from(byTeam.values()).map((teamRecords) => mergeTeamRecords(teamRecords, required));
+	// Required items depend on the team's (current) category
+	const merged = Array.from(byTeam.values()).map((teamRecords) =>
+		mergeTeamRecords(teamRecords, requiredFor(teamRecords[0].expand?.team?.category))
+	);
+	return options.categories
+		? merged.filter((s) => options.categories!.includes(s.category))
+		: merged;
 }
 
 export async function getTeamSubmission(teamId: string): Promise<TeamSubmission | null> {
