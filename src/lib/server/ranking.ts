@@ -3,6 +3,7 @@ import { getAdminClient } from './adminClient';
 import { criteriaFor } from './appConfig';
 import { getRatingProgress } from './results';
 import { getTeamSubmissions } from './submissions';
+import { CACHE_TTL_MS, cached } from './cache';
 
 export interface RankingEntry {
 	teamId: string;
@@ -10,6 +11,8 @@ export interface RankingEntry {
 	category: string;
 	// Average over the jurors who rated the team
 	finalGrade: number;
+	// Teams with the same total share a place (1, 1, 3)
+	rank: number;
 	scores: Record<string, number>;
 	ratingCount: number;
 	status: 'final' | 'provisional';
@@ -58,11 +61,23 @@ export function computeRanking(input: {
 		};
 	});
 
-	return entries.sort((a, b) => b.finalGrade - a.finalGrade || a.team.localeCompare(b.team));
+	entries.sort((a, b) => b.finalGrade - a.finalGrade || a.team.localeCompare(b.team));
+	return entries.map((entry, i) => ({
+		...entry,
+		rank:
+			i > 0 && entry.finalGrade === entries[i - 1].finalGrade
+				? entries.findIndex((e) => e.finalGrade === entry.finalGrade) + 1
+				: i + 1
+	}));
 }
 
 /** Ranking of one category. Callers must check access with canSeeResults first. */
-export async function getCategoryRanking(category: string) {
+export function getCategoryRanking(category: string) {
+	// Hundreds of people open the ranking right after results are published
+	return cached(`ranking:${category}`, CACHE_TTL_MS, () => computeCategoryRanking(category));
+}
+
+async function computeCategoryRanking(category: string) {
 	const pb = await getAdminClient();
 	const criteria = criteriaFor(category);
 	// Teams compete once they submitted something

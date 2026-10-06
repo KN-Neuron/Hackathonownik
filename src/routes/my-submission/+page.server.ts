@@ -4,12 +4,17 @@ import { getTeamSubmission } from '$lib/server/submissions';
 import { getResultsState, getTeamFeedback } from '$lib/server/results';
 import { getAdminClient } from '$lib/server/adminClient';
 import { appConfig, requiredFor } from '$lib/server/appConfig';
-import { getTeamCategory } from '$lib/server/access';
 
 // Where to send participants who need help from the organizers (Discord link if configured)
 function organizerContactUrl(): string {
 	const discord = appConfig.event.links?.find((link) => /discord/i.test(link.title + link.url));
 	return discord?.url ?? '/info';
+}
+
+async function getTeam(teamId: string): Promise<{ name: string; category: string | null }> {
+	const pb = await getAdminClient();
+	const team = await pb.collection('teams').getOne(teamId, { fields: 'name,category' });
+	return { name: team.name, category: team.category || null };
 }
 
 async function getTeamMembers(teamId: string): Promise<string[]> {
@@ -44,20 +49,23 @@ export const load: PageServerLoad = async ({ locals }) => {
 	}
 
 	try {
-		const [submission, state, members, category] = await Promise.all([
+		const [submission, state, members, team] = await Promise.all([
 			getTeamSubmission(teamId),
 			getResultsState(),
 			getTeamMembers(teamId).catch((e) => {
 				console.error('Error fetching team members:', e);
 				return [] as string[];
 			}),
-			getTeamCategory(teamId)
+			getTeam(teamId)
 		]);
+		const category = team.category;
 		const published = Boolean(category && state.publishedCategories.includes(category));
 		return {
 			submission,
 			members,
 			contactUrl,
+			teamName: team.name,
+			teamCategory: category,
 			required: requiredFor(category),
 			// Feedback from the jury reaches the team only after results are published
 			feedback: published ? await getTeamFeedback(teamId) : null,

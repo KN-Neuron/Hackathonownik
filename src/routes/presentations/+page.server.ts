@@ -21,7 +21,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	try {
 		const submissions = category ? await getTeamSubmissions({ categories: [category] }) : [];
 
-		const formattedPresentations = submissions.map((submission) => ({
+		const sorted = [...submissions].sort((a, b) => a.teamName.localeCompare(b.teamName));
+		const formattedPresentations = sorted.map((submission) => ({
 			id: submission.teamId,
 			teamName: submission.teamName,
 			teamId: submission.teamId,

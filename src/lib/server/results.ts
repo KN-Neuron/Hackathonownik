@@ -1,5 +1,6 @@
 import { getAdminClient } from './adminClient';
 import { appConfig } from './appConfig';
+import { CACHE_TTL_MS, cached, invalidate } from './cache';
 
 // Single-record collection, superuser-only (no API rules), so only the app can read or change it
 const STATE_COLLECTION = 'event_state';
@@ -11,7 +12,11 @@ export interface ResultsState {
 }
 
 /** Fails closed: if the state can't be read, no category counts as published. */
-export async function getResultsState(): Promise<ResultsState> {
+export function getResultsState(): Promise<ResultsState> {
+	return cached('results-state', CACHE_TTL_MS, readResultsState);
+}
+
+async function readResultsState(): Promise<ResultsState> {
 	try {
 		const pb = await getAdminClient();
 		const { items } = await pb.collection(STATE_COLLECTION).getList(1, 1);
@@ -52,6 +57,7 @@ export async function setCategoryPublished(category: string, published: boolean)
 	} else {
 		await pb.collection(STATE_COLLECTION).create(data);
 	}
+	invalidate('results-state');
 }
 
 export interface JuryProgress {
@@ -118,7 +124,16 @@ export function computeProgress(input: ProgressInput): Record<string, CategoryPr
 }
 
 /** Progress of every category. Reads as superuser; it only exposes counts. */
-export async function getRatingProgress(): Promise<Record<string, CategoryProgress>> {
+export function getRatingProgress(): Promise<Record<string, CategoryProgress>> {
+	return cached('rating-progress', CACHE_TTL_MS, readRatingProgress);
+}
+
+/** Call after anything that changes ratings, confirmations, jurors or teams. */
+export function invalidateRatings(): void {
+	invalidate('rating-progress', 'ranking:');
+}
+
+async function readRatingProgress(): Promise<Record<string, CategoryProgress>> {
 	const pb = await getAdminClient();
 	const [presentations, ratings, juries] = await Promise.all([
 		pb

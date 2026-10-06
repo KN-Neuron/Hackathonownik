@@ -124,5 +124,7 @@ export interface TeamSubmission {
 	missing: SubmissionItem[];
 	complete: boolean;
 	lastUpdated: string;
+	// First save of the team, for the check-in
+	firstSubmittedAt: string;
 	history: SubmissionHistoryEntry[];
 }

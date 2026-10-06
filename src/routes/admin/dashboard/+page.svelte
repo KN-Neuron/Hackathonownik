@@ -58,6 +58,25 @@
 		</div>
 	{/if}
 
+	{#if data.checkin}
+		<div class="panel checkin-panel">
+			<div>
+				<b>Check-in: {data.checkin.done} of {data.checkin.total} teams</b>
+				<span class="text-sm text-base-content/70">
+					uploaded anything before {new Date(data.checkin.deadline).toLocaleString()}
+				</span>
+			</div>
+			<div class="flex flex-wrap gap-3 text-sm">
+				{#each allCategories as category (category.key)}
+					<span style="color: {category.color}">
+						{category.name}: {data.checkin.perCategory[category.key]?.done}/{data.checkin
+							.perCategory[category.key]?.total}
+					</span>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
 	<CategoryTabs keys={data.categories} selected={data.category} {badges} />
 
 	{#if current && progress}
@@ -174,6 +193,7 @@
 							<th>PDF</th>
 							<th>Repo</th>
 							<th>Video</th>
+							{#if data.checkin}<th>Check-in</th>{/if}
 							<th>Last change</th>
 						</tr>
 					</thead>
@@ -184,12 +204,21 @@
 								<td>{team.presentation ? '✓' : '✗'}</td>
 								<td>{team.repo ? '✓' : '✗'}</td>
 								<td>{team.video ? '✓' : data.required.includes('video') ? '✗' : '–'}</td>
+								{#if data.checkin}
+									<td>
+										{team.checkin === 'done'
+											? '✓'
+											: team.checkin === 'missed'
+												? 'missed'
+												: 'not yet'}
+									</td>
+								{/if}
 								<td class="text-base-content/70">
 									{team.lastUpdated ? new Date(team.lastUpdated).toLocaleString() : 'nothing yet'}
 								</td>
 							</tr>
 						{:else}
-							<tr><td colspan="5" class="text-center text-base-content/60">No teams yet</td></tr>
+							<tr><td colspan="6" class="text-center text-base-content/60">No teams yet</td></tr>
 						{/each}
 					</tbody>
 				</table>
@@ -337,6 +366,19 @@
 		border-radius: 0.75rem;
 		padding: 1rem;
 		margin-top: 1rem;
+	}
+
+	.checkin-panel {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.75rem;
+		margin: 0 0 1rem;
+	}
+
+	.checkin-panel b {
+		margin-right: 0.5rem;
 	}
 
 	.shortcut {

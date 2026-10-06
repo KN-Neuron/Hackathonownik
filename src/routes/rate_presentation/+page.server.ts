@@ -13,7 +13,7 @@ import {
 	resultsClient
 } from '$lib/server/access';
 import { parseScores } from '$lib/server/ratings';
-import { getRatingProgress, getResultsState } from '$lib/server/results';
+import { getRatingProgress, getResultsState, invalidateRatings } from '$lib/server/results';
 import { getJuryNotes } from '$lib/server/juryNotes';
 import { setCategoryConfirmed } from '$lib/server/confirmations';
 
@@ -81,7 +81,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 				})
 			: [];
 
-		const teams: TeamWithPresentationUrl[] = submissions.map((submission) => {
+		// Alphabetical, so every juror of a category sees the same order
+		const sorted = [...submissions].sort((a, b) => a.teamName.localeCompare(b.teamName));
+		const teams: TeamWithPresentationUrl[] = sorted.map((submission) => {
 			const forTeam = ratings.filter((r) => r.team === submission.teamId);
 			const mine = forTeam.find((r) => r.jury === locals.user!.id);
 			return {
@@ -187,6 +189,7 @@ export const actions: Actions = {
 				await locals.pb.collection('ratings').create(rating);
 			}
 
+			invalidateRatings();
 			// A changed rating needs to be confirmed again before results can be published
 			await setCategoryConfirmed(user!.id, category!, false);
 		} catch (err: unknown) {

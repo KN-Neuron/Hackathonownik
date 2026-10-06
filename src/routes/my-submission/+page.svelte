@@ -11,9 +11,7 @@
 	let icon = IconNames.Presentation;
 	let text = 'My Submission';
 
-	let category = $derived(
-		submission ? eventConfig.categories.find((c) => c.key === submission.category) : null
-	);
+	let category = $derived(eventConfig.categories.find((c) => c.key === data.teamCategory));
 
 	function formatDate(dateStr: string) {
 		return new Date(dateStr).toLocaleString();
@@ -31,9 +29,9 @@
 			</a>
 		</div>
 	{:else}
-		{#if submission}
+		{#if data.teamName}
 			<div class="team-header">
-				<h2 class="team-name">{submission.teamName}</h2>
+				<h2 class="team-name">{data.teamName}</h2>
 				{#if category}
 					<span
 						class="category-badge"
@@ -42,7 +40,9 @@
 						{category.name}
 					</span>
 				{/if}
-				<span class="last-updated">Last change: {formatDate(submission.lastUpdated)}</span>
+				{#if submission}
+					<span class="last-updated">Last change: {formatDate(submission.lastUpdated)}</span>
+				{/if}
 			</div>
 		{/if}
 

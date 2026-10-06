@@ -53,6 +53,29 @@ describe('computeRanking', () => {
 		expect(entry.ratingCount).toBe(1);
 	});
 
+	it('lets teams with the same total share a place', () => {
+		const ranking = computeRanking({
+			category: 'adaptive',
+			criteria,
+			teams: [
+				{ id: 't1', name: 'Alpha' },
+				{ id: 't2', name: 'Beta' },
+				{ id: 't3', name: 'Gamma' }
+			],
+			juryIds: ['j1'],
+			ratings: [
+				{ jury: 'j1', team: 't1', scores: { idea: 5, tech: 5 } },
+				{ jury: 'j1', team: 't2', scores: { idea: 4, tech: 6 } },
+				{ jury: 'j1', team: 't3', scores: { idea: 1, tech: 1 } }
+			]
+		});
+		expect(ranking.map((r) => [r.team, r.rank])).toEqual([
+			['Alpha', 1],
+			['Beta', 1],
+			['Gamma', 3]
+		]);
+	});
+
 	it('gives unrated teams zero', () => {
 		const [entry] = computeRanking({
 			category: 'adaptive',

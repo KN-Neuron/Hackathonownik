@@ -12,7 +12,8 @@ import { POCKETBASE_URL } from '$lib/server/adminClient';
 // ============================================
 
 async function checkRouteAccess(pathname: string, user: any): Promise<boolean> {
-	const publicRoutes = ['/login', '/'];
+	// The info page (schedule, links) is for everyone, logged in or not
+	const publicRoutes = ['/login', '/', '/info'];
 	if (publicRoutes.includes(pathname)) {
 		return true;
 	}

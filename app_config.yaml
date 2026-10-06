@@ -17,6 +17,11 @@ event:
   # TODO: confirm the exact hour work ends on Sunday with the organizers
   deadline: "2026-11-15T12:00:00+01:00"
 
+  # Check-in: every team uploads anything (e.g. just the repository link) before this time,
+  # so organizers know how many teams are really competing and teams try the system early.
+  # Teams that miss it can still submit; organizers see who missed it. Remove to turn it off.
+  checkin_deadline: "2026-11-14T23:59:00+01:00"
+
   # Submission requirements (default for categories that don't set their own)
   # required: which items a team must provide for its submission to count as complete.
   # Allowed values: presentation (PDF), repo (repository link), video (demo video link)

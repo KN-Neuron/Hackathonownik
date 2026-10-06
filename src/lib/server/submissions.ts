@@ -1,6 +1,7 @@
 import type { Presentation, SubmissionEntry, SubmissionItem, TeamSubmission } from '$lib/types';
 import { requiredFor } from './appConfig';
 import { getAdminClient } from './adminClient';
+import { CACHE_TTL_MS, cached, invalidate } from './cache';
 
 function submitterName(record: Presentation): string | null {
 	const user = record.expand?.submitted_by;
@@ -61,6 +62,7 @@ export function mergeTeamRecords(
 		missing,
 		complete: missing.length === 0,
 		lastUpdated: newest.created,
+		firstSubmittedAt: sorted[sorted.length - 1].created,
 		history: sorted.map((record) => ({
 			recordId: record.id,
 			at: record.created,
@@ -78,11 +80,24 @@ export function mergeTeamRecords(
 export async function getTeamSubmissions(
 	options: { teamId?: string; categories?: string[] } = {}
 ): Promise<TeamSubmission[]> {
+	// A team's own view is always fresh; the all-teams list is shared for a moment
+	const all = options.teamId
+		? await loadSubmissions(options.teamId)
+		: await cached('submissions', CACHE_TTL_MS, () => loadSubmissions());
+	return options.categories ? all.filter((s) => options.categories!.includes(s.category)) : all;
+}
+
+/** Call after an upload or a team changing category. */
+export function invalidateSubmissions(): void {
+	invalidate('submissions', 'rating-progress', 'ranking:');
+}
+
+async function loadSubmissions(teamId?: string): Promise<TeamSubmission[]> {
 	const pb = await getAdminClient();
 	const records = await pb.collection('presentations').getFullList<Presentation>({
 		sort: '-created',
 		expand: 'team,submitted_by',
-		...(options.teamId ? { filter: pb.filter('team = {:team}', { team: options.teamId }) } : {})
+		...(teamId ? { filter: pb.filter('team = {:team}', { team: teamId }) } : {})
 	});
 
 	const byTeam = new Map<string, Presentation[]>();
@@ -94,12 +109,9 @@ export async function getTeamSubmissions(
 	}
 
 	// Required items depend on the team's (current) category
-	const merged = Array.from(byTeam.values()).map((teamRecords) =>
+	return Array.from(byTeam.values()).map((teamRecords) =>
 		mergeTeamRecords(teamRecords, requiredFor(teamRecords[0].expand?.team?.category))
 	);
-	return options.categories
-		? merged.filter((s) => options.categories!.includes(s.category))
-		: merged;
 }
 
 export async function getTeamSubmission(teamId: string): Promise<TeamSubmission | null> {

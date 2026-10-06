@@ -177,7 +177,15 @@
 
 <div class="team-card">
 	<Modal bind:show={showFormModal}>
-		<GradeTeamForm teamId={team.id} {criteria} onsaved={() => (showFormModal = false)} />
+		<!-- Mounted only while open: it loads the saved rating when the juror opens it -->
+		{#if showFormModal}
+			<GradeTeamForm
+				teamId={team.id}
+				teamName={team.name}
+				{criteria}
+				onsaved={() => (showFormModal = false)}
+			/>
+		{/if}
 	</Modal>
 
 	<Modal bind:show={showVideoModal} wide={true}>

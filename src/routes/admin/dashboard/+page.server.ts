@@ -1,10 +1,16 @@
 import { error, fail } from '@sveltejs/kit';
 import { appConfig, getCategory, requiredFor } from '$lib/server/appConfig';
 import { getAdminClient } from '$lib/server/adminClient';
-import { getRatingProgress, getResultsState, setCategoryPublished } from '$lib/server/results';
+import {
+	getRatingProgress,
+	getResultsState,
+	invalidateRatings,
+	setCategoryPublished
+} from '$lib/server/results';
 import { setCategoryConfirmed } from '$lib/server/confirmations';
-import { getTeamSubmissions } from '$lib/server/submissions';
+import { getTeamSubmissions, invalidateSubmissions } from '$lib/server/submissions';
 import type { Actions, PageServerLoad } from './$types';
+import { checkinStatus } from '$lib/utils/checkin';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	try {
@@ -46,10 +52,37 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 					repo: Boolean(submission?.repo),
 					video: Boolean(submission?.video),
 					missing: submission ? submission.missing : requiredFor(category),
-					lastUpdated: submission?.lastUpdated ?? null
+					lastUpdated: submission?.lastUpdated ?? null,
+					checkin: checkinStatus(appConfig.event.checkin_deadline, submission?.firstSubmittedAt)
 				};
 			})
 			.sort((a, b) => b.missing.length - a.missing.length || a.teamName.localeCompare(b.teamName));
+
+		// Check-in: teams that uploaded anything before the check-in deadline
+		const checkedIn = (teamIds: string[]) =>
+			teamIds.filter(
+				(id) =>
+					checkinStatus(
+						appConfig.event.checkin_deadline,
+						submissionByTeam.get(id)?.firstSubmittedAt
+					) === 'done'
+			).length;
+		const checkin = appConfig.event.checkin_deadline
+			? {
+					deadline: appConfig.event.checkin_deadline,
+					total: teams.length,
+					done: checkedIn(teams.map((t) => t.id)),
+					perCategory: Object.fromEntries(
+						categories.map((key) => [
+							key,
+							{
+								done: checkedIn(teams.filter((t) => t.category === key).map((t) => t.id)),
+								total: teams.filter((t) => t.category === key).length
+							}
+						])
+					)
+				}
+			: null;
 
 		// Per-category counters for the tabs and the overview
 		const summary = Object.fromEntries(
@@ -72,6 +105,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			published: resultsState.publishedCategories.includes(category),
 			publishedAt: resultsState.publishedAt[category] ?? null,
 			submissionOverview,
+			checkin,
 			required: requiredFor(category),
 			juries: juries.map((j) => ({
 				id: j.id,
@@ -191,6 +225,7 @@ export const actions: Actions = {
 				return fail(400, { success: false, message: 'Only jury members can be assigned' });
 			}
 			await pb.collection('users').update(juryId, { jury_categories: categories });
+			invalidateRatings();
 			return { success: true, message: 'Juror categories saved' };
 		} catch (e) {
 			console.error('Error assigning categories:', e);
@@ -231,6 +266,7 @@ export const actions: Actions = {
 			});
 			await Promise.all(ratings.map((r) => pb.collection('ratings').delete(r.id)));
 			await pb.collection('teams').update(teamId, { category });
+			invalidateSubmissions();
 
 			return {
 				success: true,

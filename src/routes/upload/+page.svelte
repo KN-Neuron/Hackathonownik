@@ -1,429 +1,508 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import HeaderText from '$lib/components/HeaderText.svelte';
 	import { IconNames } from '$lib/utils/utils';
-	import PdfUpload from '$lib/components/pdf/PdfUpload.svelte';
-	import Modal from '$lib/components/Modal.svelte';
-	import PdfViewer from '$lib/components/pdf/PdfViewer.svelte';
-	import SubmissionChecklist from '$lib/components/SubmissionChecklist.svelte';
-	import { SUBMISSION_ITEM_LABELS, type SubmissionItem } from '$lib/types';
+	import { checkinStatus } from '$lib/utils/checkin';
+	import type { SubmissionItem } from '$lib/types';
 
 	let { data } = $props();
 
 	let icon = IconNames.Upload;
 	let text = 'Submit Your Project';
 
-	let selectedFiles = $state<File[]>([]);
+	const deadline = new Date(data.eventConfig.deadline);
+	const closed = new Date() > deadline;
+	const formatDate = (d: string | Date) =>
+		new Date(typeof d === 'string' ? d.replace(' ', 'T') : d).toLocaleString([], {
+			weekday: 'short',
+			day: 'numeric',
+			month: 'short',
+			hour: '2-digit',
+			minute: '2-digit'
+		});
+
+	let submission = $derived(data.submission);
+	let required = $derived((data.required ?? []) as SubmissionItem[]);
+	let doneCount = $derived(required.filter((item) => submission?.[item]).length);
+	let allDone = $derived(required.length > 0 && doneCount === required.length);
+	let checkin = $derived(
+		checkinStatus(data.eventConfig.checkin_deadline, submission?.firstSubmittedAt)
+	);
+
+	// Per-card state: saving spinner and the server's answer
+	let saving = $state<Record<string, boolean>>({});
+	let messages = $state<Record<string, { ok: boolean; text: string }>>({});
 	let repoLink = $state(data.submission?.repo?.url ?? '');
 	let videoLink = $state(data.submission?.video?.url ?? '');
-	let showPresentationModal = $state(false);
-	let fullscreenMode = $state(false);
-	let saving = $state(false);
-	let resultMessage = $state('');
-	let resultSuccess = $state(false);
-	// Remounts the PDF picker after a successful save to clear the selected file
-	let pickerKey = $state(0);
+	let dragging = $state(false);
+	let fileInput: HTMLInputElement | undefined = $state();
+	let pdfForm: HTMLFormElement | undefined = $state();
 
-	const deadline = new Date(data.eventConfig.deadline);
-	const showDeadlineMessage = new Date() > deadline;
-
-	function handleFiles(e: CustomEvent) {
-		selectedFiles = e.detail.files;
+	function submitter(item: SubmissionItem): SubmitFunction {
+		return () => {
+			saving[item] = true;
+			delete messages[item];
+			return async ({ result, update }) => {
+				saving[item] = false;
+				const payload = result.type === 'success' ? result.data : null;
+				const ok = Boolean(payload?.success);
+				messages[item] = {
+					ok,
+					text: ok ? 'Saved ✓' : (payload?.message as string) || 'Saving failed. Please try again.'
+				};
+				await update({ reset: false });
+				// Show the link as stored (e.g. with https:// added)
+				if (ok && item === 'repo') repoLink = data.submission?.repo?.url ?? repoLink;
+				if (ok && item === 'video') videoLink = data.submission?.video?.url ?? videoLink;
+			};
+		};
 	}
 
-	function toggleFullscreen() {
-		fullscreenMode = !fullscreenMode;
+	// Choosing a file is enough: it uploads right away
+	function uploadSelected() {
+		if (fileInput?.files?.length) pdfForm?.requestSubmit();
 	}
+
+	function onDrop(event: DragEvent) {
+		event.preventDefault();
+		dragging = false;
+		const file = event.dataTransfer?.files?.[0];
+		if (!file || !fileInput) return;
+		const transfer = new DataTransfer();
+		transfer.items.add(file);
+		fileInput.files = transfer.files;
+		uploadSelected();
+	}
+
+	const labels: Record<SubmissionItem, string> = {
+		presentation: 'Presentation (PDF)',
+		repo: 'Code repository link',
+		video: 'Demo video link'
+	};
 </script>
 
 <div class="upload-page">
 	<HeaderText {icon} {text} />
 
-	{#if data.hasTeam}
-		<div class="checklist-wrapper">
-			<SubmissionChecklist
-				submission={data.submission}
-				required={data.required}
-			/>
-		</div>
-	{/if}
-
-	{#if showDeadlineMessage}
-		<div class="deadline-notice">
-			<h3>Submission Deadline Passed</h3>
-			<p>The deadline for submitting presentations was on {deadline.toLocaleString()}.</p>
-			<p>No new presentations can be submitted at this time.</p>
+	{#if !data.hasTeam}
+		<div class="alert alert-warning">
+			You are not assigned to a team yet, so you can't submit. Ask the organizers on Discord.
 		</div>
 	{:else}
-		<div class="intro-section">
-			<p>
-				You can add each item separately – fill in <b>only what you want to add or change</b>,
-				everything else stays as it is. The jury always sees the latest version of the PDF, the
-				repository link and the video link, no matter who in your team added them.
-			</p>
-			<p class="deadline-info">Deadline: {deadline.toLocaleString()}</p>
+		<p class="team-line">
+			Team <b>{data.teamName}</b> · deadline <b>{formatDate(deadline)}</b>
+		</p>
+
+		<!-- Check-in -->
+		{#if checkin === 'open'}
+			<div class="banner banner-checkin">
+				<b>Check-in: add anything before {formatDate(data.eventConfig.checkin_deadline!)}</b>
+				<span>Even just the repository link is enough. It tells us your team is competing.</span>
+			</div>
+		{:else if checkin === 'done'}
+			<div class="banner banner-ok">✓ Your team is checked in.</div>
+		{:else if checkin === 'missed'}
+			<div class="banner banner-warn">
+				Your team missed the check-in. You can still submit, but tell the organizers you are
+				competing.
+			</div>
+		{/if}
+
+		<!-- Overall progress -->
+		<div class="progress-card" class:complete={allDone}>
+			{#if allDone}
+				<h2>🎉 All done! Your project is submitted.</h2>
+				<p>
+					You can still replace anything below until the deadline. The jury always sees the newest
+					version.
+				</p>
+			{:else}
+				<h2>{doneCount} of {required.length} done</h2>
+				<p>
+					Add the {required.length - doneCount === 1 ? 'missing item' : 'missing items'} below. Each
+					one is saved on its own; teammates can add different parts.
+				</p>
+			{/if}
+			<progress
+				class="progress w-full {allDone ? 'progress-success' : 'progress-primary'}"
+				value={doneCount}
+				max={required.length || 1}
+			></progress>
 		</div>
 
-		<div class="upload-container">
-			<div class="upload-card">
-				<form
-					method="post"
-					action="?/upload"
-					class="upload-form"
-					enctype="multipart/form-data"
-					use:enhance={({ formData }) => {
-						saving = true;
-						resultMessage = '';
-						if (selectedFiles.length > 0) {
-							formData.set('file', selectedFiles[0]);
-						}
+		{#if closed}
+			<div class="banner banner-warn">
+				The submission deadline has passed ({formatDate(deadline)}). Nothing can be changed anymore.
+			</div>
+		{/if}
 
-						return async ({ result, update }) => {
-							saving = false;
-							const payload = result.type === 'success' ? result.data : null;
-							resultSuccess = Boolean(payload?.success);
-							resultMessage = (payload?.message as string) || 'Saving failed. Please try again.';
-							if (resultSuccess) {
-								selectedFiles = [];
-								pickerKey += 1;
-							}
-							// Keep typed links; refresh the checklist from the server
-							await update({ reset: false });
-						};
-					}}
+		<div class="submit-steps">
+			<!-- 1. PDF -->
+			<section class="submit-step" class:done={submission?.presentation} id="presentation_file">
+				<div class="submit-step-header">
+					<span class="submit-step-number">{submission?.presentation ? '✓' : '1'}</span>
+					<div>
+						<h3>
+							{labels.presentation}
+							{#if !required.includes('presentation')}<span class="optional">optional</span>{/if}
+						</h3>
+						{#if submission?.presentation}
+							<p class="meta">
+								<a href={submission.presentation.url} target="_blank" rel="noopener noreferrer"
+									>Open current file</a
+								>
+								· added by {submission.presentation.submittedBy ?? 'a teammate'}, {formatDate(
+									submission.presentation.at
+								)}
+							</p>
+						{:else}
+							<p class="meta">Export your slides as PDF (max 40 MB). Any file name is fine.</p>
+						{/if}
+					</div>
+				</div>
+
+				<form
+					bind:this={pdfForm}
+					method="POST"
+					action="?/upload"
+					enctype="multipart/form-data"
+					use:enhance={submitter('presentation')}
 				>
 					<input type="hidden" name="csrf_token" value={data.csrfToken} />
-
-					<h2 class="section-title" id="presentation_file">
-						<span class="section-indicator"></span>
-						Presentation (PDF)
-					</h2>
-					<p class="repo-help">
-						{data.submission?.presentation
-							? `Current file: ${data.submission.presentation.fileName}. Select a new one only if you want to replace it.`
-							: 'No presentation uploaded yet.'}
-						Suggested file name: your team name in camelCase, e.g. "Neuron Team" → neuronTeam.pdf.
-					</p>
-
-					<div class="upload-area">
-						{#key pickerKey}
-							<PdfUpload multiple={false} on:files={handleFiles} />
-						{/key}
-
-						{#if selectedFiles.length > 0}
-							<button
-								type="button"
-								class="preview-button"
-								onclick={() => (showPresentationModal = true)}
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="20"
-									height="20"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-								>
-									<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-									<circle cx="12" cy="12" r="3"></circle>
-								</svg>
-								Preview Selected PDF
-							</button>
+					<input
+						bind:this={fileInput}
+						id="pdf-input"
+						type="file"
+						name="file"
+						accept="application/pdf,.pdf"
+						class="hidden"
+						disabled={closed || saving.presentation}
+						onchange={uploadSelected}
+					/>
+					<label
+						for="pdf-input"
+						class="dropzone"
+						class:dragging
+						class:disabled={closed}
+						ondragover={(e) => {
+							e.preventDefault();
+							dragging = true;
+						}}
+						ondragleave={() => (dragging = false)}
+						ondrop={onDrop}
+					>
+						{#if saving.presentation}
+							<span class="loading loading-spinner"></span> Uploading…
+						{:else}
+							<b>{submission?.presentation ? 'Replace the PDF' : 'Choose your PDF'}</b>
+							<span>or drop it here – it uploads right away</span>
 						{/if}
-					</div>
+					</label>
+				</form>
+				{#if messages.presentation}
+					<p class="message" class:error={!messages.presentation.ok}>
+						{messages.presentation.text}
+					</p>
+				{/if}
+			</section>
 
-					<div class="repo-link-section">
-						<label for="repo_link" class="repo-label">Repository Link</label>
-						<input
-							type="url"
-							id="repo_link"
-							name="repo_link"
-							placeholder="https://github.com/username/repository"
-							bind:value={repoLink}
-							class="repo-input"
-						/>
-						<p class="repo-help">
-							Link to your project's source code repository (e.g., GitHub, GitLab)
+			<!-- 2. Repository -->
+			<section class="submit-step" class:done={submission?.repo} id="repo_link">
+				<div class="submit-step-header">
+					<span class="submit-step-number">{submission?.repo ? '✓' : '2'}</span>
+					<div>
+						<h3>
+							{labels.repo}
+							{#if !required.includes('repo')}<span class="optional">optional</span>{/if}
+						</h3>
+						<p class="meta">
+							{#if submission?.repo}
+								Added by {submission.repo.submittedBy ?? 'a teammate'}, {formatDate(
+									submission.repo.at
+								)}
+							{:else}
+								GitHub or GitLab. Make sure the repository is public.
+							{/if}
 						</p>
 					</div>
-
-					<div class="repo-link-section">
-						<label for="video_link" class="repo-label">Video Link</label>
-						<input
-							type="url"
-							id="video_link"
-							name="video_link"
-							placeholder="https://youtube.com/watch?v=..."
-							bind:value={videoLink}
-							class="repo-input"
-						/>
-						<p class="repo-help">Link to your project's demo video (e.g., YouTube, Loom)</p>
-					</div>
-
-					<div class="submit-row">
-						<button type="submit" class="btn btn-primary" disabled={saving}>
-							{#if saving}
-								<span class="loading loading-spinner loading-sm"></span>
-								Saving...
-							{:else}
-								Save submission
-							{/if}
-						</button>
-						{#if resultMessage}
-							<div
-								class="alert"
-								class:alert-success={resultSuccess}
-								class:alert-error={!resultSuccess}
-							>
-								{resultMessage}
-							</div>
-						{/if}
-					</div>
-				</form>
-
-				<div class="guidelines">
-					<h3>Upload Guidelines:</h3>
-					<ul>
-						<li>Only PDF files are accepted, maximum file size: 40MB</li>
-						<li>
-							Required for a complete submission:
-							{data.required
-								.map((item: SubmissionItem) => SUBMISSION_ITEM_LABELS[item])
-								.join(', ')}
-						</li>
-						<li>
-							You can update any item until the deadline – the newest version replaces the old one
-						</li>
-						<li>Every change is listed with its author on the "My Submission" page</li>
-					</ul>
 				</div>
-			</div>
+				<form method="POST" action="?/upload" class="link-form" use:enhance={submitter('repo')}>
+					<input type="hidden" name="csrf_token" value={data.csrfToken} />
+					<input
+						type="text"
+						inputmode="url"
+						name="repo_link"
+						class="input input-bordered"
+						placeholder="github.com/your-team/project"
+						bind:value={repoLink}
+						disabled={closed}
+						required
+					/>
+					<button
+						class="btn btn-primary"
+						disabled={closed ||
+							saving.repo ||
+							!repoLink.trim() ||
+							repoLink === submission?.repo?.url}
+					>
+						{#if saving.repo}<span class="loading loading-spinner loading-sm"></span>{/if}
+						{submission?.repo ? 'Update' : 'Save'}
+					</button>
+				</form>
+				{#if messages.repo}
+					<p class="message" class:error={!messages.repo.ok}>{messages.repo.text}</p>
+				{/if}
+			</section>
+
+			<!-- 3. Video -->
+			<section class="submit-step" class:done={submission?.video} id="video_link">
+				<div class="submit-step-header">
+					<span class="submit-step-number">{submission?.video ? '✓' : '3'}</span>
+					<div>
+						<h3>
+							{labels.video}
+							{#if !required.includes('video')}<span class="optional">optional</span>{/if}
+						</h3>
+						<p class="meta">
+							{#if submission?.video}
+								Added by {submission.video.submittedBy ?? 'a teammate'}, {formatDate(
+									submission.video.at
+								)}
+							{:else}
+								YouTube (unlisted is fine) or Loom. Anyone with the link must be able to watch it.
+							{/if}
+						</p>
+					</div>
+				</div>
+				<form method="POST" action="?/upload" class="link-form" use:enhance={submitter('video')}>
+					<input type="hidden" name="csrf_token" value={data.csrfToken} />
+					<input
+						type="text"
+						inputmode="url"
+						name="video_link"
+						class="input input-bordered"
+						placeholder="youtu.be/…"
+						bind:value={videoLink}
+						disabled={closed}
+						required
+					/>
+					<button
+						class="btn btn-primary"
+						disabled={closed ||
+							saving.video ||
+							!videoLink.trim() ||
+							videoLink === submission?.video?.url}
+					>
+						{#if saving.video}<span class="loading loading-spinner loading-sm"></span>{/if}
+						{submission?.video ? 'Update' : 'Save'}
+					</button>
+				</form>
+				{#if messages.video}
+					<p class="message" class:error={!messages.video.ok}>{messages.video.text}</p>
+				{/if}
+			</section>
 		</div>
+
+		<p class="footnote">
+			Every change is listed with its author on <a href="/my-submission">My Submission</a>.
+		</p>
 	{/if}
 </div>
 
-<Modal bind:show={showPresentationModal} fullHeight={true} fullScreen={fullscreenMode}>
-	{#snippet header()}
-		<div class="flex justify-between items-center w-full">
-			<h2>PDF Preview</h2>
-			<button class="btn btn-sm" onclick={toggleFullscreen}>
-				{fullscreenMode ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-			</button>
-		</div>
-	{/snippet}
-
-	<PdfViewer files={selectedFiles} />
-</Modal>
-
 <style>
 	.upload-page {
-		max-width: 1200px;
+		max-width: 760px;
 		margin: 0 auto;
 		padding: 1rem;
-	}
-
-	.intro-section {
-		margin-bottom: 1.5rem;
-		max-width: 800px;
-		color: #f0f0f0;
-		opacity: 0.8;
-		line-height: 1.5;
-	}
-
-	.intro-section .deadline-info {
-		color: #ff6b6b;
-		font-weight: 500;
-		margin-top: 0.5rem;
-		font-size: 0.9rem;
-	}
-
-	.deadline-notice {
-		background-color: rgba(255, 107, 107, 0.1);
-		border: 1px solid rgba(255, 107, 107, 0.3);
-		border-radius: 0.75rem;
-		padding: 1.5rem;
-		margin: 1rem 0;
-		text-align: center;
-	}
-
-	.deadline-notice h3 {
-		color: #ff6b6b;
-		margin: 0 0 0.5rem 0;
-	}
-
-	.deadline-notice p {
-		margin: 0.25rem 0;
-		color: #f0f0f0;
-	}
-
-	.upload-container {
-		margin: 1.5rem 0 3rem;
-	}
-
-	.upload-card {
-		background-color: rgba(30, 31, 34, 0.8);
-		border-radius: 12px;
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		overflow: hidden;
-		padding: 2rem;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-	}
-
-	@media (max-width: 640px) {
-		.upload-card {
-			padding: 1.25rem;
-			border-radius: 8px;
-		}
-	}
-
-	.section-title {
-		font-size: 1.25rem;
-		color: #7f7bff;
-		margin-bottom: 1.75rem;
-		font-weight: 600;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.checklist-wrapper {
-		margin-bottom: 1.5rem;
-	}
-
-	.submit-row {
 		display: flex;
 		flex-direction: column;
-		align-items: flex-start;
-		gap: 0.75rem;
-	}
-	.section-indicator {
-		display: block;
-		width: 4px;
-		height: 1.25rem;
-		background: linear-gradient(to bottom, #7f7bff, #4df2ff);
-		border-radius: 2px;
-	}
-
-	.upload-area {
-		max-width: 600px;
-		margin: 0 auto 1.5rem;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
 		gap: 1rem;
 	}
 
-	.preview-button {
+	.team-line {
+		color: rgba(255, 255, 255, 0.75);
+		margin: -0.5rem 0 0;
+	}
+
+	.banner {
 		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 8px;
-		background: linear-gradient(to right, #4df2ff, #7f7bff);
-		color: #0f1322;
-		font-weight: 600;
-		padding: 0.6rem 1.25rem;
-		border-radius: 0.5rem;
-		border: none;
-		cursor: pointer;
-		transition: all 0.15s ease;
-		box-shadow: 0 2px 10px rgba(127, 123, 255, 0.3);
-		width: fit-content;
-		margin-top: 0.75rem;
-	}
-
-	.preview-button:hover {
-		transform: translateY(-1px);
-		box-shadow: 0 4px 15px rgba(127, 123, 255, 0.4);
-	}
-
-	.preview-button:active {
-		transform: translateY(0);
-	}
-
-	.repo-link-section {
-		margin: 1.5rem 0;
-		padding: 1.5rem;
-		background: rgba(0, 0, 0, 0.2);
+		flex-direction: column;
+		gap: 0.2rem;
+		padding: 0.9rem 1.1rem;
 		border-radius: 0.75rem;
-		border: 1px solid rgba(255, 255, 255, 0.05);
+		border: 1px solid;
 	}
 
-	.repo-label {
-		display: block;
-		font-size: 0.9rem;
-		font-weight: 600;
-		color: #f0f0f0;
-		margin-bottom: 0.5rem;
+	.banner-checkin {
+		background: rgba(127, 123, 255, 0.12);
+		border-color: rgba(127, 123, 255, 0.5);
 	}
 
-	.repo-input {
-		width: 100%;
-		padding: 0.75rem;
-		border-radius: 0.5rem;
+	.banner-ok {
+		background: rgba(54, 195, 153, 0.1);
+		border-color: rgba(54, 195, 153, 0.4);
+		color: #36c399;
+	}
+
+	.banner-warn {
+		background: rgba(247, 166, 84, 0.1);
+		border-color: rgba(247, 166, 84, 0.45);
+		color: #f7a654;
+	}
+
+	.progress-card {
+		padding: 1.1rem 1.25rem;
+		border-radius: 0.75rem;
+		background: rgba(255, 255, 255, 0.04);
 		border: 1px solid rgba(255, 255, 255, 0.1);
-		background-color: rgba(0, 0, 0, 0.3);
-		color: #f0f0f0;
-		font-size: 1rem;
 	}
 
-	.repo-input:focus {
-		outline: none;
-		border-color: #7f7bff;
-		box-shadow: 0 0 0 2px rgba(127, 123, 255, 0.3);
+	.progress-card.complete {
+		background: rgba(54, 195, 153, 0.08);
+		border-color: rgba(54, 195, 153, 0.4);
 	}
 
-	.repo-help {
-		font-size: 0.8rem;
-		color: rgba(255, 255, 255, 0.6);
-		margin-top: 0.5rem;
-		margin-bottom: 0;
+	.progress-card h2 {
+		font-size: 1.35rem;
+		font-weight: 700;
 	}
 
-	.guidelines {
-		margin-top: 2rem;
-		background: rgba(0, 0, 0, 0.2);
-		border-radius: 0.75rem;
-		padding: 1.25rem;
-		border: 1px solid rgba(255, 255, 255, 0.05);
-	}
-
-	.guidelines h3 {
-		font-size: 0.9rem;
-		margin-bottom: 1rem;
-		color: #f0f0f0;
-		font-weight: 600;
-	}
-
-	.guidelines ul {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-	}
-
-	.guidelines li {
-		position: relative;
-		padding-left: 1.25rem;
-		margin-bottom: 0.5rem;
-		font-size: 0.85rem;
+	.progress-card p {
 		color: rgba(255, 255, 255, 0.7);
+		margin: 0.25rem 0 0.75rem;
 	}
 
-	.guidelines li::before {
-		content: '•';
-		position: absolute;
-		left: 0;
+	.submit-steps {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.submit-step {
+		padding: 1.1rem 1.25rem;
+		border-radius: 0.75rem;
+		background: #1a1b1f;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-left: 4px solid #f87272;
+		scroll-margin-top: 1rem;
+	}
+
+	.submit-step.done {
+		border-left-color: #36c399;
+	}
+
+	.submit-step-header {
+		display: flex;
+		gap: 0.85rem;
+		align-items: flex-start;
+		margin-bottom: 0.85rem;
+	}
+
+	.submit-step-number {
+		flex: none;
+		width: 2rem;
+		height: 2rem;
+		border-radius: 9999px;
+		display: grid;
+		place-items: center;
+		font-weight: 700;
+		background: rgba(255, 255, 255, 0.08);
+	}
+
+	.submit-step.done .submit-step-number {
+		background: #36c399;
+		color: #0f1322;
+	}
+
+	.submit-step h3 {
+		font-size: 1.1rem;
+		font-weight: 700;
+	}
+
+	.optional {
+		margin-left: 0.4rem;
+		font-size: 0.7rem;
+		font-weight: 500;
+		text-transform: uppercase;
+		color: rgba(255, 255, 255, 0.5);
+	}
+
+	.meta {
+		font-size: 0.85rem;
+		color: rgba(255, 255, 255, 0.6);
+	}
+
+	.meta a {
 		color: #4df2ff;
-		font-weight: bold;
+		text-decoration: underline;
+	}
+
+	.dropzone {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.2rem;
+		padding: 1.4rem;
+		border: 2px dashed rgba(127, 123, 255, 0.5);
+		border-radius: 0.75rem;
+		cursor: pointer;
+		text-align: center;
+		transition: background 0.15s ease;
+	}
+
+	.dropzone b {
+		font-size: 1.05rem;
+		color: #7f7bff;
+	}
+
+	.dropzone span {
+		font-size: 0.85rem;
+		color: rgba(255, 255, 255, 0.6);
+	}
+
+	.dropzone:hover,
+	.dropzone.dragging {
+		background: rgba(127, 123, 255, 0.1);
+	}
+
+	.dropzone.disabled {
+		opacity: 0.5;
+		pointer-events: none;
+	}
+
+	.link-form {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.link-form input {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.message {
+		margin-top: 0.5rem;
+		font-size: 0.9rem;
+		color: #36c399;
+	}
+
+	.message.error {
+		color: #f87272;
+	}
+
+	.footnote {
+		font-size: 0.85rem;
+		color: rgba(255, 255, 255, 0.6);
+	}
+
+	.footnote a {
+		text-decoration: underline;
 	}
 
 	@media (max-width: 480px) {
-		.guidelines {
-			padding: 1rem;
-		}
-
-		.guidelines li {
-			font-size: 0.8rem;
+		.link-form {
+			flex-direction: column;
 		}
 	}
 </style>

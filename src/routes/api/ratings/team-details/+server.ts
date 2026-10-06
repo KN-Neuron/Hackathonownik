@@ -28,19 +28,22 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		const pb = await resultsClient();
 		const ratings = await pb.collection('ratings').getFullList({
 			filter: pb.filter('team = {:team}', { team: teamId }),
-			sort: '-created',
+			sort: 'created',
 			expand: 'jury'
 		});
 
 		return json({
 			criteria,
-			ratings: ratings.map((rating) => {
+			ratings: ratings.map((rating, i) => {
 				const scores = Object.fromEntries(
 					criteria.map((c) => [c.key, Number(rating.scores?.[c.key]) || 0])
 				);
 				return {
 					id: rating.id,
-					juryName: rating.expand?.jury?.name || 'Unknown Jury',
+					// Participants see the jury anonymously, like the feedback
+					juryName: isJuryOrAdmin(locals.user)
+						? rating.expand?.jury?.name || 'Unknown Jury'
+						: `Juror ${i + 1}`,
 					comments: showFeedback ? rating.comments || '' : '',
 					created: rating.created,
 					scores,

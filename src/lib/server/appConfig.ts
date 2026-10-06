@@ -14,6 +14,8 @@ export interface AppConfig {
 		year: string | number;
 		organizer: string;
 		deadline: string;
+		// Optional: teams should upload anything before this time
+		checkin_deadline?: string;
 		// Defaults for categories that don't define their own
 		submission: {
 			required: SubmissionItem[];

@@ -6,9 +6,15 @@
 
 	let {
 		teamId,
+		teamName,
 		criteria,
 		onsaved
-	}: { teamId: string; criteria: RatingCriterion[]; onsaved?: () => void } = $props();
+	}: {
+		teamId: string;
+		teamName: string;
+		criteria: RatingCriterion[];
+		onsaved?: () => void;
+	} = $props();
 
 	// One slider per criterion of the team's category
 	let scores = $state<Record<string, number>>(
@@ -82,26 +88,10 @@
 			<p>Loading rating data...</p>
 		</div>
 	{:else}
-		<h2 class="text-2xl font-bold mb-3">Project Grading</h2>
+		<h2 class="text-2xl font-bold mb-3">Rate {teamName}</h2>
 		<p class="text-gray-400 mb-6">Please grade this project based on the criteria below</p>
 
-		<div class="form-section">
-			<label class="form-control">
-				<div class="label">
-					<span class="label-text">Project ID</span>
-				</div>
-
-				<input
-					class="input input-bordered w-full"
-					id="teamId"
-					name="teamId"
-					type="text"
-					value={teamId}
-					readonly
-					required
-				/>
-			</label>
-		</div>
+		<input type="hidden" name="teamId" value={teamId} />
 
 		{#each criteria as criterion (criterion.key)}
 			<div class="form-section">
@@ -136,7 +126,7 @@
 		<div class="form-section">
 			<div class="label flex-col items-start">
 				<span class="label-text">Feedback for the team (optional)</span>
-				<span class="label-text-alt text-base-content/60">
+				<span class="label-text-alt text-base-content/60 whitespace-normal">
 					Shared with this team only, after the organizers publish the results. For notes just for
 					yourself, use "My private notes" on the team card.
 				</span>

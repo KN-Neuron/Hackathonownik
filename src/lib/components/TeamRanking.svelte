@@ -133,7 +133,7 @@
 			];
 
 			const tableRows = sortedRankings.map((team, index) => [
-				index + 1,
+				team.rank ?? index + 1,
 				team.team,
 				eventConfig.categories.find(c => c.key === team.category)?.name || 'N/A',
 				...criteria.map(c => team.scores?.[c.key]?.toFixed(1) || '0.0'),
@@ -427,7 +427,7 @@
 			<tbody>
 				{#each sortedRankings as team, index}
 					<tr class="hover:bg-base-200 transition-colors">
-						<td class="font-bold">{index + 1}</td>
+						<td class="font-bold">{team.rank ?? index + 1}</td>
 						<td>
 							<div class="team-name-cell">
 								<span class="font-semibold">{team.team}</span>
