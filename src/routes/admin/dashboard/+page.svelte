@@ -8,6 +8,10 @@
 	let { data, form } = $props();
 	let forcePublish = $state(false);
 	let forceFinal = $state(false);
+	// Login details of a juror just added or given a new password
+	let credentials = $derived(
+		(form as { credentials?: { email: string; password: string } } | null)?.credentials
+	);
 
 	// Unsaved juror ↔ category changes, per juror
 	let juryDraft = $state<Record<string, string[]>>({});
@@ -77,6 +81,21 @@
 	{#if form?.message}
 		<div class="alert mb-4 {form.success ? 'alert-success' : 'alert-error'}">
 			<span>{form.message}</span>
+		</div>
+	{/if}
+
+	{#if credentials}
+		<!-- Shown once: the password isn't stored anywhere the organizers can read it again -->
+		<div class="panel credentials">
+			<b>Login details – give them to the juror now, they won't be shown again:</b>
+			<code>E-mail: {credentials.email}<br />Password: {credentials.password}</code>
+			<button
+				class="btn btn-xs btn-outline"
+				onclick={() =>
+					navigator.clipboard.writeText(
+						`E-mail: ${credentials.email}\nPassword: ${credentials.password}\nLog in at ${location.origin}/login`
+					)}>Copy</button
+			>
 		</div>
 	{/if}
 
@@ -444,7 +463,10 @@
 						{@const draft = juryDraft[jury.id] ?? jury.categories}
 						{@const changed = !sameCategories(draft, jury.categories)}
 						<tr>
-							<td class="font-medium">{jury.name}</td>
+							<td>
+								<span class="font-medium">{jury.name}</span>
+								<span class="block text-xs text-base-content/60">{jury.email}</span>
+							</td>
 							{#each allCategories as category (category.key)}
 								<td>
 									<input
@@ -479,6 +501,15 @@
 										{changed ? 'Save' : 'Saved'}
 									</button>
 								</form>
+								<form method="POST" action="?/resetJuryPassword" use:enhance class="inline">
+									<input type="hidden" name="csrf_token" value={data.csrfToken} />
+									<input type="hidden" name="jury_id" value={jury.id} />
+									<button
+										class="btn btn-xs btn-ghost"
+										onclick={confirmSubmit(`Set a new password for ${jury.name}?`)}
+										>New password</button
+									>
+								</form>
 							</td>
 						</tr>
 					{:else}
@@ -491,6 +522,36 @@
 				</tbody>
 			</table>
 		</div>
+
+		<form method="POST" action="?/addJury" use:enhance class="panel add-jury">
+			<input type="hidden" name="csrf_token" value={data.csrfToken} />
+			<h3 class="panel-title">Add a juror</h3>
+			<div class="flex flex-wrap gap-2 items-center">
+				<input class="input input-bordered input-sm" name="name" placeholder="Full name" required />
+				<input
+					class="input input-bordered input-sm"
+					name="email"
+					type="email"
+					placeholder="E-mail"
+					required
+				/>
+				{#each allCategories as category (category.key)}
+					<label class="label cursor-pointer gap-1">
+						<input
+							type="checkbox"
+							class="checkbox checkbox-sm"
+							name="categories"
+							value={category.key}
+						/>
+						<span class="label-text text-sm" style="color: {category.color}">{category.name}</span>
+					</label>
+				{/each}
+				<button class="btn btn-sm btn-primary">Add juror</button>
+			</div>
+			<p class="text-xs text-base-content/60 mt-2">
+				A password is generated and shown once, so you can hand it to the juror.
+			</p>
+		</form>
 	</section>
 
 	<!-- Moving a team -->
@@ -619,6 +680,22 @@
 		border: 1px solid rgba(247, 166, 84, 0.45);
 		display: flex;
 		flex-direction: column;
+	}
+
+	.credentials {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+		border-color: rgba(54, 195, 153, 0.5);
+		margin: 0 0 1rem;
+	}
+
+	.credentials code {
+		font-size: 1rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.5rem;
+		background: rgba(0, 0, 0, 0.35);
 	}
 
 	.checkin-panel {

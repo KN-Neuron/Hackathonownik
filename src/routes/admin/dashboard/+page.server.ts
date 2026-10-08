@@ -126,6 +126,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			juries: juries.map((j) => ({
 				id: j.id,
 				name: j.name || j.email,
+				email: j.email,
 				categories: Array.isArray(j.jury_categories) ? j.jury_categories : []
 			})),
 			// Teams without a valid category are listed so they can be fixed
@@ -152,6 +153,20 @@ async function checkAdminForm(locals: App.Locals, formData: FormData) {
 		return 'Invalid security token';
 	}
 	return null;
+}
+
+/** Readable random password (no 0/O/1/l to avoid typos when it's dictated). */
+function generatePassword(): string {
+	const alphabet = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+	const bytes = crypto.getRandomValues(new Uint8Array(12));
+	const chars = [...bytes].map((b) => alphabet[b % alphabet.length]).join('');
+	return `${chars.slice(0, 4)}-${chars.slice(4, 8)}-${chars.slice(8)}`;
+}
+
+/** Names of the given categories whose results are already published. */
+async function publishedAmong(keys: string[]): Promise<string[]> {
+	const { publishedCategories } = await getResultsState();
+	return keys.filter((k) => publishedCategories.includes(k)).map((k) => getCategory(k)?.name ?? k);
 }
 
 const validCategory = (value: FormDataEntryValue | null) =>
@@ -337,9 +352,21 @@ export const actions: Actions = {
 
 		try {
 			const pb = await getAdminClient();
-			const jury = await pb.collection('users').getOne(juryId, { fields: 'role' });
+			const jury = await pb.collection('users').getOne(juryId, { fields: 'role,jury_categories' });
 			if (jury.role !== 'jury') {
 				return fail(400, { success: false, message: 'Only jury members can be assigned' });
+			}
+			const before: string[] = Array.isArray(jury.jury_categories) ? jury.jury_categories : [];
+			const touched = [
+				...categories.filter((c) => !before.includes(c as string)),
+				...before.filter((c) => !categories.includes(c))
+			] as string[];
+			const locked = await publishedAmong(touched);
+			if (locked.length) {
+				return fail(409, {
+					success: false,
+					message: `Results of ${locked.join(', ')} are published; unpublish before changing its jury.`
+				});
 			}
 			await pb.collection('users').update(juryId, { jury_categories: categories });
 			invalidateRatings();
@@ -347,6 +374,84 @@ export const actions: Actions = {
 		} catch (e) {
 			console.error('Error assigning categories:', e);
 			return fail(500, { success: false, message: 'Could not save categories' });
+		}
+	},
+
+	// New jury accounts: organizers hand the generated password over to the juror
+	addJury: async ({ locals, request }) => {
+		const formData = await request.formData();
+		const authError = await checkAdminForm(locals, formData);
+		if (authError) return fail(403, { success: false, message: authError });
+
+		const name = String(formData.get('name') ?? '').trim();
+		const email = String(formData.get('email') ?? '')
+			.trim()
+			.toLowerCase();
+		const categories = formData.getAll('categories').map(validCategory).filter(Boolean);
+		if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+			return fail(400, { success: false, message: "Enter the juror's name and a valid e-mail." });
+		}
+
+		const locked = await publishedAmong(categories as string[]);
+		if (locked.length) {
+			return fail(409, {
+				success: false,
+				message: `Results of ${locked.join(', ')} are published; unpublish before changing its jury.`
+			});
+		}
+
+		const password = generatePassword();
+		try {
+			const pb = await getAdminClient();
+			await pb.collection('users').create({
+				name,
+				email,
+				role: 'jury',
+				jury_categories: categories,
+				password,
+				passwordConfirm: password,
+				verified: true
+			});
+			invalidateRatings();
+			return {
+				success: true,
+				message: `Juror ${name} added`,
+				credentials: { email, password }
+			};
+		} catch (e: any) {
+			const taken = e?.response?.data?.email;
+			console.error('Error adding juror:', e);
+			return fail(taken ? 409 : 500, {
+				success: false,
+				message: taken ? 'An account with this e-mail already exists.' : 'Could not add the juror'
+			});
+		}
+	},
+
+	resetJuryPassword: async ({ locals, request }) => {
+		const formData = await request.formData();
+		const authError = await checkAdminForm(locals, formData);
+		if (authError) return fail(403, { success: false, message: authError });
+
+		const juryId = formData.get('jury_id');
+		if (typeof juryId !== 'string') return fail(400, { success: false, message: 'Missing juror' });
+
+		const password = generatePassword();
+		try {
+			const pb = await getAdminClient();
+			const jury = await pb.collection('users').getOne(juryId, { fields: 'role,email,name' });
+			if (jury.role !== 'jury') {
+				return fail(400, { success: false, message: 'Only jury passwords can be reset here' });
+			}
+			await pb.collection('users').update(juryId, { password, passwordConfirm: password });
+			return {
+				success: true,
+				message: `New password for ${jury.name || jury.email}`,
+				credentials: { email: jury.email, password }
+			};
+		} catch (e) {
+			console.error('Error resetting password:', e);
+			return fail(500, { success: false, message: 'Could not reset the password' });
 		}
 	},
 

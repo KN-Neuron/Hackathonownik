@@ -19,12 +19,23 @@
 	const { open = false } = $props();
 	const eventConfig = $page.data.eventConfig;
 	const category = $derived(eventConfig.categories.find((c) => c.key === teamCategory));
+	// A juror can judge several categories
+	const juryCategories = $derived(
+		user?.role === 'jury' && Array.isArray(user.jury_categories)
+			? eventConfig.categories.filter((/** @type {{ key: string }} */ c) =>
+					user.jury_categories.includes(c.key)
+				)
+			: []
+	);
 </script>
 
 <aside class:open class="bg-base-100">
 	<div class="sidebar-header">
 		<a href="/"
-			><h2 class="text-2xl font-bold text-primary mb-6 text-center">{$page.data.eventConfig.name} {$page.data.eventConfig.year}</h2></a
+			><h2 class="text-2xl font-bold text-primary mb-6 text-center">
+				{$page.data.eventConfig.name}
+				{$page.data.eventConfig.year}
+			</h2></a
 		>
 		{#if isAuthenticated}
 			<div class="user-info-sidebar">
@@ -50,6 +61,17 @@
 				{/if}
 				{#if isParticipant}
 					<DeadlineCountdown deadline={eventConfig.deadline} />
+				{/if}
+				{#each juryCategories as juryCategory (juryCategory.key)}
+					<span
+						class="team-challenge"
+						style="background: color-mix(in srgb, {juryCategory.color} 20%, transparent); color: {juryCategory.color}; border: 1px solid color-mix(in srgb, {juryCategory.color} 30%, transparent);"
+					>
+						{juryCategory.name}
+					</span>
+				{/each}
+				{#if user.role === 'jury' && juryCategories.length === 0}
+					<span class="text-xs text-warning">No category assigned yet</span>
 				{/if}
 			</div>
 		{/if}
@@ -135,7 +157,10 @@
 	</nav>
 
 	<div class="sidebar-footer">
-		<p class="text-sm text-gray-500">© {$page.data.eventConfig.year} {$page.data.eventConfig.organizer}</p>
+		<p class="text-sm text-gray-500">
+			© {$page.data.eventConfig.year}
+			{$page.data.eventConfig.organizer}
+		</p>
 	</div>
 </aside>
 

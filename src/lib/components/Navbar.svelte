@@ -56,6 +56,12 @@
 
 	const eventConfig = $page.data.eventConfig;
 	const category = $derived(eventConfig.categories.find((c) => c.key === teamCategory));
+	// A juror can judge several categories
+	const juryCategories = $derived(
+		user?.role === 'jury' && Array.isArray(user.jury_categories)
+			? eventConfig.categories.filter((c: { key: string }) => user.jury_categories.includes(c.key))
+			: []
+	);
 </script>
 
 <nav class="navbar">
@@ -79,7 +85,11 @@
 				<span class="user-name">{user.name || user.email}</span>
 				<div class="user-badges">
 					<Badge
-						variant={user.admin || user.role === 'admin' ? 'admin' : user.role === 'jury' ? 'jury' : 'default'}
+						variant={user.admin || user.role === 'admin'
+							? 'admin'
+							: user.role === 'jury'
+								? 'jury'
+								: 'default'}
 						class="user-role"
 					>
 						{user.admin || user.role === 'admin'
@@ -96,6 +106,14 @@
 							{category.name}
 						</Badge>
 					{/if}
+					{#each juryCategories as juryCategory (juryCategory.key)}
+						<Badge
+							style="background: color-mix(in srgb, {juryCategory.color} 20%, transparent); color: {juryCategory.color}; border: 1px solid color-mix(in srgb, {juryCategory.color} 30%, transparent);"
+							class="team-challenge"
+						>
+							{juryCategory.name}
+						</Badge>
+					{/each}
 				</div>
 			</div>
 		{/if}
