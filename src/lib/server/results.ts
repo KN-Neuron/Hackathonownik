@@ -261,6 +261,31 @@ export function getRatingProgress(): Promise<Record<string, CategoryProgress>> {
 	return cached('rating-progress', CACHE_TTL_MS, readRatingProgress);
 }
 
+/**
+ * Which jurors rated which teams of a category in its current stage ("jury:team" keys).
+ * A rating counts once every criterion of the stage is scored, like in the progress counters.
+ */
+export async function getRatedPairs(category: string): Promise<Set<string>> {
+	const pb = await getAdminClient();
+	const state = await getResultsState();
+	const keys = stageCriteria(category, stageOf(state, category)).map((c) => c.key);
+	const teams = await pb.collection('teams').getFullList({
+		filter: pb.filter('category = {:category}', { category }),
+		fields: 'id'
+	});
+	if (teams.length === 0) return new Set();
+
+	const ratings = await pb.collection('ratings').getFullList({
+		filter: teams.map((t) => pb.filter('team = {:id}', { id: t.id })).join(' || '),
+		fields: 'jury,team,scores'
+	});
+	return new Set(
+		ratings
+			.filter((r) => keys.every((k) => typeof r.scores?.[k] === 'number'))
+			.map((r) => `${r.jury}:${r.team}`)
+	);
+}
+
 /** Call after anything that changes ratings, confirmations, jurors or teams. */
 export function invalidateRatings(): void {
 	invalidate('rating-progress', 'ranking:');

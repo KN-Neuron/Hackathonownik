@@ -25,8 +25,9 @@
 - **Per-category control**: progress of every juror, the submission table (what's missing, check-in, team size 3–4), the live ranking.
 - **Judging workflow**: pick the finalists (top 5 preselected, with a warning when a tie crosses the cut-off), start the final, record the jury vote that breaks a tie for first place, then publish the category. Publishing is blocked until every juror rated everything and confirmed (an explicit override exists).
 - **Presentation order** (move up/down, random draw, A–Z) and a **presenter mode** (`/present`): the team's slides full screen with a countdown timer in the corner, previous/next team, keyboard shortcuts.
-- **Jury review**: which juror opened which presentation, video, repository or final presentation.
+- **Jury review**: which juror opened which presentation, video, repository or final presentation, and whether they already rated the team.
 - **People**: add a juror (a password is generated and shown once), reset a password, assign jurors to categories, move a team to another category.
+- **Import teams and participants from a CSV** (`/admin/import`): columns `name`, `email`, `team`, `category` (Excel exports with Polish headers and `;` work). The file is checked first (bad e-mails, unknown categories, a team in two categories, duplicates, team sizes), then teams and accounts are created and a CSV with the generated passwords can be downloaded once.
 - **Printable jury protocol** per category (ranking, every juror's scores, signature lines).
 - Info page with the schedule and useful links.
 
@@ -152,7 +153,7 @@ The app keeps short-lived caches in memory and works as a single Node process. I
     POCKETBASE_URL=http://127.0.0.1:8090
     ```
 
-4.  **Create the PocketBase collections** from the table above (and set their API rules), then add the first admin user (`role = admin`). Other jurors and their categories are managed in the Admin Dashboard.
+4.  **Create the PocketBase collections** from the table above (and set their API rules), then add the first admin user (`role = admin`). After that everything happens in the app: jurors and their categories in the Admin Dashboard, teams and participants through the CSV import.
 
 5.  **Start the Development Server:**
     ```bash
