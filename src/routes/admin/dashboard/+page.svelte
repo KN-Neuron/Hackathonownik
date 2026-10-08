@@ -488,8 +488,9 @@
 			<div class="section-header">
 				<h2>Jury review: {current.name}</h2>
 				<p>
-					What each juror opened: <b>P</b> presentation, <b>V</b> video, <b>F</b> final
-					presentation.
+					What each juror opened: <b>P</b> presentation, <b>V</b> video, <b>R</b> repository,
+					<b>F</b>
+					final presentation.
 					<a class="link ml-2" href="/present?category={data.category}">Open the presenter mode →</a
 					>
 				</p>
@@ -511,6 +512,7 @@
 									<td class="views">
 										<span class:yes={items.includes('presentation')}>P</span>
 										<span class:yes={items.includes('video')}>V</span>
+										<span class:yes={items.includes('repo')}>R</span>
 										{#if data.stage === 'final'}
 											<span class:yes={items.includes('final_presentation')}>F</span>
 										{/if}
