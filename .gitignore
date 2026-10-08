@@ -28,3 +28,8 @@ src/lib/paraglide
 # PocketBase
 pb_data
 pb_migrations
+bun.lock
+bun.lockb
+deno.lock
+yarn.lock
+pnpm-lock.yaml
