@@ -226,6 +226,19 @@ export const handle: Handle = async ({ event, resolve }) => {
 		response.headers.set(key, value);
 	});
 
+	// Presentation PDFs are shown in a frame on our own pages (jury view, presenter mode);
+	// everything else stays unframeable
+	if (pathname.startsWith('/api/presentations/')) {
+		response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+		const csp = response.headers.get('Content-Security-Policy');
+		if (csp) {
+			response.headers.set(
+				'Content-Security-Policy',
+				csp.replace("frame-ancestors 'none'", "frame-ancestors 'self'")
+			);
+		}
+	}
+
 	response.headers.set('X-RateLimit-Limit', '1000');
 	response.headers.set('X-RateLimit-Remaining', generalLimit.remaining.toString());
 	response.headers.set('X-RateLimit-Reset', new Date(generalLimit.resetTime).toISOString());

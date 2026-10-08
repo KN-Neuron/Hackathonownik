@@ -19,7 +19,8 @@
 	const anchors: Record<SubmissionItem, string> = {
 		presentation: 'presentation_file',
 		repo: 'repo_link',
-		video: 'video_link'
+		video: 'video_link',
+		final_presentation: 'final_presentation_file'
 	};
 
 	let missing = $derived(submission ? submission.missing : required);
@@ -82,7 +83,11 @@
 						</span>
 					{:else}
 						<span class="item-meta">
-							{optional ? 'Not required in this category' : 'Not submitted yet'}
+							{item === 'final_presentation'
+								? 'Needed only if the team reaches the final'
+								: optional
+									? 'Not required in this category'
+									: 'Not submitted yet'}
 						</span>
 					{/if}
 				</div>

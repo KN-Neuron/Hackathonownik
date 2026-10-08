@@ -3,6 +3,7 @@
 	import CategoryTabs from '$lib/components/CategoryTabs.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { matchesTeam } from '$lib/utils/teamSearch';
+	import { onMount } from 'svelte';
 
 	let { data } = $props();
 	let teams = $derived(data.teams);
@@ -11,6 +12,59 @@
 	let confirmationError = $state('');
 	let filter = $state<'all' | 'todo' | 'done'>('all');
 	let search = $state('');
+
+	// "Now on stage": polled from the organizers' presenter mode
+	type OnStage = {
+		teamId: string;
+		teamName: string;
+		order: number | null;
+		startedAt: string | null;
+		durationSec: number;
+	};
+	let onStage = $state<OnStage | null>(null);
+	let clockOffset = 0;
+	let followStage = $state(false);
+	let now = $state(Date.now());
+
+	onMount(() => {
+		let stopped = false;
+		// Background tabs skip the periodic polls; the first load and coming back always ask
+		async function poll(force = false) {
+			if (!data.category || (document.hidden && !force)) return;
+			try {
+				const res = await fetch(`/api/stage?category=${encodeURIComponent(data.category)}`);
+				if (!res.ok) return;
+				const body = await res.json();
+				if (stopped) return;
+				clockOffset = new Date(body.serverTime).getTime() - Date.now();
+				onStage = body.onStage;
+			} catch {
+				// Offline for a moment: keep the last state
+			}
+		}
+		poll(true);
+		const pollTimer = setInterval(() => poll(), 3000);
+		const onVisible = () => !document.hidden && poll(true);
+		document.addEventListener('visibilitychange', onVisible);
+		const tick = setInterval(() => (now = Date.now()), 1000);
+		return () => {
+			stopped = true;
+			document.removeEventListener('visibilitychange', onVisible);
+			clearInterval(pollTimer);
+			clearInterval(tick);
+		};
+	});
+
+	let stageRemaining = $derived(
+		onStage?.startedAt
+			? onStage.durationSec * 1000 - (now + clockOffset - new Date(onStage.startedAt).getTime())
+			: null
+	);
+	const formatTime = (ms: number) => {
+		const total = Math.ceil(Math.abs(ms) / 1000);
+		return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+	};
+	let onStageTeam = $derived(teams.find((t) => t.id === onStage?.teamId));
 
 	// "rated/total" per category, ✓ once confirmed
 	let badges = $derived(
@@ -30,7 +84,11 @@
 			: filter === 'done'
 				? teams.filter((team) => team.isRatedByCurrentJury)
 				: teams
-		).filter((team) => matchesTeam(search, team.name, team.order))
+		).filter((team) =>
+			followStage && onStage
+				? team.id === onStage.teamId
+				: matchesTeam(search, team.name, team.order)
+		)
 	);
 
 	async function handleConfirmation(confirmed: boolean) {
@@ -61,6 +119,36 @@
 	</div>
 {:else}
 	<CategoryTabs keys={data.categories} selected={data.category} {badges} />
+
+	{#if onStage}
+		<div class="on-stage" role="status">
+			<span class="live-dot" aria-hidden="true"></span>
+			<span>
+				Now on stage:
+				<b>{onStage.order ? `#${onStage.order} ` : ''}{onStage.teamName}</b>
+				{#if stageRemaining !== null}
+					· <span class:overtime={stageRemaining <= 0}>
+						{stageRemaining > 0
+							? `${formatTime(stageRemaining)} left`
+							: `${formatTime(stageRemaining)} over time`}
+					</span>
+				{:else}
+					· timer not started
+				{/if}
+				{#if onStageTeam?.isRatedByCurrentJury}· <span class="rated">you rated it</span>{/if}
+			</span>
+			{#if onStageTeam}
+				<label class="label cursor-pointer gap-2 ml-auto">
+					<input
+						type="checkbox"
+						class="toggle toggle-sm toggle-warning"
+						bind:checked={followStage}
+					/>
+					<span class="label-text">Follow the stage</span>
+				</label>
+			{/if}
+		</div>
+	{/if}
 
 	<div class="stage-banner" class:final={data.stage === 'final'}>
 		{#if data.stage === 'final'}
@@ -164,6 +252,45 @@
 {/if}
 
 <style>
+	.on-stage {
+		position: sticky;
+		top: 0.5rem;
+		z-index: 20;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.6rem;
+		margin-bottom: 1rem;
+		padding: 0.75rem 1rem;
+		border-radius: 0.75rem;
+		background: #2a1f12;
+		border: 1px solid rgba(247, 166, 84, 0.6);
+		color: #fff;
+	}
+
+	.live-dot {
+		width: 0.65rem;
+		height: 0.65rem;
+		border-radius: 9999px;
+		background: #f87272;
+		animation: pulse 1.2s ease-in-out infinite;
+	}
+
+	@keyframes pulse {
+		50% {
+			opacity: 0.3;
+		}
+	}
+
+	.overtime {
+		color: #f87272;
+		font-weight: 700;
+	}
+
+	.rated {
+		color: #36c399;
+	}
+
 	.stage-banner {
 		display: flex;
 		flex-wrap: wrap;

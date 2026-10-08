@@ -483,6 +483,46 @@
 			</form>
 		</section>
 
+		<!-- Did the jury open the material? -->
+		<section class="section">
+			<div class="section-header">
+				<h2>Jury review: {current.name}</h2>
+				<p>
+					What each juror opened: <b>P</b> presentation, <b>V</b> video, <b>F</b> final
+					presentation.
+					<a class="link ml-2" href="/present?category={data.category}">Open the presenter mode →</a
+					>
+				</p>
+			</div>
+			<div class="overflow-x-auto bg-base-200 rounded-lg mt-4">
+				<table class="table table-sm w-full">
+					<thead>
+						<tr>
+							<th>Team</th>
+							{#each progress.juries as jury (jury.id)}<th>{jury.name}</th>{/each}
+						</tr>
+					</thead>
+					<tbody>
+						{#each order as team (team.teamId)}
+							<tr>
+								<td class="font-medium">{team.teamName}</td>
+								{#each progress.juries as jury (jury.id)}
+									{@const items = data.views[team.teamId]?.[jury.id] ?? []}
+									<td class="views">
+										<span class:yes={items.includes('presentation')}>P</span>
+										<span class:yes={items.includes('video')}>V</span>
+										{#if data.stage === 'final'}
+											<span class:yes={items.includes('final_presentation')}>F</span>
+										{/if}
+									</td>
+								{/each}
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</section>
+
 		<!-- Submissions of the selected category -->
 		<section class="section">
 			<div class="section-header">
@@ -801,6 +841,16 @@
 		width: 2.5rem;
 		color: rgba(255, 255, 255, 0.5);
 		font-variant-numeric: tabular-nums;
+	}
+
+	.views span {
+		margin-right: 0.35rem;
+		font-weight: 700;
+		color: rgba(255, 255, 255, 0.2);
+	}
+
+	.views span.yes {
+		color: #36c399;
 	}
 
 	.credentials {

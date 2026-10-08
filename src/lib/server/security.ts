@@ -588,7 +588,7 @@ export const CSP_HEADERS = {
 		"font-src 'self' data: https:",
 		"connect-src 'self' https://hotb-pb.knneuron.pl/",
 		// Embedded demo videos on the jury view
-		'frame-src https://www.youtube-nocookie.com https://www.loom.com',
+		"frame-src 'self' https://www.youtube-nocookie.com https://www.loom.com",
 		"frame-ancestors 'none'",
 		"base-uri 'self'",
 		"form-action 'self'"

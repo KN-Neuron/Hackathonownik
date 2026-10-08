@@ -13,6 +13,7 @@ import {
 	stageOf
 } from '$lib/server/results';
 import { getCategoryRanking } from '$lib/server/ranking';
+import { getViews } from '$lib/server/views';
 import { setCategoryConfirmed } from '$lib/server/confirmations';
 import { getTeamSubmissions, invalidateSubmissions } from '$lib/server/submissions';
 import type { Actions, PageServerLoad } from './$types';
@@ -109,7 +110,14 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		);
 
 		// Live ranking of the selected category (preliminary or final, by its stage)
-		const ranking = await getCategoryRanking(category);
+		const categoryTeamIds = submissions.filter((s) => s.category === category).map((s) => s.teamId);
+		const [ranking, views] = await Promise.all([
+			getCategoryRanking(category),
+			getViews(categoryTeamIds).catch((e) => {
+				console.error('Error loading jury views:', e);
+				return [];
+			})
+		]);
 
 		return {
 			categories,
@@ -117,8 +125,14 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			summary,
 			stage: stageOf(resultsState, category),
 			// Teams that submitted something, in the current presentation order
+			// In the final only the finalists present, numbered like the jury sees them
 			presentationOrder: inPresentationOrder(
-				submissions.filter((s) => s.category === category),
+				submissions.filter(
+					(s) =>
+						s.category === category &&
+						(stageOf(resultsState, category) !== 'final' ||
+							(resultsState.finalists[category] ?? []).includes(s.teamId))
+				),
 				resultsState.orders[category],
 				(s) => s.teamId,
 				(s) => s.teamName
@@ -130,6 +144,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			finalists: resultsState.finalists[category] ?? [],
 			finalistsLimit: appConfig.event.finalists_per_category,
 			ranking,
+			// Which juror opened which material, per team (team → jury → items)
+			views: views.reduce<Record<string, Record<string, string[]>>>((acc, v) => {
+				((acc[v.team] ??= {})[v.jury] ??= []).push(v.item);
+				return acc;
+			}, {}),
 			progress: progress[category],
 			published: resultsState.publishedCategories.includes(category),
 			publishedAt: resultsState.publishedAt[category] ?? null,

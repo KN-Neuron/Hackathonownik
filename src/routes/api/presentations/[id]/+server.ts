@@ -4,8 +4,9 @@ import { error, isHttpError } from '@sveltejs/kit';
 import { getResultsState } from '$lib/server/results';
 import { getAdminClient } from '$lib/server/adminClient';
 import { canJudgeCategory, isAdmin } from '$lib/server/access';
+import { recordView } from '$lib/server/views';
 
-export const GET: RequestHandler = async ({ params, locals }) => {
+export const GET: RequestHandler = async ({ params, locals, url }) => {
 	// Check if user is authenticated
 	if (!locals.user) {
 		throw error(401, 'Unauthorized');
@@ -40,9 +41,20 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		}
 
 		// Get the file name from the presentation record
-		const fileName = presentation.presentation;
+		// ?file=final: the presentation for the final (stage) instead of the preliminary one
+		const isFinal = url.searchParams.get('file') === 'final';
+		const fileName = isFinal ? presentation.final_presentation : presentation.presentation;
 		if (!fileName) {
 			throw error(404, 'Presentation file not found');
+		}
+
+		// Jurors opening a team's material is shown to the organizers
+		if (locals.user.role === 'jury') {
+			void recordView(
+				locals.user.id,
+				presentation.team,
+				isFinal ? 'final_presentation' : 'presentation'
+			);
 		}
 
 		// Construct the file URL using the authenticated client

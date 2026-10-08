@@ -127,10 +127,9 @@
 		return 'metric-fill-poor';
 	}
 
-	async function getPresentationFiles(team) {
-		if (team.presentationUrl) {
-			const filename = team.presentationUrl.split('/').pop() || 'presentation.pdf';
-			const file = await urlToFile(team.presentationUrl, filename);
+	async function getPresentationFiles(url: string | null) {
+		if (url) {
+			const file = await urlToFile(url, `${team.name}.pdf`);
 			return [file];
 		}
 		return [];
@@ -150,16 +149,30 @@
 		}
 	}
 
-	async function showPresentationModalHandler() {
+	async function showPresentationModalHandler(url: string | null = team.presentationUrl) {
 		loadingPresentation = true;
 		try {
-			presentationFiles = await getPresentationFiles(team);
+			presentationFiles = await getPresentationFiles(url);
+			// The server records the view when it serves the file
+			if (url === team.finalPresentationUrl) viewed.final_presentation = true;
+			else viewed.presentation = true;
 			showPresentationModal = true;
 		} catch (err) {
 			console.error('Error loading presentation:', err);
 		} finally {
 			loadingPresentation = false;
 		}
+	}
+
+	// What this juror opened; the organizers see it too (rules: jury must review the material)
+	let viewed = $state<Record<string, boolean>>({ ...(team.viewed ?? {}) });
+	function videoOpened() {
+		viewed.video = true;
+		fetch('/api/jury/views', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ teamId: team.id, item: 'video' })
+		}).catch(() => {});
 	}
 
 	// Criteria and required items come from the team's category
@@ -255,6 +268,17 @@
 			/>
 		</div>
 
+		<p class="opened">
+			You opened:
+			<span class:yes={viewed.presentation}>PDF {viewed.presentation ? '✓' : '–'}</span>
+			· <span class:yes={viewed.video}>video {viewed.video ? '✓' : '–'}</span>
+			{#if team.stage === 'final'}
+				· <span class:yes={viewed.final_presentation}
+					>final PDF {viewed.final_presentation ? '✓' : '–'}</span
+				>
+			{/if}
+		</p>
+
 		<details class="jury-notes" open={Boolean(notes)}>
 			<summary>
 				My private notes
@@ -332,7 +356,13 @@
 					<span class="btn btn-missing">No repository</span>
 				{/if}
 				{#if videoEmbedUrl}
-					<button class="btn btn-video" onclick={() => (showVideoModal = true)}>
+					<button
+						class="btn btn-video"
+						onclick={() => {
+							showVideoModal = true;
+							videoOpened();
+						}}
+					>
 						<svg
 							width="16"
 							height="16"
@@ -346,7 +376,13 @@
 						Watch Video
 					</button>
 				{:else if team.video_link}
-					<a href={team.video_link} target="_blank" rel="noopener noreferrer" class="btn btn-video">
+					<a
+						href={team.video_link}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="btn btn-video"
+						onclick={videoOpened}
+					>
 						<svg
 							width="16"
 							height="16"
@@ -365,7 +401,7 @@
 				{#if team.presentationUrl}
 					<Button
 						variant="secondary"
-						onclick={showPresentationModalHandler}
+						onclick={() => showPresentationModalHandler(team.presentationUrl)}
 						{...loadingPresentation ? { loading: true } : {}}
 						class="btn-presentation"
 					>
@@ -389,6 +425,17 @@
 					</button>
 				{:else}
 					<span class="btn btn-missing">No PDF</span>
+				{/if}
+				{#if team.stage === 'final'}
+					{#if team.finalPresentationUrl}
+						<button
+							class="btn btn-final"
+							onclick={() => showPresentationModalHandler(team.finalPresentationUrl)}
+							>Final presentation</button
+						>
+					{:else}
+						<span class="btn btn-missing">No final PDF</span>
+					{/if}
 				{/if}
 
 				{#if locked}
@@ -427,6 +474,21 @@
 
 	.submission-status {
 		margin: 0.5rem 0 0.75rem;
+	}
+
+	.opened {
+		margin: -0.25rem 0 0.5rem;
+		font-size: 0.75rem;
+		color: rgba(255, 255, 255, 0.5);
+	}
+
+	.opened .yes {
+		color: #36c399;
+	}
+
+	.btn-final {
+		background: #f7a654;
+		color: #1a1206;
 	}
 
 	.jury-notes {

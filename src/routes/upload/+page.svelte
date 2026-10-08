@@ -60,25 +60,34 @@
 	}
 
 	// Choosing a file is enough: it uploads right away
-	function uploadSelected() {
-		if (fileInput?.files?.length) pdfForm?.requestSubmit();
+	function uploadSelected(input = fileInput, form = pdfForm) {
+		if (input?.files?.length) form?.requestSubmit();
 	}
 
-	function onDrop(event: DragEvent) {
+	function onDrop(event: DragEvent, input = fileInput, form = pdfForm) {
 		event.preventDefault();
 		dragging = false;
+		finalDragging = false;
 		const file = event.dataTransfer?.files?.[0];
-		if (!file || !fileInput) return;
+		if (!file || !input) return;
 		const transfer = new DataTransfer();
 		transfer.items.add(file);
-		fileInput.files = transfer.files;
-		uploadSelected();
+		input.files = transfer.files;
+		uploadSelected(input, form);
 	}
+
+	// The final presentation has its own, later deadline
+	const finalDeadline = new Date(data.eventConfig.final_presentation_deadline);
+	const finalClosed = new Date() > finalDeadline;
+	let finalFileInput: HTMLInputElement | undefined = $state();
+	let finalForm: HTMLFormElement | undefined = $state();
+	let finalDragging = $state(false);
 
 	const labels: Record<SubmissionItem, string> = {
 		presentation: 'Presentation (PDF)',
 		repo: 'Code repository link',
-		video: 'Demo video link'
+		video: 'Demo video link',
+		final_presentation: 'Final presentation (PDF)'
 	};
 </script>
 
@@ -131,9 +140,14 @@
 			></progress>
 		</div>
 
-		{#if closed}
+		{#if closed && finalClosed}
 			<div class="banner banner-warn">
 				The submission deadline has passed ({formatDate(deadline)}). Nothing can be changed anymore.
+			</div>
+		{:else if closed}
+			<div class="banner banner-warn">
+				The deadline has passed ({formatDate(deadline)}). You can still upload the final
+				presentation until {formatDate(finalDeadline)}.
 			</div>
 		{/if}
 
@@ -178,7 +192,7 @@
 						accept="application/pdf,.pdf"
 						class="hidden"
 						disabled={closed || saving.presentation}
-						onchange={uploadSelected}
+						onchange={() => uploadSelected()}
 					/>
 					<label
 						for="pdf-input"
@@ -190,7 +204,7 @@
 							dragging = true;
 						}}
 						ondragleave={() => (dragging = false)}
-						ondrop={onDrop}
+						ondrop={(e) => onDrop(e)}
 					>
 						{#if saving.presentation}
 							<span class="loading loading-spinner"></span> Uploading…
@@ -300,6 +314,91 @@
 				</form>
 				{#if messages.video}
 					<p class="message" class:error={!messages.video.ok}>{messages.video.text}</p>
+				{/if}
+			</section>
+
+			<!-- 4. Final presentation: only for finalists, later deadline (rules §8) -->
+			<section
+				class="submit-step final-step"
+				class:done={submission?.final_presentation}
+				class:highlight={data.inFinal && !submission?.final_presentation}
+				id="final_presentation_file"
+			>
+				<div class="submit-step-header">
+					<span class="submit-step-number">{submission?.final_presentation ? '✓' : '★'}</span>
+					<div>
+						<h3>
+							{labels.final_presentation}
+							<span class="optional">for the final</span>
+						</h3>
+						{#if data.inFinal}
+							<p class="meta final-note">
+								🎉 Your team is in the final! Upload the slides you'll show on stage.
+							</p>
+						{/if}
+						<p class="meta">
+							{#if submission?.final_presentation}
+								<a
+									href={submission.final_presentation.url}
+									target="_blank"
+									rel="noopener noreferrer">Open current file</a
+								>
+								· added by {submission.final_presentation.submittedBy ?? 'a teammate'}, {formatDate(
+									submission.final_presentation.at
+								)}
+							{:else}
+								Needed only if your team reaches the final. Upload it by
+								{formatDate(finalDeadline)} – it can differ from the first presentation.
+							{/if}
+						</p>
+					</div>
+				</div>
+				<form
+					bind:this={finalForm}
+					method="POST"
+					action="?/upload"
+					enctype="multipart/form-data"
+					use:enhance={submitter('final_presentation')}
+				>
+					<input type="hidden" name="csrf_token" value={data.csrfToken} />
+					<input
+						bind:this={finalFileInput}
+						id="final-pdf-input"
+						type="file"
+						name="final_file"
+						accept="application/pdf,.pdf"
+						class="hidden"
+						disabled={finalClosed || saving.final_presentation}
+						onchange={() => uploadSelected(finalFileInput, finalForm)}
+					/>
+					<label
+						for="final-pdf-input"
+						class="dropzone"
+						class:dragging={finalDragging}
+						class:disabled={finalClosed}
+						ondragover={(e) => {
+							e.preventDefault();
+							finalDragging = true;
+						}}
+						ondragleave={() => (finalDragging = false)}
+						ondrop={(e) => onDrop(e, finalFileInput, finalForm)}
+					>
+						{#if saving.final_presentation}
+							<span class="loading loading-spinner"></span> Uploading…
+						{:else}
+							<b>
+								{submission?.final_presentation
+									? 'Replace the final presentation'
+									: 'Choose the final presentation'}
+							</b>
+							<span>or drop it here – it uploads right away</span>
+						{/if}
+					</label>
+				</form>
+				{#if messages.final_presentation}
+					<p class="message" class:error={!messages.final_presentation.ok}>
+						{messages.final_presentation.text}
+					</p>
 				{/if}
 			</section>
 		</div>
@@ -436,6 +535,19 @@
 	.meta a {
 		color: #4df2ff;
 		text-decoration: underline;
+	}
+
+	.final-step {
+		border-left-color: rgba(247, 166, 84, 0.6);
+	}
+
+	.final-step.highlight {
+		border-color: rgba(247, 166, 84, 0.7);
+		background: rgba(247, 166, 84, 0.06);
+	}
+
+	.final-note {
+		color: #f7a654;
 	}
 
 	.dropzone {

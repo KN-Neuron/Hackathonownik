@@ -4,6 +4,7 @@ import 'dotenv/config';
 import { appConfig, requiredFor } from '$lib/server/appConfig';
 import { getTeamSubmission, invalidateSubmissions } from '$lib/server/submissions';
 import { getAdminClient } from '$lib/server/adminClient';
+import { getResultsState, stageOf } from '$lib/server/results';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// Ensure user is authenticated
@@ -26,12 +27,13 @@ export const load: PageServerLoad = async ({ locals }) => {
 	}
 
 	const pb = await getAdminClient();
-	const [submission, team] = await Promise.all([
+	const [submission, team, state] = await Promise.all([
 		getTeamSubmission(teamId).catch((e) => {
 			console.error('Error fetching team submission:', e);
 			return null;
 		}),
-		pb.collection('teams').getOne(teamId, { fields: 'name,category' })
+		pb.collection('teams').getOne(teamId, { fields: 'name,category' }),
+		getResultsState()
 	]);
 
 	return {
@@ -40,7 +42,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 		submission,
 		teamName: team.name as string,
 		// What this team's category requires
-		required: requiredFor(team.category)
+		required: requiredFor(team.category),
+		inFinal: Boolean(
+			team.category &&
+				stageOf(state, team.category) === 'final' &&
+				state.finalists[team.category]?.includes(teamId)
+		)
 	};
 };
 
@@ -83,14 +90,12 @@ async function teamFileName(teamId: string): Promise<string> {
 
 export const actions: Actions = {
 	upload: async ({ request, locals }) => {
-		// 1. Check deadline
-		const deadline = new Date(appConfig.event.deadline);
+		// 1. Deadlines: the final presentation may come later than everything else
 		const now = new Date();
-		if (now > deadline) {
-			return {
-				success: false,
-				message: `Submission deadline has passed. Presentations can no longer be submitted after ${deadline.toLocaleString()}.`
-			};
+		const mainClosed = now > new Date(appConfig.event.deadline);
+		const finalClosed = now > new Date(appConfig.event.final_presentation_deadline);
+		if (mainClosed && finalClosed) {
+			return { success: false, message: 'The submission deadline has passed.' };
 		}
 
 		// 2. Authentication check (without CSRF validation yet)
@@ -106,6 +111,7 @@ export const actions: Actions = {
 		// 3. Get form data first
 		const formData = await request.formData();
 		const uploaded = formData.get('file');
+		const uploadedFinal = formData.get('final_file');
 		const csrfToken = formData.get('csrf_token') as string;
 
 		// Accept links typed without the protocol ("github.com/team/repo")
@@ -136,22 +142,40 @@ export const actions: Actions = {
 
 		// 5. Every item is optional on its own
 		const hasFile = uploaded instanceof File && uploaded.size > 0;
+		const hasFinalFile = uploadedFinal instanceof File && uploadedFinal.size > 0;
+		if (mainClosed && (hasFile || repoLink || videoLink)) {
+			return {
+				success: false,
+				message: 'The deadline has passed; only the final presentation can still be uploaded.'
+			};
+		}
+		if (finalClosed && hasFinalFile) {
+			return { success: false, message: 'The deadline for the final presentation has passed.' };
+		}
 
 		// 6. Content check (PDF signature, size). The original name doesn't matter: spaces or
 		// Polish letters shouldn't block anyone, so the file gets a safe name of the team.
+		const checkPdf = async (upload: File) => {
+			const pdf = new File([upload], 'presentation.pdf', { type: 'application/pdf' });
+			const validation = await FileUploadSecurity.validatePdfUpload(pdf);
+			if (validation.valid) return { pdf };
+			return {
+				error:
+					validation.error === 'File is not a valid PDF'
+						? 'This file is not a PDF. Export your presentation as PDF and try again.'
+						: validation.error || 'Invalid file'
+			};
+		};
 		let file: File | null = null;
-		if (hasFile) {
-			file = new File([uploaded], 'presentation.pdf', { type: 'application/pdf' });
-			const validation = await FileUploadSecurity.validatePdfUpload(file);
-			if (!validation.valid) {
-				return {
-					success: false,
-					message:
-						validation.error === 'File is not a valid PDF'
-							? 'This file is not a PDF. Export your presentation as PDF and try again.'
-							: validation.error || 'Invalid file'
-				};
-			}
+		let finalFile: File | null = null;
+		for (const [upload, set] of [
+			[hasFile ? (uploaded as File) : null, (f: File) => (file = f)],
+			[hasFinalFile ? (uploadedFinal as File) : null, (f: File) => (finalFile = f)]
+		] as const) {
+			if (!upload) continue;
+			const checked = await checkPdf(upload);
+			if ('error' in checked) return { success: false, message: checked.error };
+			set(checked.pdf);
 		}
 
 		// 7. Check team association
@@ -173,7 +197,7 @@ export const actions: Actions = {
 		const newRepoLink = repoLink && repoLink !== current?.repo?.url ? repoLink : '';
 		const newVideoLink = videoLink && videoLink !== current?.video?.url ? videoLink : '';
 
-		if (!hasFile && !newRepoLink && !newVideoLink) {
+		if (!hasFile && !hasFinalFile && !newRepoLink && !newVideoLink) {
 			return {
 				success: false,
 				message: 'Nothing new to save. Add a PDF or change one of the links.'
@@ -187,6 +211,13 @@ export const actions: Actions = {
 			uploadData.append('submitted_by', locals.user.id);
 			if (file) {
 				uploadData.append('presentation', file, await teamFileName(teamId));
+			}
+			if (finalFile) {
+				uploadData.append(
+					'final_presentation',
+					finalFile,
+					(await teamFileName(teamId)).replace(/\.pdf$/, '-final.pdf')
+				);
 			}
 			if (newRepoLink) {
 				uploadData.append('repo_link', newRepoLink);

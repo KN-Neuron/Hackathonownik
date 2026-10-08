@@ -55,6 +55,7 @@ export interface Presentation {
 	team: string;
 	updated: string;
 	presentation: string;
+	final_presentation?: string;
 	repo_link?: string | null;
 	video_link?: string | null;
 	submitted_by?: string;
@@ -72,7 +73,8 @@ export interface Presentation {
 	};
 }
 
-export const SUBMISSION_ITEMS = ['presentation', 'repo', 'video'] as const;
+// presentation: rated in the preliminary round; final_presentation: shown on stage in the final
+export const SUBMISSION_ITEMS = ['presentation', 'repo', 'video', 'final_presentation'] as const;
 export type SubmissionItem = (typeof SUBMISSION_ITEMS)[number];
 
 export interface RatingCriterion {
@@ -95,7 +97,8 @@ export interface EventCategory {
 export const SUBMISSION_ITEM_LABELS: Record<SubmissionItem, string> = {
 	presentation: 'Presentation (PDF)',
 	repo: 'Repository link',
-	video: 'Video demo'
+	video: 'Video demo',
+	final_presentation: 'Final presentation (PDF)'
 };
 
 // One item (PDF / repo / video) as currently visible to the jury
@@ -123,6 +126,7 @@ export interface TeamSubmission {
 	presentation: SubmissionEntry | null;
 	repo: SubmissionEntry | null;
 	video: SubmissionEntry | null;
+	final_presentation: SubmissionEntry | null;
 	missing: SubmissionItem[];
 	complete: boolean;
 	lastUpdated: string;

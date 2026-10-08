@@ -13,6 +13,7 @@ function itemsIn(record: Presentation): SubmissionItem[] {
 	if (record.presentation) items.push('presentation');
 	if (record.repo_link) items.push('repo');
 	if (record.video_link) items.push('video');
+	if (record.final_presentation) items.push('final_presentation');
 	return items;
 }
 
@@ -25,6 +26,12 @@ function entryFor(record: Presentation, item: SubmissionItem): SubmissionEntry {
 			return { ...base, url: record.repo_link! };
 		case 'video':
 			return { ...base, url: record.video_link! };
+		case 'final_presentation':
+			return {
+				...base,
+				url: `/api/presentations/${record.id}?file=final`,
+				fileName: record.final_presentation
+			};
 	}
 }
 
@@ -43,7 +50,8 @@ export function mergeTeamRecords(
 	const latest: Record<SubmissionItem, SubmissionEntry | null> = {
 		presentation: null,
 		repo: null,
-		video: null
+		video: null,
+		final_presentation: null
 	};
 	for (const record of sorted) {
 		for (const item of itemsIn(record)) {

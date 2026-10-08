@@ -21,6 +21,15 @@ export interface ResultsState {
 	tieWinners: Record<string, string>;
 	// Presentation order set by the organizers, per category (team ids)
 	orders: Record<string, string[]>;
+	// Team presenting right now, per category; the timer runs from startedAt
+	onStage: Record<string, OnStage>;
+}
+
+export interface OnStage {
+	teamId: string;
+	// ISO time the timer was started, null while it hasn't
+	startedAt: string | null;
+	durationSec: number;
 }
 
 const asObject = <T>(value: unknown): Record<string, T> =>
@@ -44,7 +53,8 @@ async function readResultsState(): Promise<ResultsState> {
 			stages: asObject(record?.stages),
 			finalists: asObject(record?.finalists),
 			tieWinners: asObject(record?.tie_winners),
-			orders: asObject(record?.orders)
+			orders: asObject(record?.orders),
+			onStage: asObject(record?.on_stage)
 		};
 	} catch (e) {
 		console.error('Error reading results state:', e);
@@ -54,7 +64,8 @@ async function readResultsState(): Promise<ResultsState> {
 			stages: {},
 			finalists: {},
 			tieWinners: {},
-			orders: {}
+			orders: {},
+			onStage: {}
 		};
 	}
 }
@@ -107,6 +118,16 @@ export async function setCategoryStage(
 		else delete allFinalists[category];
 		delete tieWinners[category];
 		return { stages, finalists: allFinalists, tie_winners: tieWinners };
+	});
+}
+
+/** Put a team on stage (timer stopped), start its timer, or clear the stage of a category. */
+export async function setOnStage(category: string, onStage: OnStage | null): Promise<void> {
+	await updateState((current) => {
+		const all = { ...asObject<OnStage>(current.on_stage) };
+		if (onStage) all[category] = onStage;
+		else delete all[category];
+		return { on_stage: all };
 	});
 }
 

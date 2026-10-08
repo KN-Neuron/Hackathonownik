@@ -22,12 +22,15 @@ import {
 } from '$lib/server/results';
 import { getJuryNotes } from '$lib/server/juryNotes';
 import { setCategoryConfirmed } from '$lib/server/confirmations';
+import { getViews, type ViewItem } from '$lib/server/views';
 
 export interface TeamWithPresentationUrl {
 	id: string;
 	name: string;
 	category: string;
 	presentationUrl: string | null;
+	finalPresentationUrl: string | null;
+	viewed: Partial<Record<ViewItem, boolean>>;
 	repo_link: string | null;
 	video_link: string | null;
 	submission: TeamSubmission;
@@ -67,14 +70,21 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	}
 
 	try {
-		const [submissions, progress, state, notes] = await Promise.all([
+		const [submissions, progress, state, notes, myViews] = await Promise.all([
 			getTeamSubmissions({ categories: [category] }),
 			getRatingProgress(),
 			getResultsState(),
 			getJuryNotes(locals.user.id).catch((e) => {
 				console.error('Error loading jury notes:', e);
 				return {} as Record<string, string>;
-			})
+			}),
+			// What this juror already opened, shown on the cards
+			getTeamSubmissions({ categories: [category] }).then((s) =>
+				getViews(
+					s.map((x) => x.teamId),
+					locals.user!.id
+				).catch(() => [])
+			)
 		]);
 
 		const categoryProgress = progress[category];
@@ -114,6 +124,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 				order: submission.order,
 				category: submission.category,
 				presentationUrl: submission.presentation?.url ?? null,
+				finalPresentationUrl: submission.final_presentation?.url ?? null,
+				viewed: Object.fromEntries(
+					myViews.filter((v) => v.team === submission.teamId).map((v) => [v.item, true])
+				) as Partial<Record<ViewItem, boolean>>,
 				repo_link: submission.repo?.url ?? null,
 				video_link: submission.video?.url ?? null,
 				submission,
