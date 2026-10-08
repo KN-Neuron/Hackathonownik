@@ -4,6 +4,7 @@
 	import PdfViewer from '$lib/components/pdf/PdfViewer.svelte';
 	import SubmissionChecklist from '$lib/components/SubmissionChecklist.svelte';
 	import CategoryTabs from '$lib/components/CategoryTabs.svelte';
+	import { matchesTeam } from '$lib/utils/teamSearch';
 	import type { TeamSubmission } from '$lib/types';
 
 	let { data } = $props<{
@@ -14,6 +15,7 @@
 				teamId: string;
 				category: string;
 				updated: string;
+				order: number;
 				presentationUrl: string | null;
 				repo_link: string | null;
 				video_link: string | null;
@@ -29,7 +31,12 @@
 	let selectedPresentationFiles = $state<File[]>([]);
 	let showPresentationModal = $state(false);
 	let currentTeamName = $state('');
-	let presentations = $derived(data.presentations);
+	let search = $state('');
+	let presentations = $derived(
+		data.presentations.filter((p: { teamName: string; order: number }) =>
+			matchesTeam(search, p.teamName, p.order)
+		)
+	);
 	let isLoading = $state(false);
 	let loadingPresentationId = $state<string | null>(null);
 	let currentPage = $state(1);
@@ -148,6 +155,14 @@
 
 	<CategoryTabs keys={data.categories} selected={data.category} />
 
+	<input
+		type="search"
+		class="input input-bordered w-full max-w-md mb-4"
+		placeholder="Find a team: name or number, e.g. 7"
+		bind:value={search}
+		aria-label="Find a team"
+	/>
+
 	{#if presentations.length > 0}
 		{#each data.eventConfig.categories as category}
 			{@const categoryPresentations = getPresentationsByCategory(category.key)}
@@ -166,7 +181,10 @@
 							>
 								<div class="card-content">
 									<div class="card-header-row">
-										<h3>{presentation.teamName}</h3>
+										<h3>
+											<span class="order-number">#{presentation.order}</span>
+											{presentation.teamName}
+										</h3>
 										<span
 											class="category-badge"
 											style="background: color-mix(in srgb, {category.color} 20%, transparent); color: {category.color}; border: 1px solid color-mix(in srgb, {category.color} 30%, transparent);"
@@ -368,6 +386,11 @@
 {/if}
 
 <style>
+	.order-number {
+		color: rgba(255, 255, 255, 0.5);
+		font-variant-numeric: tabular-nums;
+	}
+
 	.presentations-gallery {
 		padding: 2rem;
 		max-width: 1400px;

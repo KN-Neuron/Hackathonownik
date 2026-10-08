@@ -1,6 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { getTeamSubmissions } from '$lib/server/submissions';
+import { getResultsState, inPresentationOrder } from '$lib/server/results';
 import { isJuryOrAdmin, juryCategories } from '$lib/server/access';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -19,12 +20,21 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		requested && categories.includes(requested) ? requested : (categories[0] ?? null);
 
 	try {
-		const submissions = category ? await getTeamSubmissions({ categories: [category] }) : [];
+		const [submissions, state] = await Promise.all([
+			category ? getTeamSubmissions({ categories: [category] }) : [],
+			getResultsState()
+		]);
 
-		const sorted = [...submissions].sort((a, b) => a.teamName.localeCompare(b.teamName));
+		const sorted = inPresentationOrder(
+			submissions,
+			category ? state.orders[category] : undefined,
+			(s) => s.teamId,
+			(s) => s.teamName
+		);
 		const formattedPresentations = sorted.map((submission) => ({
 			id: submission.teamId,
 			teamName: submission.teamName,
+			order: submission.order,
 			teamId: submission.teamId,
 			category: submission.category,
 			updated: submission.lastUpdated,

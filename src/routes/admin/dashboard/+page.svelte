@@ -8,6 +8,32 @@
 	let { data, form } = $props();
 	let forcePublish = $state(false);
 	let forceFinal = $state(false);
+
+	// Presentation order being edited (reset when the category or the saved order changes)
+	type OrderItem = { teamId: string; teamName: string; finalist: boolean };
+	let order = $state<OrderItem[]>([]);
+	$effect(() => {
+		order = [...(data.presentationOrder as OrderItem[])];
+	});
+	let orderChanged = $derived(
+		order.map((t) => t.teamId).join() !==
+			(data.presentationOrder as OrderItem[]).map((t) => t.teamId).join()
+	);
+	function move(index: number, by: number) {
+		const target = index + by;
+		if (target < 0 || target >= order.length) return;
+		const next = [...order];
+		[next[index], next[target]] = [next[target], next[index]];
+		order = next;
+	}
+	function shuffle() {
+		const next = [...order];
+		for (let i = next.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[next[i], next[j]] = [next[j], next[i]];
+		}
+		order = next;
+	}
 	// Login details of a juror just added or given a new password
 	let credentials = $derived(
 		(form as { credentials?: { email: string; password: string } } | null)?.credentials
@@ -386,6 +412,77 @@
 			{/if}
 		</section>
 
+		<!-- Presentation order of the selected category -->
+		<section class="section">
+			<div class="section-header">
+				<h2>Presentation order: {current.name}</h2>
+				<p>
+					Jurors see the teams in this order, numbered. In the final only the finalists, in the same
+					order.
+				</p>
+			</div>
+			<form
+				method="POST"
+				action="?/setOrder"
+				class="panel"
+				use:enhance={() =>
+					async ({ update }) => {
+						await update({ reset: false });
+					}}
+			>
+				<input type="hidden" name="csrf_token" value={data.csrfToken} />
+				<input type="hidden" name="category" value={data.category} />
+				{#each order as team (team.teamId)}
+					<input type="hidden" name="order" value={team.teamId} />
+				{/each}
+				<div class="flex flex-wrap gap-2 mb-3">
+					<button type="button" class="btn btn-xs btn-outline" onclick={shuffle}>Random draw</button
+					>
+					<button
+						type="button"
+						class="btn btn-xs btn-outline"
+						onclick={() =>
+							(order = [...order].sort((a, b) => a.teamName.localeCompare(b.teamName)))}>A–Z</button
+					>
+					<button
+						class="btn btn-xs {orderChanged ? 'btn-primary' : 'btn-ghost'}"
+						disabled={!orderChanged}
+					>
+						{orderChanged ? 'Save order' : 'Saved'}
+					</button>
+				</div>
+				<ol class="order-list">
+					{#each order as team, i (team.teamId)}
+						<li>
+							<span class="order-index">#{i + 1}</span>
+							<span class="flex-1">
+								{team.teamName}
+								{#if data.stage === 'final' && team.finalist}<span
+										class="badge badge-warning badge-xs ml-1">final</span
+									>{/if}
+							</span>
+							<button
+								type="button"
+								class="btn btn-xs btn-ghost"
+								disabled={i === 0}
+								onclick={() => move(i, -1)}
+								aria-label="Move {team.teamName} up">↑</button
+							>
+							<button
+								type="button"
+								class="btn btn-xs btn-ghost"
+								disabled={i === order.length - 1}
+								onclick={() => move(i, 1)}
+								aria-label="Move {team.teamName} down">↓</button
+							>
+						</li>
+					{:else}
+						<li class="text-base-content/60">No submissions yet</li>
+					{/each}
+				</ol>
+			</form>
+		</section>
+
 		<!-- Submissions of the selected category -->
 		<section class="section">
 			<div class="section-header">
@@ -680,6 +777,30 @@
 		border: 1px solid rgba(247, 166, 84, 0.45);
 		display: flex;
 		flex-direction: column;
+	}
+
+	.order-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+	}
+
+	.order-list li {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.2rem 0.4rem;
+		border-radius: 0.375rem;
+	}
+
+	.order-list li:hover {
+		background: rgba(255, 255, 255, 0.04);
+	}
+
+	.order-index {
+		width: 2.5rem;
+		color: rgba(255, 255, 255, 0.5);
+		font-variant-numeric: tabular-nums;
 	}
 
 	.credentials {

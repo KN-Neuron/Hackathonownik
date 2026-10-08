@@ -106,3 +106,29 @@ describe('computeProgress', () => {
 		expect(progress.adaptive.readyToPublish).toBe(true);
 	});
 });
+
+import { inPresentationOrder } from './results';
+
+describe('inPresentationOrder', () => {
+	const teams = [
+		{ id: 'a', name: 'Alpha' },
+		{ id: 'b', name: 'Beta' },
+		{ id: 'c', name: 'Gamma' },
+		{ id: 'd', name: 'Delta' }
+	];
+	const sort = (order?: string[]) =>
+		inPresentationOrder(
+			teams,
+			order,
+			(t) => t.id,
+			(t) => t.name
+		).map((t) => `${t.order}:${t.name}`);
+
+	it('follows the organizers order, then the rest alphabetically', () => {
+		expect(sort(['c', 'a'])).toEqual(['1:Gamma', '2:Alpha', '3:Beta', '4:Delta']);
+	});
+
+	it('is alphabetical without an order', () => {
+		expect(sort()).toEqual(['1:Alpha', '2:Beta', '3:Delta', '4:Gamma']);
+	});
+});

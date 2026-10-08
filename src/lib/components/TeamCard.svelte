@@ -240,7 +240,10 @@
 
 	<div class="team-info">
 		<div class="team-header">
-			<h3>{team.name}</h3>
+			<h3>
+				{#if team.order}<span class="order-number">#{team.order}</span>{/if}
+				{team.name}
+			</h3>
 			<span class="team-id">ID: {team.id}</span>
 		</div>
 
@@ -414,6 +417,12 @@
 		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); /* var(--card-shadow) */
 		border: 1px solid #2c2e33; /* var(--card-border) */
 		position: relative;
+	}
+
+	.order-number {
+		margin-right: 0.35rem;
+		color: rgba(255, 255, 255, 0.5);
+		font-variant-numeric: tabular-nums;
 	}
 
 	.submission-status {

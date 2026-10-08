@@ -16,6 +16,7 @@ import {
 	getRatingProgress,
 	getResultsState,
 	invalidateRatings,
+	inPresentationOrder,
 	stageCriteria,
 	stageOf
 } from '$lib/server/results';
@@ -30,6 +31,8 @@ export interface TeamWithPresentationUrl {
 	repo_link: string | null;
 	video_link: string | null;
 	submission: TeamSubmission;
+	// Position in the presentation order
+	order: number;
 	ratingsCount: number;
 	totalJuries: number;
 	isRatedByCurrentJury: boolean;
@@ -92,9 +95,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			: [];
 
 		// Alphabetical, so every juror of a category sees the same order
-		const sorted = submissions
-			.filter((s) => inStage.has(s.teamId))
-			.sort((a, b) => a.teamName.localeCompare(b.teamName));
+		// In the organizers' presentation order, so jurors follow the stage
+		const sorted = inPresentationOrder(
+			submissions.filter((s) => inStage.has(s.teamId)),
+			state.orders[category],
+			(s) => s.teamId,
+			(s) => s.teamName
+		);
 		const teams: TeamWithPresentationUrl[] = sorted.map((submission) => {
 			// A rating counts for this stage once every criterion of the stage is scored
 			const complete = (r: (typeof ratings)[number]) =>
@@ -104,6 +111,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			return {
 				id: submission.teamId,
 				name: submission.teamName,
+				order: submission.order,
 				category: submission.category,
 				presentationUrl: submission.presentation?.url ?? null,
 				repo_link: submission.repo?.url ?? null,

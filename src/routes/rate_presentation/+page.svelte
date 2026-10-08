@@ -2,6 +2,7 @@
 	import TeamSection from '$lib/components/TeamSection.svelte';
 	import CategoryTabs from '$lib/components/CategoryTabs.svelte';
 	import { invalidateAll } from '$app/navigation';
+	import { matchesTeam } from '$lib/utils/teamSearch';
 
 	let { data } = $props();
 	let teams = $derived(data.teams);
@@ -9,6 +10,7 @@
 	let showConfirmationModal = $state(false);
 	let confirmationError = $state('');
 	let filter = $state<'all' | 'todo' | 'done'>('all');
+	let search = $state('');
 
 	// "rated/total" per category, ✓ once confirmed
 	let badges = $derived(
@@ -23,11 +25,12 @@
 	let allTeamsRated = $derived(teams.length > 0 && ratedCount === teams.length);
 	let progressPercent = $derived(teams.length ? Math.round((ratedCount / teams.length) * 100) : 0);
 	let visibleTeams = $derived(
-		filter === 'todo'
+		(filter === 'todo'
 			? teams.filter((team) => !team.isRatedByCurrentJury)
 			: filter === 'done'
 				? teams.filter((team) => team.isRatedByCurrentJury)
 				: teams
+		).filter((team) => matchesTeam(search, team.name, team.order))
 	);
 
 	async function handleConfirmation(confirmed: boolean) {
@@ -95,6 +98,16 @@
 			</div>
 		</div>
 		<progress class="progress progress-success w-full" value={progressPercent} max="100"></progress>
+		<input
+			type="search"
+			class="input input-bordered input-sm w-full mt-3"
+			placeholder="Find a team: name or number, e.g. 7"
+			bind:value={search}
+			aria-label="Find a team"
+		/>
+		{#if search && visibleTeams.length === 0}
+			<p class="text-sm text-base-content/60 mt-2">No team matches “{search}”.</p>
+		{/if}
 	</div>
 
 	{#if data.published}

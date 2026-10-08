@@ -19,6 +19,8 @@ export interface ResultsState {
 	finalists: Record<string, string[]>;
 	// Team that won a tie for first place by jury vote, per category
 	tieWinners: Record<string, string>;
+	// Presentation order set by the organizers, per category (team ids)
+	orders: Record<string, string[]>;
 }
 
 const asObject = <T>(value: unknown): Record<string, T> =>
@@ -41,11 +43,19 @@ async function readResultsState(): Promise<ResultsState> {
 			publishedAt: asObject(record?.published_at),
 			stages: asObject(record?.stages),
 			finalists: asObject(record?.finalists),
-			tieWinners: asObject(record?.tie_winners)
+			tieWinners: asObject(record?.tie_winners),
+			orders: asObject(record?.orders)
 		};
 	} catch (e) {
 		console.error('Error reading results state:', e);
-		return { publishedCategories: [], publishedAt: {}, stages: {}, finalists: {}, tieWinners: {} };
+		return {
+			publishedCategories: [],
+			publishedAt: {},
+			stages: {},
+			finalists: {},
+			tieWinners: {},
+			orders: {}
+		};
 	}
 }
 
@@ -98,6 +108,32 @@ export async function setCategoryStage(
 		delete tieWinners[category];
 		return { stages, finalists: allFinalists, tie_winners: tieWinners };
 	});
+}
+
+export async function setPresentationOrder(category: string, teamIds: string[]): Promise<void> {
+	await updateState((current) => ({
+		orders: { ...asObject<string[]>(current.orders), [category]: teamIds }
+	}));
+}
+
+/**
+ * Sort teams by the organizers' presentation order; teams missing from it come last,
+ * alphabetically. Returns each team with its 1-based position.
+ */
+export function inPresentationOrder<T>(
+	teams: T[],
+	order: string[] | undefined,
+	id: (team: T) => string,
+	name: (team: T) => string
+): (T & { order: number })[] {
+	const position = new Map((order ?? []).map((teamId, i) => [teamId, i]));
+	return [...teams]
+		.sort((a, b) => {
+			const pa = position.get(id(a)) ?? Infinity;
+			const pb = position.get(id(b)) ?? Infinity;
+			return pa !== pb ? pa - pb : name(a).localeCompare(name(b));
+		})
+		.map((team, i) => ({ ...team, order: i + 1 }));
 }
 
 export async function setTieWinner(category: string, teamId: string | null): Promise<void> {

@@ -8,6 +8,8 @@ import {
 	setCategoryPublished,
 	setCategoryStage,
 	setTieWinner,
+	setPresentationOrder,
+	inPresentationOrder,
 	stageOf
 } from '$lib/server/results';
 import { getCategoryRanking } from '$lib/server/ranking';
@@ -114,6 +116,17 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			category,
 			summary,
 			stage: stageOf(resultsState, category),
+			// Teams that submitted something, in the current presentation order
+			presentationOrder: inPresentationOrder(
+				submissions.filter((s) => s.category === category),
+				resultsState.orders[category],
+				(s) => s.teamId,
+				(s) => s.teamName
+			).map((s) => ({
+				teamId: s.teamId,
+				teamName: s.teamName,
+				finalist: (resultsState.finalists[category] ?? []).includes(s.teamId)
+			})),
 			finalists: resultsState.finalists[category] ?? [],
 			finalistsLimit: appConfig.event.finalists_per_category,
 			ranking,
@@ -294,6 +307,30 @@ export const actions: Actions = {
 		} catch (e) {
 			console.error('Error going back to the preliminary round:', e);
 			return fail(500, { success: false, message: 'Could not change the stage' });
+		}
+	},
+
+	setOrder: async ({ locals, request }) => {
+		const formData = await request.formData();
+		const authError = await checkAdminForm(locals, formData);
+		if (authError) return fail(403, { success: false, message: authError });
+
+		const category = validCategory(formData.get('category'));
+		if (!category) return fail(400, { success: false, message: 'Unknown category' });
+
+		const submitted = new Set(
+			(await getTeamSubmissions({ categories: [category] })).map((s) => s.teamId)
+		);
+		const order = [...new Set(formData.getAll('order').map(String))].filter((id) =>
+			submitted.has(id)
+		);
+
+		try {
+			await setPresentationOrder(category, order);
+			return { success: true, message: `${getCategory(category)!.name}: presentation order saved` };
+		} catch (e) {
+			console.error('Error saving the order:', e);
+			return fail(500, { success: false, message: 'Could not save the order' });
 		}
 	},
 
