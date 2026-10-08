@@ -8,6 +8,15 @@
 	let { data, form } = $props();
 	let forcePublish = $state(false);
 	let forceFinal = $state(false);
+
+	// Unsaved juror ↔ category changes, per juror
+	let juryDraft = $state<Record<string, string[]>>({});
+	const sameCategories = (a: string[], b: string[]) =>
+		a.length === b.length && a.every((key) => b.includes(key));
+	function toggleJuryCategory(juryId: string, current: string[], key: string, event: Event) {
+		const checked = (event.currentTarget as HTMLInputElement).checked;
+		juryDraft[juryId] = checked ? [...current, key] : current.filter((k) => k !== key);
+	}
 	// Finalists to pick: the top N of the preliminary ranking, reset when the category changes
 	let selectedFinalists = $state<string[]>([]);
 	let finalistsFor = '';
@@ -432,6 +441,8 @@
 				</thead>
 				<tbody>
 					{#each data.juries as jury (jury.id)}
+						{@const draft = juryDraft[jury.id] ?? jury.categories}
+						{@const changed = !sameCategories(draft, jury.categories)}
 						<tr>
 							<td class="font-medium">{jury.name}</td>
 							{#each allCategories as category (category.key)}
@@ -439,19 +450,34 @@
 									<input
 										type="checkbox"
 										class="checkbox checkbox-sm"
-										name="categories"
-										value={category.key}
-										form="jury-{jury.id}"
-										checked={jury.categories.includes(category.key)}
+										checked={draft.includes(category.key)}
+										onchange={(e) => toggleJuryCategory(jury.id, draft, category.key, e)}
 										aria-label="{jury.name}: {category.name}"
 									/>
 								</td>
 							{/each}
 							<td>
-								<form id="jury-{jury.id}" method="POST" action="?/setJuryCategories" use:enhance>
+								<form
+									method="POST"
+									action="?/setJuryCategories"
+									use:enhance={() =>
+										async ({ result, update }) => {
+											// Keep the checkboxes as they are; the saved data comes back from the server
+											await update({ reset: false });
+											if (result.type === 'success') delete juryDraft[jury.id];
+										}}
+								>
 									<input type="hidden" name="csrf_token" value={data.csrfToken} />
 									<input type="hidden" name="jury_id" value={jury.id} />
-									<button class="btn btn-xs btn-primary">Save</button>
+									{#each draft as key (key)}
+										<input type="hidden" name="categories" value={key} />
+									{/each}
+									<button
+										class="btn btn-xs {changed ? 'btn-primary' : 'btn-ghost'}"
+										disabled={!changed}
+									>
+										{changed ? 'Save' : 'Saved'}
+									</button>
 								</form>
 							</td>
 						</tr>
