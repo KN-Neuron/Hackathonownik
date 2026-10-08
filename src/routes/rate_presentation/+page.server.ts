@@ -3,7 +3,6 @@ import type { Actions, PageServerLoad } from './$types';
 import { pbError } from '$lib/pocketbase.svelte';
 import { HttpStatusCode } from '$lib/utils/utils';
 import type { Rating, TeamSubmission, User } from '$lib/types';
-import { criteriaFor } from '$lib/server/appConfig';
 import { getTeamSubmissions } from '$lib/server/submissions';
 import {
 	canJudgeCategory,
@@ -13,7 +12,13 @@ import {
 	resultsClient
 } from '$lib/server/access';
 import { parseScores } from '$lib/server/ratings';
-import { getRatingProgress, getResultsState, invalidateRatings } from '$lib/server/results';
+import {
+	getRatingProgress,
+	getResultsState,
+	invalidateRatings,
+	stageCriteria,
+	stageOf
+} from '$lib/server/results';
 import { getJuryNotes } from '$lib/server/juryNotes';
 import { setCategoryConfirmed } from '$lib/server/confirmations';
 
@@ -71,9 +76,14 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 		const categoryProgress = progress[category];
 		const juryIds = new Set(categoryProgress?.juries.map((j) => j.id) ?? []);
+		// Preliminary round: every team with a submission; final: only the finalists
+		const stage = stageOf(state, category);
+		const inStage = new Set(categoryProgress?.teamIds ?? []);
+		const criteria = stageCriteria(category, stage);
+		const stageKeys = criteria.map((c) => c.key);
 
 		const pb = await resultsClient();
-		const teamIds = submissions.map((s) => s.teamId);
+		const teamIds = submissions.filter((s) => inStage.has(s.teamId)).map((s) => s.teamId);
 		const ratings = teamIds.length
 			? await pb.collection('ratings').getFullList({
 					filter: teamIds.map((id) => pb.filter('team = {:id}', { id })).join(' || '),
@@ -82,10 +92,15 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			: [];
 
 		// Alphabetical, so every juror of a category sees the same order
-		const sorted = [...submissions].sort((a, b) => a.teamName.localeCompare(b.teamName));
+		const sorted = submissions
+			.filter((s) => inStage.has(s.teamId))
+			.sort((a, b) => a.teamName.localeCompare(b.teamName));
 		const teams: TeamWithPresentationUrl[] = sorted.map((submission) => {
-			const forTeam = ratings.filter((r) => r.team === submission.teamId);
-			const mine = forTeam.find((r) => r.jury === locals.user!.id);
+			// A rating counts for this stage once every criterion of the stage is scored
+			const complete = (r: (typeof ratings)[number]) =>
+				stageKeys.every((k) => typeof r.scores?.[k] === 'number');
+			const forTeam = ratings.filter((r) => r.team === submission.teamId && complete(r));
+			const mine = ratings.find((r) => r.team === submission.teamId && r.jury === locals.user!.id);
 			return {
 				id: submission.teamId,
 				name: submission.teamName,
@@ -97,8 +112,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 				// Only ratings of the category's jurors count
 				ratingsCount: new Set(forTeam.filter((r) => juryIds.has(r.jury)).map((r) => r.jury)).size,
 				totalJuries: juryIds.size,
-				isRatedByCurrentJury: Boolean(mine),
+				isRatedByCurrentJury: Boolean(mine && complete(mine)),
 				scores: mine?.scores ?? null,
+				stage,
 				finalGradeDisplay: mine?.finalGrade ?? null,
 				notes: notes[submission.teamId] ?? ''
 			};
@@ -126,7 +142,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			teams,
 			progress: summary,
 			confirmed: summary[category]?.confirmed ?? false,
-			published: state.publishedCategories.includes(category)
+			published: state.publishedCategories.includes(category),
+			stage,
+			criteria
 		};
 	} catch (err) {
 		console.error('Error fetching data:', err);
@@ -162,29 +180,36 @@ export const actions: Actions = {
 			});
 		}
 
-		const parsed = parseScores(form, criteriaFor(category));
+		// Preliminary round: preliminary criteria; final: every criterion, finalists only
+		const state = await getResultsState();
+		const stage = stageOf(state, category!);
+		if (stage === 'final' && !(state.finalists[category!] ?? []).includes(teamId)) {
+			return fail(HttpStatusCode.Forbidden, { error: 'This team is not in the final.' });
+		}
+
+		const parsed = parseScores(form, stageCriteria(category!, stage));
 		if (!parsed.ok) {
 			return fail(HttpStatusCode.BadRequest, { error: parsed.error });
 		}
 
+		const existingRatings = await locals.pb.collection('ratings').getList(1, 1, {
+			filter: locals.pb.filter('jury = {:jury} && team = {:team}', { jury: user!.id, team: teamId })
+		});
+		const existing = existingRatings.items[0];
+
+		// Keep scores of the other stage (e.g. the final presentation score) untouched
+		const scores: Record<string, number> = { ...(existing?.scores ?? {}), ...parsed.scores };
 		const rating: Rating = {
 			comments: typeof form.comments === 'string' ? form.comments : '',
 			jury: user!.id,
 			team: teamId,
-			scores: parsed.scores,
-			finalGrade: parsed.finalGrade
+			scores,
+			finalGrade: Object.values(scores).reduce((a, b) => a + (Number(b) || 0), 0)
 		};
 
 		try {
-			const existingRatings = await locals.pb.collection('ratings').getList(1, 1, {
-				filter: locals.pb.filter('jury = {:jury} && team = {:team}', {
-					jury: user!.id,
-					team: teamId
-				})
-			});
-
-			if (existingRatings.totalItems > 0) {
-				await locals.pb.collection('ratings').update(existingRatings.items[0].id, rating);
+			if (existing) {
+				await locals.pb.collection('ratings').update(existing.id, rating);
 			} else {
 				await locals.pb.collection('ratings').create(rating);
 			}

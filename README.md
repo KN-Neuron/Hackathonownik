@@ -68,6 +68,8 @@ Participants and jurors can log in to PocketBase directly with their own credent
 **How it works**
 - Every category (`app_config.yaml`) is rated by its own jurors, with its own criteria and required submission items.
 - Organizers assign jurors to categories and move teams between categories in the Admin Dashboard.
+- Judging follows the Heroes of the Brain rules (§8): in the **preliminary round** jurors rate every team from its PDF and demo video (implementation 1–10, innovation 1–5, usefulness 1–5); organizers then start the **final** with at most `finalists_per_category` teams, whose stage presentation is rated too (1–5, 25 points in total). A tie for first place is decided by a jury vote that the organizers record in the Admin Dashboard, and every category has a printable jury protocol for signatures.
+- Teams check in by uploading anything before `checkin_deadline`; the Admin Dashboard shows who did.
 - Results stay hidden until an organizer publishes a category. Publishing requires every juror of the category to rate all of its teams and confirm; changing a rating withdraws the confirmation, and ratings are locked once the category is published. Jurors see their category's ranking once all of its jurors confirmed.
 - Teams submit the PDF, the repository link and the video link separately; every save stores only what changed and the app shows the newest version of each item.
 
@@ -79,12 +81,16 @@ Participants and jurors can log in to PocketBase directly with their own credent
 | `teams`         | `name` (text), `category` (text, a category key)                                                                        | `@request.auth.id != ""`                                                                   | empty                                |
 | `presentations` | `team` (relation → `teams`, required), `presentation` (file, PDF, **optional**), `repo_link`, `video_link` (text), `submitted_by` (relation → `users`) | `team = @request.auth.team \|\| @request.auth.role = "admin"`                                 | empty                                |
 | `ratings`       | `jury` (relation → `users`), `team` (relation → `teams`), `scores` (json), `finalGrade` (number), `comments` (text)  | `@request.auth.role = "admin" \|\| (@request.auth.role = "jury" && jury = @request.auth.id)`   | Create/Update: `(@request.auth.role = "jury" \|\| @request.auth.role = "admin") && jury = @request.auth.id`; Delete: `@request.auth.role = "admin"` |
-| `event_state`   | `published_categories` (json), `published_at` (json)                                                                    | empty                                                                                      | empty                                |
+| `event_state`   | `published_categories`, `published_at`, `stages`, `finalists`, `tie_winners` (all json)                                                                    | empty                                                                                      | empty                                |
 | `jury_notes`    | `jury` (relation → `users`), `team` (relation → `teams`), `content` (text)                                             | empty                                                                                      | empty                                |
 
 Users must not be able to update their own record: they could change their role, team or jury categories.
 
 The `comments` field of a rating is the feedback for the team: the team sees it (without jury names) after its category is published.
+
+### Running it for the event
+
+The app keeps short-lived caches in memory and works as a single Node process. In a load test with 300 simultaneous sessions it answered 95% of requests within 0.45 s; only hundreds of clicks in the same millisecond take a few seconds. For more headroom run several processes behind a load balancer (each has its own cache, data may then be up to 2 s old).
 
 ### Steps
 

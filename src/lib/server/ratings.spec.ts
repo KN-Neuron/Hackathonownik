@@ -21,7 +21,7 @@ describe('parseScores', () => {
 		expect(parsed.ok).toBe(false);
 	});
 
-	it.each(['-1', '2.5', 'abc', ''])('rejects %j', (value) => {
+	it.each(['0', '-1', '2.5', 'abc', ''])('rejects %j', (value) => {
 		const parsed = parseScores({ ...validForm, [criteria[0].key]: value }, criteria);
 		expect(parsed.ok).toBe(false);
 	});

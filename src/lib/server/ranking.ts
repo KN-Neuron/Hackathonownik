@@ -1,7 +1,6 @@
 import type { RatingCriterion } from '$lib/types';
 import { getAdminClient } from './adminClient';
-import { criteriaFor } from './appConfig';
-import { getRatingProgress } from './results';
+import { getRatingProgress, getResultsState, stageCriteria, stageOf } from './results';
 import { getTeamSubmissions } from './submissions';
 import { CACHE_TTL_MS, cached } from './cache';
 
@@ -17,6 +16,8 @@ export interface RankingEntry {
 	ratingCount: number;
 	status: 'final' | 'provisional';
 	completionPercent: number;
+	// Placed first by the jury's vote after a tie
+	wonTieBreak?: boolean;
 }
 
 const round = (value: number) => Math.round(value * 100) / 100;
@@ -36,8 +37,14 @@ export function computeRanking(input: {
 	const totalJuries = juryIds.size;
 
 	const entries = input.teams.map((team) => {
-		// One rating per assigned juror (ignore ratings by others, e.g. before a reassignment)
-		const ratings = input.ratings.filter((r) => r.team === team.id && juryIds.has(r.jury));
+		// One rating per assigned juror (ignore ratings by others, e.g. before a reassignment).
+		// Only complete ratings count: in the final, a rating needs the final presentation score too.
+		const ratings = input.ratings.filter(
+			(r) =>
+				r.team === team.id &&
+				juryIds.has(r.jury) &&
+				input.criteria.every((c) => typeof r.scores?.[c.key] === 'number')
+		);
 		const count = ratings.length;
 
 		const scores: Record<string, number> = {};
@@ -71,6 +78,28 @@ export function computeRanking(input: {
 	}));
 }
 
+/** Teams tied for first place (empty when there is a single leader). */
+export function firstPlaceTie(entries: RankingEntry[]): RankingEntry[] {
+	const tied = entries.filter((e) => e.rank === 1);
+	return tied.length > 1 ? tied : [];
+}
+
+/**
+ * Rules §8: a tie is decided by a jury vote. The organizers record the winner, who takes first
+ * place; the other tied teams move to second.
+ */
+export function applyTieWinner(entries: RankingEntry[], winnerId: string | undefined) {
+	const tied = firstPlaceTie(entries);
+	if (!winnerId || !tied.some((e) => e.teamId === winnerId)) return entries;
+	const winner = entries.find((e) => e.teamId === winnerId)!;
+	return [
+		{ ...winner, rank: 1, wonTieBreak: true },
+		...entries
+			.filter((e) => e.teamId !== winnerId)
+			.map((e) => (e.rank === 1 ? { ...e, rank: 2 } : e))
+	];
+}
+
 /** Ranking of one category. Callers must check access with canSeeResults first. */
 export function getCategoryRanking(category: string) {
 	// Hundreds of people open the ranking right after results are published
@@ -79,14 +108,21 @@ export function getCategoryRanking(category: string) {
 
 async function computeCategoryRanking(category: string) {
 	const pb = await getAdminClient();
-	const criteria = criteriaFor(category);
 	// Teams compete once they submitted something
-	const [submissions, progress] = await Promise.all([
+	const [submissions, progress, state] = await Promise.all([
 		getTeamSubmissions({ categories: [category] }),
-		getRatingProgress()
+		getRatingProgress(),
+		getResultsState()
 	]);
 
-	const teamIds = submissions.map((s) => s.teamId);
+	// Preliminary round: preliminary criteria for every team; final: all criteria for finalists
+	const stage = stageOf(state, category);
+	const criteria = stageCriteria(category, stage);
+	const finalists = state.finalists[category] ?? [];
+	const competing =
+		stage === 'final' ? submissions.filter((s) => finalists.includes(s.teamId)) : submissions;
+
+	const teamIds = competing.map((s) => s.teamId);
 	const ratings = teamIds.length
 		? await pb.collection('ratings').getFullList({
 				filter: teamIds.map((id) => pb.filter('team = {:id}', { id })).join(' || '),
@@ -95,17 +131,28 @@ async function computeCategoryRanking(category: string) {
 		: [];
 
 	const juryIds = progress[category]?.juries.map((j) => j.id) ?? [];
+	const rankings = computeRanking({
+		category,
+		criteria,
+		teams: competing.map((s) => ({ id: s.teamId, name: s.teamName })),
+		juryIds,
+		ratings: ratings.map((r) => ({ jury: r.jury, team: r.team, scores: r.scores }))
+	});
 
 	return {
 		category,
+		stage,
 		criteria,
 		totalJuries: juryIds.length,
-		rankings: computeRanking({
-			category,
-			criteria,
-			teams: submissions.map((s) => ({ id: s.teamId, name: s.teamName })),
-			juryIds,
-			ratings: ratings.map((r) => ({ jury: r.jury, team: r.team, scores: r.scores }))
-		})
+		rankings: applyTieWinner(rankings, state.tieWinners[category]),
+		tie: state.tieWinners[category] ? [] : firstPlaceTie(rankings),
+		// Teams that didn't reach the final, listed without a place
+		nonFinalists:
+			stage === 'final'
+				? submissions
+						.filter((s) => !finalists.includes(s.teamId))
+						.map((s) => s.teamName)
+						.sort((a, b) => a.localeCompare(b))
+				: []
 	};
 }

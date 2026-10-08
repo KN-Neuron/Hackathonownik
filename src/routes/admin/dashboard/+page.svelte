@@ -7,6 +7,28 @@
 
 	let { data, form } = $props();
 	let forcePublish = $state(false);
+	let forceFinal = $state(false);
+	// Finalists to pick: the top N of the preliminary ranking, reset when the category changes
+	let selectedFinalists = $state<string[]>([]);
+	let finalistsFor = '';
+	$effect(() => {
+		if (data.category !== finalistsFor) {
+			finalistsFor = data.category;
+			selectedFinalists = data.ranking.rankings
+				.slice(0, data.finalistsLimit)
+				.map((r: { teamId: string }) => r.teamId);
+		}
+	});
+	// Teams sharing the place of the last finalist spot, when that place spills over the limit
+	let cutoffTie = $derived.by(() => {
+		const list = data.ranking.rankings as { team: string; rank: number }[];
+		const last = list[data.finalistsLimit - 1];
+		if (!last || list.length <= data.finalistsLimit || list[data.finalistsLimit].rank !== last.rank)
+			return [];
+		return list.filter((t) => t.rank === last.rank).map((t) => t.team);
+	});
+	const maxScore = (criteria: { maxScore: number }[]) =>
+		criteria.reduce((sum, c) => sum + c.maxScore, 0);
 	let moveTeamId = $state('');
 	let moveCategory = $state('');
 
@@ -80,99 +102,260 @@
 	<CategoryTabs keys={data.categories} selected={data.category} {badges} />
 
 	{#if current && progress}
-		<!-- Results of the selected category -->
+		<!-- Judging of the selected category (rules §8: preliminary round → final → results) -->
 		<section class="section">
 			<div class="section-header">
-				<h2>Results: {current.name}</h2>
-				<p>
-					Participants see this category's ranking, scores and feedback only after you publish it.
-				</p>
+				<h2>Judging: {current.name}</h2>
+				<ol class="stage-steps">
+					<li class:active={data.stage === 'preliminary'} class:done={data.stage === 'final'}>
+						1. Preliminary round
+					</li>
+					<li class:active={data.stage === 'final' && !data.published} class:done={data.published}>
+						2. Final ({data.finalists.length || data.finalistsLimit} teams)
+					</li>
+					<li class:active={data.published}>3. Results published</li>
+				</ol>
 			</div>
 
 			<div class="panel">
-				<div class="flex flex-wrap items-start justify-between gap-4">
-					<div>
-						{#if data.published}
-							<span class="badge badge-success">Published</span>
-							{#if data.publishedAt}
-								<span class="text-sm text-base-content/70 ml-2">
-									since {new Date(data.publishedAt).toLocaleString()}
-								</span>
+				<p class="text-sm">
+					{#if data.stage === 'preliminary'}
+						Jurors rate every team from its PDF and demo video.
+					{:else}
+						Jurors rate the finalists' stage presentations.
+					{/if}
+					{progress.confirmedCount} of {progress.juries.length} jurors confirmed ·
+					{progress.totalTeams} teams to rate
+				</p>
+				{#if progress.juries.length === 0}
+					<p class="text-warning text-sm mt-2">No juror is assigned to this category yet.</p>
+				{/if}
+				<ul class="text-sm mt-2 space-y-1">
+					{#each progress.juries as jury (jury.id)}
+						<li class="flex items-center gap-2">
+							<span class={jury.confirmed ? 'text-success' : 'text-warning'}>
+								{jury.confirmed ? '✓' : '…'}
+							</span>
+							{jury.name}: rated {jury.ratedTeams}/{progress.totalTeams}{jury.confirmed
+								? ', confirmed'
+								: ''}
+							{#if !jury.confirmed && !data.published && jury.ratedTeams === progress.totalTeams && progress.totalTeams > 0}
+								<form method="POST" action="?/confirmForJury" use:enhance>
+									<input type="hidden" name="csrf_token" value={data.csrfToken} />
+									<input type="hidden" name="category" value={data.category} />
+									<input type="hidden" name="jury_id" value={jury.id} />
+									<button
+										class="btn btn-xs btn-outline"
+										onclick={confirmSubmit(`Confirm ratings for ${jury.name}?`)}
+										>Confirm for juror</button
+									>
+								</form>
 							{/if}
-							<p class="text-sm text-base-content/70 mt-2">Ratings are locked for the jury.</p>
-						{:else}
-							<span class="badge badge-ghost">Not published</span>
-							<p class="text-sm mt-2">
-								{progress.confirmedCount} of {progress.juries.length} jurors confirmed ·
-								{progress.totalTeams} teams to rate
-							</p>
-						{/if}
+						</li>
+					{/each}
+				</ul>
+			</div>
 
-						{#if progress.juries.length === 0}
-							<p class="text-warning text-sm mt-2">No juror is assigned to this category yet.</p>
+			{#if data.stage === 'preliminary'}
+				<!-- Step 1 → 2: pick the finalists -->
+				<form method="POST" action="?/startFinal" use:enhance class="panel">
+					<input type="hidden" name="csrf_token" value={data.csrfToken} />
+					<input type="hidden" name="category" value={data.category} />
+					<h3 class="panel-title">
+						Preliminary ranking – pick up to {data.finalistsLimit} finalists
+					</h3>
+					<p class="text-sm text-base-content/70 mb-2">
+						The top {data.finalistsLimit} are preselected; the jury decides who goes to the final.
+					</p>
+					<div class="overflow-x-auto">
+						<table class="table table-sm w-full">
+							<thead>
+								<tr>
+									<th>Final</th>
+									<th>Place</th>
+									<th>Team</th>
+									<th>Score</th>
+									<th>Ratings</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each data.ranking.rankings as team (team.teamId)}
+									<tr>
+										<td>
+											<input
+												type="checkbox"
+												class="checkbox checkbox-sm"
+												name="finalists"
+												value={team.teamId}
+												bind:group={selectedFinalists}
+												aria-label="Finalist: {team.team}"
+											/>
+										</td>
+										<td>{team.rank}</td>
+										<td class="font-medium">{team.team}</td>
+										<td>{team.finalGrade.toFixed(2)} / {maxScore(data.ranking.criteria)}</td>
+										<td>{team.ratingCount}/{data.ranking.totalJuries}</td>
+									</tr>
+								{:else}
+									<tr
+										><td colspan="5" class="text-center text-base-content/60">No submissions yet</td
+										></tr
+									>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+					{#if cutoffTie.length > 1}
+						<div class="tie-box">
+							<b>Tie at the finalist cut-off.</b>
+							<span class="text-sm">
+								{cutoffTie.join(', ')} share place {data.ranking.rankings[data.finalistsLimit - 1]
+									.rank}. The jury decides which of them go to the final.
+							</span>
+						</div>
+					{/if}
+					<div class="flex flex-wrap items-center gap-3 mt-3">
+						{#if !progress.readyToPublish}
+							<label class="label cursor-pointer gap-2">
+								<input
+									type="checkbox"
+									class="checkbox checkbox-sm checkbox-warning"
+									name="force"
+									value="true"
+									bind:checked={forceFinal}
+								/>
+								<span class="label-text text-sm">Start anyway (not every juror is done)</span>
+							</label>
 						{/if}
-						<ul class="text-sm mt-2 space-y-1">
-							{#each progress.juries as jury (jury.id)}
-								<li class="flex items-center gap-2">
-									<span class={jury.confirmed ? 'text-success' : 'text-warning'}>
-										{jury.confirmed ? '✓' : '…'}
-									</span>
-									{jury.name}: rated {jury.ratedTeams}/{progress.totalTeams}{jury.confirmed
-										? ', confirmed'
-										: ''}
-									{#if !jury.confirmed && !data.published && jury.ratedTeams === progress.totalTeams && progress.totalTeams > 0}
-										<form method="POST" action="?/confirmForJury" use:enhance>
-											<input type="hidden" name="csrf_token" value={data.csrfToken} />
-											<input type="hidden" name="category" value={data.category} />
-											<input type="hidden" name="jury_id" value={jury.id} />
-											<button
-												class="btn btn-xs btn-outline"
-												onclick={confirmSubmit(`Confirm ratings for ${jury.name}?`)}
-												>Confirm for juror</button
-											>
-										</form>
-									{/if}
-								</li>
-							{/each}
-						</ul>
+						<button
+							class="btn btn-primary"
+							disabled={selectedFinalists.length === 0 ||
+								selectedFinalists.length > data.finalistsLimit ||
+								(!progress.readyToPublish && !forceFinal)}
+							onclick={confirmSubmit(
+								`Start the ${current.name} final with ${selectedFinalists.length} teams?`
+							)}
+						>
+							Start the final with {selectedFinalists.length} teams
+						</button>
+						{#if selectedFinalists.length > data.finalistsLimit}
+							<span class="text-error text-sm">At most {data.finalistsLimit} teams.</span>
+						{/if}
+					</div>
+				</form>
+			{:else}
+				<!-- Step 2 → 3: final ranking, tie-break, publishing -->
+				<div class="panel">
+					<h3 class="panel-title">Final ranking</h3>
+					<div class="overflow-x-auto">
+						<table class="table table-sm w-full">
+							<thead>
+								<tr>
+									<th>Place</th>
+									<th>Team</th>
+									<th>Score</th>
+									<th>Ratings</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each data.ranking.rankings as team (team.teamId)}
+									<tr>
+										<td>{team.rank}{team.wonTieBreak ? ' (tie-break)' : ''}</td>
+										<td class="font-medium">{team.team}</td>
+										<td>{team.finalGrade.toFixed(2)} / {maxScore(data.ranking.criteria)}</td>
+										<td>{team.ratingCount}/{data.ranking.totalJuries}</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
 					</div>
 
-					{#if data.published}
-						<form method="POST" action="?/unpublishCategory" use:enhance>
+					{#if data.ranking.tie.length > 0}
+						<form method="POST" action="?/setTieWinner" use:enhance class="tie-box">
 							<input type="hidden" name="csrf_token" value={data.csrfToken} />
 							<input type="hidden" name="category" value={data.category} />
-							<button
-								class="btn btn-outline btn-warning"
-								onclick={confirmSubmit(`Hide ${current.name} results from participants again?`)}
-								>Unpublish</button
-							>
-						</form>
-					{:else}
-						<form method="POST" action="?/publishCategory" use:enhance class="flex flex-col gap-2">
-							<input type="hidden" name="csrf_token" value={data.csrfToken} />
-							<input type="hidden" name="category" value={data.category} />
-							{#if !progress.readyToPublish}
-								<label class="label cursor-pointer gap-2 justify-start">
-									<input
-										type="checkbox"
-										class="checkbox checkbox-sm checkbox-warning"
-										name="force"
-										value="true"
-										bind:checked={forcePublish}
-									/>
-									<span class="label-text text-sm">Publish anyway (not every juror is done)</span>
-								</label>
-							{/if}
-							<button
-								class="btn btn-primary"
-								disabled={!progress.readyToPublish && !forcePublish}
-								onclick={confirmSubmit(`Publish ${current.name} results to all participants now?`)}
-								>Publish {current.name}</button
-							>
+							<b>Tie for first place.</b>
+							<span class="text-sm">Rules §8: the jury decides by vote. Record the winner:</span>
+							<div class="flex flex-wrap gap-2 mt-2">
+								{#each data.ranking.tie as team (team.teamId)}
+									<button class="btn btn-sm btn-warning" name="team_id" value={team.teamId}
+										>{team.team} won the vote</button
+									>
+								{/each}
+							</div>
 						</form>
 					{/if}
+
+					<div class="flex flex-wrap items-center justify-between gap-3 mt-4">
+						{#if data.published}
+							<span>
+								<span class="badge badge-success">Published</span>
+								{#if data.publishedAt}
+									<span class="text-sm text-base-content/70 ml-2">
+										since {new Date(data.publishedAt).toLocaleString()}
+									</span>
+								{/if}
+							</span>
+							<form method="POST" action="?/unpublishCategory" use:enhance>
+								<input type="hidden" name="csrf_token" value={data.csrfToken} />
+								<input type="hidden" name="category" value={data.category} />
+								<button
+									class="btn btn-outline btn-warning"
+									onclick={confirmSubmit(`Hide ${current.name} results from participants again?`)}
+									>Unpublish</button
+								>
+							</form>
+						{:else}
+							<form method="POST" action="?/backToPreliminary" use:enhance>
+								<input type="hidden" name="csrf_token" value={data.csrfToken} />
+								<input type="hidden" name="category" value={data.category} />
+								<button
+									class="btn btn-sm btn-ghost"
+									onclick={confirmSubmit(
+										'Go back to the preliminary round? The finalist list is cleared.'
+									)}>Back to the preliminary round</button
+								>
+							</form>
+							<form
+								method="POST"
+								action="?/publishCategory"
+								use:enhance
+								class="flex flex-col gap-2"
+							>
+								<input type="hidden" name="csrf_token" value={data.csrfToken} />
+								<input type="hidden" name="category" value={data.category} />
+								{#if !progress.readyToPublish || data.ranking.tie.length > 0}
+									<label class="label cursor-pointer gap-2 justify-start">
+										<input
+											type="checkbox"
+											class="checkbox checkbox-sm checkbox-warning"
+											name="force"
+											value="true"
+											bind:checked={forcePublish}
+										/>
+										<span class="label-text text-sm">
+											{data.ranking.tie.length > 0
+												? 'Publish without a tie-break'
+												: 'Publish anyway (not every juror is done)'}
+										</span>
+									</label>
+								{/if}
+								<button
+									class="btn btn-primary"
+									disabled={(!progress.readyToPublish || data.ranking.tie.length > 0) &&
+										!forcePublish}
+									onclick={confirmSubmit(
+										`Publish ${current.name} results to all participants now?`
+									)}>Publish {current.name}</button
+								>
+							</form>
+						{/if}
+					</div>
+					<a class="link text-sm mt-3 inline-block" href="/admin/protocol?category={data.category}"
+						>Print the jury protocol</a
+					>
 				</div>
-			</div>
+			{/if}
 		</section>
 
 		<!-- Submissions of the selected category -->
@@ -190,6 +373,7 @@
 					<thead>
 						<tr>
 							<th>Team</th>
+							<th title="Rules: 3–4 people">People</th>
 							<th>PDF</th>
 							<th>Repo</th>
 							<th>Video</th>
@@ -201,6 +385,9 @@
 						{#each data.submissionOverview as team (team.teamId)}
 							<tr class={team.missing.length ? 'text-warning' : ''}>
 								<td class="font-medium">{team.teamName}</td>
+								<td class={team.members < 3 || team.members > 4 ? 'text-error' : ''}
+									>{team.members}</td
+								>
 								<td>{team.presentation ? '✓' : '✗'}</td>
 								<td>{team.repo ? '✓' : '✗'}</td>
 								<td>{team.video ? '✓' : data.required.includes('video') ? '✗' : '–'}</td>
@@ -218,7 +405,7 @@
 								</td>
 							</tr>
 						{:else}
-							<tr><td colspan="6" class="text-center text-base-content/60">No teams yet</td></tr>
+							<tr><td colspan="7" class="text-center text-base-content/60">No teams yet</td></tr>
 						{/each}
 					</tbody>
 				</table>
@@ -366,6 +553,46 @@
 		border-radius: 0.75rem;
 		padding: 1rem;
 		margin-top: 1rem;
+	}
+
+	.stage-steps {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
+		font-size: 0.85rem;
+	}
+
+	.stage-steps li {
+		padding: 0.25rem 0.75rem;
+		border-radius: 9999px;
+		background: rgba(255, 255, 255, 0.05);
+		color: rgba(255, 255, 255, 0.55);
+	}
+
+	.stage-steps li.active {
+		background: rgba(127, 123, 255, 0.25);
+		color: #fff;
+		font-weight: 600;
+	}
+
+	.stage-steps li.done {
+		color: #36c399;
+	}
+
+	.panel-title {
+		font-weight: 700;
+		margin-bottom: 0.25rem;
+	}
+
+	.tie-box {
+		margin-top: 1rem;
+		padding: 0.75rem 1rem;
+		border-radius: 0.5rem;
+		background: rgba(247, 166, 84, 0.1);
+		border: 1px solid rgba(247, 166, 84, 0.45);
+		display: flex;
+		flex-direction: column;
 	}
 
 	.checkin-panel {

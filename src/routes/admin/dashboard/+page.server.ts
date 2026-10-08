@@ -5,8 +5,12 @@ import {
 	getRatingProgress,
 	getResultsState,
 	invalidateRatings,
-	setCategoryPublished
+	setCategoryPublished,
+	setCategoryStage,
+	setTieWinner,
+	stageOf
 } from '$lib/server/results';
+import { getCategoryRanking } from '$lib/server/ranking';
 import { setCategoryConfirmed } from '$lib/server/confirmations';
 import { getTeamSubmissions, invalidateSubmissions } from '$lib/server/submissions';
 import type { Actions, PageServerLoad } from './$types';
@@ -27,7 +31,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	try {
 		const pb = await getAdminClient();
-		const [teams, juries, progress, resultsState, submissions] = await Promise.all([
+		const [teams, juries, progress, resultsState, submissions, members] = await Promise.all([
 			pb.collection('teams').getFullList({ fields: 'id,name,category', sort: 'name' }),
 			pb.collection('users').getFullList({
 				filter: 'role = "jury"',
@@ -36,8 +40,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			}),
 			getRatingProgress(),
 			getResultsState(),
-			getTeamSubmissions()
+			getTeamSubmissions(),
+			pb.collection('users').getFullList({ filter: 'team != ""', fields: 'team' })
 		]);
+		const teamSize = new Map<string, number>();
+		for (const m of members) teamSize.set(m.team, (teamSize.get(m.team) ?? 0) + 1);
 
 		// Every registered team of the selected category, also those that submitted nothing yet
 		const submissionByTeam = new Map(submissions.map((s) => [s.teamId, s]));
@@ -53,6 +60,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 					video: Boolean(submission?.video),
 					missing: submission ? submission.missing : requiredFor(category),
 					lastUpdated: submission?.lastUpdated ?? null,
+					// Rules §4: 3–4 people per team
+					members: teamSize.get(team.id) ?? 0,
 					checkin: checkinStatus(appConfig.event.checkin_deadline, submission?.firstSubmittedAt)
 				};
 			})
@@ -97,10 +106,17 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			])
 		);
 
+		// Live ranking of the selected category (preliminary or final, by its stage)
+		const ranking = await getCategoryRanking(category);
+
 		return {
 			categories,
 			category,
 			summary,
+			stage: stageOf(resultsState, category),
+			finalists: resultsState.finalists[category] ?? [],
+			finalistsLimit: appConfig.event.finalists_per_category,
+			ranking,
 			progress: progress[category],
 			published: resultsState.publishedCategories.includes(category),
 			publishedAt: resultsState.publishedAt[category] ?? null,
@@ -152,11 +168,20 @@ export const actions: Actions = {
 
 		// Publishing early would leak a provisional ranking, so it needs an explicit override
 		const force = formData.get('force') === 'true';
-		const progress = (await getRatingProgress())[category];
+		const [progress, state] = await Promise.all([
+			getRatingProgress().then((p) => p[category]),
+			getResultsState()
+		]);
+		if (stageOf(state, category) !== 'final' && !force) {
+			return fail(400, {
+				success: false,
+				message: 'Pick the finalists and finish the final before publishing.'
+			});
+		}
 		if (!progress?.readyToPublish && !force) {
 			return fail(400, {
 				success: false,
-				message: 'Not every juror of this category has rated all teams and confirmed.'
+				message: 'Not every juror of this category has rated all finalists and confirmed.'
 			});
 		}
 
@@ -183,6 +208,98 @@ export const actions: Actions = {
 		} catch (e) {
 			console.error('Error unpublishing results:', e);
 			return fail(500, { success: false, message: 'Could not hide results' });
+		}
+	},
+
+	// Rules §8: after the preliminary round the jury picks at most N teams for the final
+	startFinal: async ({ locals, request }) => {
+		const formData = await request.formData();
+		const authError = await checkAdminForm(locals, formData);
+		if (authError) return fail(403, { success: false, message: authError });
+
+		const category = validCategory(formData.get('category'));
+		if (!category) return fail(400, { success: false, message: 'Unknown category' });
+
+		const submitted = new Set(
+			(await getTeamSubmissions({ categories: [category] })).map((s) => s.teamId)
+		);
+		const finalists = [...new Set(formData.getAll('finalists').map(String))].filter((id) =>
+			submitted.has(id)
+		);
+		const limit = appConfig.event.finalists_per_category;
+		if (finalists.length === 0) {
+			return fail(400, { success: false, message: 'Select at least one finalist.' });
+		}
+		if (finalists.length > limit) {
+			return fail(400, { success: false, message: `At most ${limit} teams can reach the final.` });
+		}
+
+		const force = formData.get('force') === 'true';
+		const progress = (await getRatingProgress())[category];
+		if (!progress?.readyToPublish && !force) {
+			return fail(400, {
+				success: false,
+				message: 'Not every juror has finished and confirmed the preliminary round.'
+			});
+		}
+
+		try {
+			await setCategoryStage(category, 'final', finalists);
+			// Every juror confirms again once the final is rated
+			await Promise.all(
+				(progress?.juries ?? []).map((j) => setCategoryConfirmed(j.id, category, false))
+			);
+			return {
+				success: true,
+				message: `${getCategory(category)!.name}: final started with ${finalists.length} teams`
+			};
+		} catch (e) {
+			console.error('Error starting the final:', e);
+			return fail(500, { success: false, message: 'Could not start the final' });
+		}
+	},
+
+	backToPreliminary: async ({ locals, request }) => {
+		const formData = await request.formData();
+		const authError = await checkAdminForm(locals, formData);
+		if (authError) return fail(403, { success: false, message: authError });
+
+		const category = validCategory(formData.get('category'));
+		if (!category) return fail(400, { success: false, message: 'Unknown category' });
+		if ((await getResultsState()).publishedCategories.includes(category)) {
+			return fail(409, { success: false, message: 'Unpublish the category first.' });
+		}
+
+		try {
+			await setCategoryStage(category, 'preliminary');
+			return {
+				success: true,
+				message: `${getCategory(category)!.name}: back to the preliminary round`
+			};
+		} catch (e) {
+			console.error('Error going back to the preliminary round:', e);
+			return fail(500, { success: false, message: 'Could not change the stage' });
+		}
+	},
+
+	// Rules §8: a tie is decided by a jury vote, the organizers record the winner
+	setTieWinner: async ({ locals, request }) => {
+		const formData = await request.formData();
+		const authError = await checkAdminForm(locals, formData);
+		if (authError) return fail(403, { success: false, message: authError });
+
+		const category = validCategory(formData.get('category'));
+		const teamId = formData.get('team_id');
+		if (!category || typeof teamId !== 'string') {
+			return fail(400, { success: false, message: 'Missing category or team' });
+		}
+
+		try {
+			await setTieWinner(category, teamId || null);
+			return { success: true, message: teamId ? 'Tie-break winner saved' : 'Tie-break cleared' };
+		} catch (e) {
+			console.error('Error saving the tie-break:', e);
+			return fail(500, { success: false, message: 'Could not save the tie-break' });
 		}
 	},
 

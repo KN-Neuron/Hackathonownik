@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeRanking } from './ranking';
+import { applyTieWinner, computeRanking, firstPlaceTie } from './ranking';
 
 const criteria = [
 	{ key: 'idea', name: 'Idea', maxScore: 5 },
@@ -85,5 +85,48 @@ describe('computeRanking', () => {
 			ratings: []
 		});
 		expect(entry).toMatchObject({ finalGrade: 0, ratingCount: 0, status: 'provisional' });
+	});
+
+	it('lets the organizers record the winner of a tie for first place', () => {
+		const ranking = computeRanking({
+			category: 'adaptive',
+			criteria,
+			teams: [
+				{ id: 't1', name: 'Alpha' },
+				{ id: 't2', name: 'Beta' },
+				{ id: 't3', name: 'Gamma' }
+			],
+			juryIds: ['j1'],
+			ratings: [
+				{ jury: 'j1', team: 't1', scores: { idea: 5, tech: 5 } },
+				{ jury: 'j1', team: 't2', scores: { idea: 4, tech: 6 } },
+				{ jury: 'j1', team: 't3', scores: { idea: 1, tech: 1 } }
+			]
+		});
+		expect(firstPlaceTie(ranking).map((r) => r.team)).toEqual(['Alpha', 'Beta']);
+
+		const decided = applyTieWinner(ranking, 't2');
+		expect(decided.map((r) => [r.team, r.rank, r.wonTieBreak ?? false])).toEqual([
+			['Beta', 1, true],
+			['Alpha', 2, false],
+			['Gamma', 3, false]
+		]);
+		// A team that wasn't tied can't win the tie-break
+		expect(applyTieWinner(ranking, 't3')).toBe(ranking);
+	});
+
+	it('counts only ratings that score every criterion of the stage', () => {
+		const [entry] = computeRanking({
+			category: 'adaptive',
+			criteria,
+			teams: [{ id: 't1', name: 'Alpha' }],
+			juryIds: ['j1', 'j2'],
+			ratings: [
+				{ jury: 'j1', team: 't1', scores: { idea: 4, tech: 8 } },
+				// preliminary-only rating without "tech" yet
+				{ jury: 'j2', team: 't1', scores: { idea: 5 } }
+			]
+		});
+		expect(entry).toMatchObject({ ratingCount: 1, finalGrade: 12, status: 'provisional' });
 	});
 });

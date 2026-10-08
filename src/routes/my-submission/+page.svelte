@@ -59,8 +59,23 @@
 			</p>
 		{/if}
 
+		{#if data.inFinal && !data.published}
+			<div class="final-banner">
+				<h3>🎉 Your team is in the final!</h3>
+				<p>Prepare your presentation on stage – it is rated in the final as well.</p>
+			</div>
+		{/if}
+
 		{#if data.feedback}
 			<div class="feedback-section">
+				{#if data.place}
+					<p class="place">
+						{data.place === 1 ? '🏆 ' : ''}Your team placed <b>#{data.place}</b>
+						{data.inFinal ? 'in the final' : ''}.
+					</p>
+				{:else if data.published}
+					<p class="place">Your team did not reach the final this time.</p>
+				{/if}
 				<h3>Jury feedback</h3>
 				{#if data.feedback.length > 0}
 					<ul>
@@ -72,6 +87,11 @@
 					<p class="history-help">The jury didn't leave written feedback for your team.</p>
 				{/if}
 				<a href="/ranking" class="btn btn-sm btn-outline mt-2">See the ranking</a>
+				<p class="history-help">
+					Appeals: within 24 hours of the results, by e-mail to
+					<a class="link" href="mailto:heroesofthebrain@pwr.edu.pl">heroesofthebrain@pwr.edu.pl</a>
+					(rules §12).
+				</p>
 			</div>
 		{/if}
 
@@ -194,6 +214,23 @@
 		font-size: 0.8rem;
 		color: rgba(255, 255, 255, 0.6);
 		margin: 0.5rem 0;
+	}
+
+	.final-banner {
+		padding: 1.25rem;
+		border-radius: 0.75rem;
+		background: rgba(247, 166, 84, 0.1);
+		border: 1px solid rgba(247, 166, 84, 0.45);
+	}
+
+	.final-banner h3 {
+		font-size: 1.25rem;
+		font-weight: 700;
+	}
+
+	.place {
+		font-size: 1.1rem;
+		margin-bottom: 0.75rem;
 	}
 
 	.feedback-section {

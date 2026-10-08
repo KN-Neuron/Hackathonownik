@@ -59,6 +59,20 @@
 {:else}
 	<CategoryTabs keys={data.categories} selected={data.category} {badges} />
 
+	<div class="stage-banner" class:final={data.stage === 'final'}>
+		{#if data.stage === 'final'}
+			<b>Final</b>
+			<span>
+				Rate the finalists' stage presentations. You can also adjust your earlier scores.
+			</span>
+		{:else}
+			<b>Preliminary round</b>
+			<span>
+				Rate every team from its presentation (PDF) and demo video. The best teams go to the final.
+			</span>
+		{/if}
+	</div>
+
 	<div class="jury-progress">
 		<div class="flex flex-wrap items-center justify-between gap-2 mb-2">
 			<span class="font-semibold">You rated {ratedCount} of {teams.length} teams</span>
@@ -137,6 +151,23 @@
 {/if}
 
 <style>
+	.stage-banner {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		align-items: baseline;
+		margin-bottom: 1rem;
+		padding: 0.75rem 1rem;
+		border-radius: 0.75rem;
+		background: rgba(127, 123, 255, 0.1);
+		border: 1px solid rgba(127, 123, 255, 0.4);
+	}
+
+	.stage-banner.final {
+		background: rgba(247, 166, 84, 0.1);
+		border-color: rgba(247, 166, 84, 0.45);
+	}
+
 	.jury-progress {
 		margin-bottom: 1rem;
 		padding: 1rem;

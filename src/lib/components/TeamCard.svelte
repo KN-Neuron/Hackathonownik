@@ -166,7 +166,12 @@
 	const category = $derived(
 		(eventConfig.categories as EventCategory[]).find((c) => c.key === team.category)
 	);
-	const criteria = $derived(category?.rating_criteria ?? eventConfig.rating_criteria);
+	// Preliminary round: the preliminary criteria; final: every criterion (rules §8)
+	const criteria = $derived(
+		((category?.rating_criteria ?? eventConfig.rating_criteria) as RatingCriterion[]).filter(
+			(c) => team.stage === 'final' || c.stage !== 'final'
+		)
+	);
 	const maxTotalScore = $derived(
 		criteria.reduce((acc: number, c: RatingCriterion) => acc + c.maxScore, 0)
 	);

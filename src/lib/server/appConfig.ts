@@ -21,6 +21,8 @@ export interface AppConfig {
 			required: SubmissionItem[];
 		};
 		rating_criteria: RatingCriterion[];
+		// At most this many teams per category reach the final
+		finalists_per_category: number;
 		// Normalized: every category has its own criteria and required items
 		categories: EventCategory[];
 		links: Array<{
@@ -54,13 +56,20 @@ function validItems(items: unknown): SubmissionItem[] | null {
 appConfig.event.submission = {
 	required: validItems(appConfig.event.submission?.required) ?? [...SUBMISSION_ITEMS]
 };
-appConfig.event.rating_criteria ??= [];
+appConfig.event.rating_criteria = (appConfig.event.rating_criteria ?? []).map((c) => ({
+	...c,
+	stage: c.stage === 'final' ? 'final' : 'preliminary'
+}));
+appConfig.event.finalists_per_category = Number(appConfig.event.finalists_per_category) || 5;
 
 // Fill every category with the defaults it doesn't override
 appConfig.event.categories = (appConfig.event.categories ?? []).map((category) => ({
 	...category,
 	rating_criteria: category.rating_criteria?.length
-		? category.rating_criteria
+		? category.rating_criteria.map((c) => ({
+				...c,
+				stage: c.stage === 'final' ? ('final' as const) : ('preliminary' as const)
+			}))
 		: appConfig.event.rating_criteria,
 	submission: {
 		required: validItems(category.submission?.required) ?? appConfig.event.submission.required

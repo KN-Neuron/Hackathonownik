@@ -7,9 +7,15 @@ describe('category config', () => {
 		expect(requiredFor('adaptive')).toEqual(['presentation', 'repo', 'video']);
 	});
 
-	it('uses category overrides', () => {
-		expect(requiredFor('fnirs')).toEqual(['presentation', 'repo']);
-		expect(criteriaFor('fnirs').map((c) => c.key)).toContain('methodology');
+	it('follows the rules: 25 points, the final presentation rated only in the final', () => {
+		for (const { key } of appConfig.event.categories) {
+			const criteria = criteriaFor(key);
+			expect(criteria.reduce((sum, c) => sum + c.maxScore, 0)).toBe(25);
+			expect(criteria.filter((c) => c.stage === 'final').map((c) => c.key)).toEqual([
+				'finalPresentation'
+			]);
+		}
+		expect(appConfig.event.finalists_per_category).toBe(5);
 	});
 
 	it('falls back to the defaults for unknown categories', () => {

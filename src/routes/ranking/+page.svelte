@@ -21,6 +21,12 @@
 
 	<CategoryTabs keys={data.categories} selected={data.category} />
 
+	{#if data.stage === 'preliminary'}
+		<p class="stage-note">Preliminary round ranking (presentation and demo video).</p>
+	{:else}
+		<p class="stage-note">Final ranking of the finalists, out of 25 points.</p>
+	{/if}
+
 	{#key data.category}
 		<TeamRanking
 			rankings={data.rankings}
@@ -29,9 +35,19 @@
 			categoryFilter={data.category}
 		/>
 	{/key}
+
+	{#if data.nonFinalists?.length}
+		<p class="stage-note">Did not reach the final: {data.nonFinalists.join(', ')}.</p>
+	{/if}
 </div>
 
 <style>
+	.stage-note {
+		margin: 0.5rem 0;
+		font-size: 0.9rem;
+		color: rgba(255, 255, 255, 0.7);
+	}
+
 	.page-content {
 		padding: 1.5rem;
 		max-width: 1400px;

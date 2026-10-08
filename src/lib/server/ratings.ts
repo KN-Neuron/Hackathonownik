@@ -6,7 +6,7 @@ export type ParsedScores =
 
 /**
  * Read one score per rating criterion of the team's category and check it is a whole number
- * in 0..maxScore. The UI slider enforces this too, but a hand-crafted request must not skew
+ * in 1..maxScore (rules §8). The UI slider enforces this too, but a hand-crafted request must not skew
  * the ranking.
  */
 export function parseScores(
@@ -23,12 +23,12 @@ export function parseScores(
 		if (
 			typeof value !== 'number' ||
 			!Number.isInteger(value) ||
-			value < 0 ||
+			value < 1 ||
 			value > criterion.maxScore
 		) {
 			return {
 				ok: false,
-				error: `${criterion.name} must be a whole number between 0 and ${criterion.maxScore}`
+				error: `${criterion.name} must be a whole number between 1 and ${criterion.maxScore}`
 			};
 		}
 

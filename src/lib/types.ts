@@ -79,6 +79,8 @@ export interface RatingCriterion {
 	key: string;
 	name: string;
 	maxScore: number;
+	// "final": rated only during the finalists' stage presentations (rules §8)
+	stage?: 'preliminary' | 'final';
 	description?: string;
 }
 

@@ -1,7 +1,8 @@
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { getTeamSubmission } from '$lib/server/submissions';
-import { getResultsState, getTeamFeedback } from '$lib/server/results';
+import { getResultsState, getTeamFeedback, stageOf } from '$lib/server/results';
+import { getCategoryRanking } from '$lib/server/ranking';
 import { getAdminClient } from '$lib/server/adminClient';
 import { appConfig, requiredFor } from '$lib/server/appConfig';
 
@@ -60,6 +61,16 @@ export const load: PageServerLoad = async ({ locals }) => {
 		]);
 		const category = team.category;
 		const published = Boolean(category && state.publishedCategories.includes(category));
+		const inFinal = Boolean(
+			category &&
+				stageOf(state, category) === 'final' &&
+				state.finalists[category]?.includes(teamId)
+		);
+		// Place in the published ranking
+		const place = published
+			? ((await getCategoryRanking(category!)).rankings.find((r) => r.teamId === teamId)?.rank ??
+				null)
+			: null;
 		return {
 			submission,
 			members,
@@ -69,6 +80,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 			required: requiredFor(category),
 			// Feedback from the jury reaches the team only after results are published
 			feedback: published ? await getTeamFeedback(teamId) : null,
+			inFinal,
+			published,
+			place,
 			error: null
 		};
 	} catch (err) {
