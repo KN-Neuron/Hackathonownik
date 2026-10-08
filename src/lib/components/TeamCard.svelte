@@ -189,6 +189,10 @@
 				teamName={team.name}
 				{criteria}
 				onsaved={() => (showFormModal = false)}
+				bind:notes
+				{notesStatus}
+				onnotesinput={onNotesInput}
+				onnotesblur={flushNotes}
 			/>
 		{/if}
 	</Modal>

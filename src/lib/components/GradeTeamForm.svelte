@@ -8,12 +8,21 @@
 		teamId,
 		teamName,
 		criteria,
-		onsaved
+		onsaved,
+		notes = $bindable(''),
+		notesStatus = 'idle',
+		onnotesinput,
+		onnotesblur
 	}: {
 		teamId: string;
 		teamName: string;
 		criteria: RatingCriterion[];
 		onsaved?: () => void;
+		// Private notes, shared with the team card and autosaved by it
+		notes?: string;
+		notesStatus?: 'idle' | 'saving' | 'saved' | 'error';
+		onnotesinput?: () => void;
+		onnotesblur?: () => void;
 	} = $props();
 
 	// One slider per criterion of the team's category
@@ -122,13 +131,35 @@
 			</div>
 		{/each}
 
+		<!-- Private notes: only this juror sees them, saved automatically -->
+		<div class="form-section">
+			<div class="label flex-col items-start">
+				<span class="label-text">
+					My private notes
+					<span class="text-xs text-base-content/50 ml-1">
+						{#if notesStatus === 'saving'}Saving…{:else if notesStatus === 'saved'}Saved{:else if notesStatus === 'error'}Not
+							saved – check your connection{/if}
+					</span>
+				</span>
+				<span class="label-text-alt text-base-content/60 whitespace-normal">
+					Only you can see these. Saved automatically, also when you don't submit the rating.
+				</span>
+			</div>
+			<textarea
+				class="textarea textarea-bordered w-full h-24"
+				bind:value={notes}
+				oninput={onnotesinput}
+				onblur={onnotesblur}
+				placeholder="Questions to ask, strengths, doubts..."
+			></textarea>
+		</div>
+
 		<!-- Comments Section -->
 		<div class="form-section">
 			<div class="label flex-col items-start">
 				<span class="label-text">Feedback for the team (optional)</span>
 				<span class="label-text-alt text-base-content/60 whitespace-normal">
-					Shared with this team only, after the organizers publish the results. For notes just for
-					yourself, use "My private notes" on the team card.
+					Shared with this team only (without your name), after the organizers publish the results.
 				</span>
 			</div>
 			<textarea
