@@ -5,6 +5,7 @@
 	import PdfViewer from './pdf/PdfViewer.svelte';
 	import SubmissionChecklist from './SubmissionChecklist.svelte';
 	import { toEmbedUrl } from '$lib/utils/videoEmbed';
+	import { reportView } from '$lib/utils/reportView';
 	import type { EventCategory, RatingCriterion } from '$lib/types';
 	import { Button } from '$lib/components/ui';
 	import { page } from '$app/stores';
@@ -168,11 +169,11 @@
 	let viewed = $state<Record<string, boolean>>({ ...(team.viewed ?? {}) });
 	function videoOpened() {
 		viewed.video = true;
-		fetch('/api/jury/views', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ teamId: team.id, item: 'video' })
-		}).catch(() => {});
+		reportView(team.id, 'video');
+	}
+	function repoOpened() {
+		viewed.repo = true;
+		reportView(team.id, 'repo');
 	}
 
 	// Criteria and required items come from the team's category
@@ -272,6 +273,7 @@
 			You opened:
 			<span class:yes={viewed.presentation}>PDF {viewed.presentation ? '✓' : '–'}</span>
 			· <span class:yes={viewed.video}>video {viewed.video ? '✓' : '–'}</span>
+			· <span class:yes={viewed.repo}>repo {viewed.repo ? '✓' : '–'}</span>
 			{#if team.stage === 'final'}
 				· <span class:yes={viewed.final_presentation}
 					>final PDF {viewed.final_presentation ? '✓' : '–'}</span
@@ -337,7 +339,13 @@
 
 			<div class="function-buttons">
 				{#if team.repo_link}
-					<a href={team.repo_link} target="_blank" rel="noopener noreferrer" class="btn btn-repo">
+					<a
+						href={team.repo_link}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="btn btn-repo"
+						onclick={repoOpened}
+					>
 						<svg
 							width="16"
 							height="16"
