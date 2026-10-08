@@ -2,6 +2,8 @@
 	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
 	import PdfViewer from '$lib/components/pdf/PdfViewer.svelte';
+	import SubmissionChecklist from '$lib/components/SubmissionChecklist.svelte';
+	import type { TeamSubmission } from '$lib/types';
 
 	let { data } = $props<{
 		data: {
@@ -10,11 +12,11 @@
 				teamName: string;
 				teamId: string;
 				category: string;
-				created: string;
 				updated: string;
-				presentationUrl: string;
+				presentationUrl: string | null;
 				repo_link: string | null;
 				video_link: string | null;
+				submission: TeamSubmission;
 			}[];
 			user: any;
 			eventConfig: any;
@@ -108,7 +110,9 @@
 			const link = document.createElement('a');
 			link.href = presentation.presentationUrl;
 			// Try to get the filename from the URL, fallback to a default name
-			const filename = presentation.presentationUrl.split('/').pop() || `presentation-${presentation.teamName}.pdf`;
+			const filename =
+				presentation.presentationUrl.split('/').pop() ||
+				`presentation-${presentation.teamName}.pdf`;
 			link.download = filename;
 			document.body.appendChild(link);
 			link.click();
@@ -166,54 +170,68 @@
 									</div>
 									<p class="team-id">Team ID: {presentation.teamId}</p>
 									<p class="created-date">
-										Submitted: {new Date(presentation.created).toLocaleDateString()}
+										Last update: {new Date(presentation.updated).toLocaleString()}
 									</p>
+									<SubmissionChecklist
+										submission={presentation.submission}
+										required={data.eventConfig.submission.required}
+										mode="jury"
+									/>
 									<div class="links-container">
-										<a
-											href={presentation.repo_link}
-											target="_blank"
-											rel="noopener noreferrer"
-											class="external-link repo-link"
-											on:click|stopPropagation
-										>
-											<svg
-												width="16"
-												height="16"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
+										{#if presentation.repo_link}
+											<a
+												href={presentation.repo_link}
+												target="_blank"
+												rel="noopener noreferrer"
+												class="external-link repo-link"
+												on:click|stopPropagation
 											>
-												<path
-													d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
-												></path>
-											</svg>
-											Repository
-										</a>
-										<a
-											href={presentation.video_link}
-											target="_blank"
-											rel="noopener noreferrer"
-											class="external-link video-link"
-											on:click|stopPropagation
-										>
-											<svg
-												width="16"
-												height="16"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
+												<svg
+													width="16"
+													height="16"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="2"
+												>
+													<path
+														d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+													></path>
+												</svg>
+												Repository
+											</a>
+										{:else}
+											<span class="external-link missing-link">No repository</span>
+										{/if}
+										{#if presentation.video_link}
+											<a
+												href={presentation.video_link}
+												target="_blank"
+												rel="noopener noreferrer"
+												class="external-link video-link"
+												on:click|stopPropagation
 											>
-												<polygon points="5 3 19 12 5 21 5 3"></polygon>
-											</svg>
-											Video Demo
-										</a>
+												<svg
+													width="16"
+													height="16"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="2"
+												>
+													<polygon points="5 3 19 12 5 21 5 3"></polygon>
+												</svg>
+												Video Demo
+											</a>
+										{:else}
+											<span class="external-link missing-link">No video</span>
+										{/if}
 									</div>
 									<div class="card-actions">
 										<button
 											class="view-btn"
-											disabled={loadingPresentationId === presentation.id}
+											disabled={!presentation.presentationUrl ||
+												loadingPresentationId === presentation.id}
 										>
 											{#if loadingPresentationId === presentation.id}
 												<span class="loading-spinner"></span>
@@ -230,7 +248,7 @@
 													<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
 													<circle cx="12" cy="12" r="3"></circle>
 												</svg>
-												View
+												{presentation.presentationUrl ? 'View' : 'No PDF'}
 											{/if}
 										</button>
 										{#if presentation.presentationUrl}
@@ -284,7 +302,7 @@
 						class="download-fullscreen-btn"
 						on:click|stopPropagation={() => {
 							// Find current presentation to download
-							const currentPresentation = presentations.find(p => p.teamName === currentTeamName);
+							const currentPresentation = presentations.find((p) => p.teamName === currentTeamName);
 							if (currentPresentation) {
 								downloadPresentation(currentPresentation);
 							}
@@ -564,6 +582,12 @@
 		text-decoration: none;
 	}
 
+	.missing-link {
+		background: rgba(255, 255, 255, 0.08);
+		color: rgba(255, 255, 255, 0.5);
+		cursor: default;
+	}
+
 	.no-presentations {
 		text-align: center;
 		padding: 4rem 2rem;
@@ -774,4 +798,3 @@
 		}
 	}
 </style>
-

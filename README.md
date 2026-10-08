@@ -50,6 +50,7 @@ event:
 
 Key sections:
 -   **`event`**: Basic info (name, organizer, deadlines).
+-   **`submission.required`**: Items a team must provide for a complete submission (`presentation`, `repo`, `video`).
 -   **`categories`**: Define competition tracks/categories.
 -   **`rating_criteria`**: Customize the scoring metrics and weights.
 -   **`schedule`**: Define the event timeline displayed to users.
@@ -61,6 +62,18 @@ Key sections:
 
 *   Node.js (v18+ recommended) or Bun
 *   A running [PocketBase](https://pocketbase.io/) instance.
+
+### PocketBase `presentations` collection
+
+Teams can submit the PDF, the repository link and the video link separately. Every save creates a record with only the items that changed, and the app shows the newest version of each item. The collection needs:
+
+| Field          | Type                     | Required |
+| -------------- | ------------------------ | -------- |
+| `team`         | relation → `teams`       | yes      |
+| `presentation` | file (PDF)               | **no**   |
+| `repo_link`    | url / text               | no       |
+| `video_link`   | url / text               | no       |
+| `submitted_by` | relation → `users` (single) | no    |
 
 ### Steps
 
@@ -81,7 +94,7 @@ Key sections:
     Create a `.env` file in the root directory (use `.env.example` as a template) and configure your PocketBase URL.
 
     ```env
-    PUBLIC_POCKETBASE_URL=http://127.0.0.1:8090
+    POCKETBASE_URL=http://127.0.0.1:8090
     ```
 
 4.  **Start the Development Server:**
@@ -108,7 +121,7 @@ Key sections:
 
 ### Admin Dashboard
 <img width="1340" height="751" alt="image" src="https://github.com/user-attachments/assets/608333df-03b3-4588-b151-aed807d95802" />
-![telegram-cloud-photo-size-4-5944844193983302816-y](https://github.com/user-attachments/assets/57d0bd51-8518-46ea-b833-31dbb58858cb)
+
 ### Rating
 <img width="1909" height="930" alt="image" src="https://github.com/user-attachments/assets/da9979c4-212c-4c59-b8ca-10e7ff33b0b2" />
 <img width="1907" height="928" alt="image" src="https://github.com/user-attachments/assets/ec5df501-125e-4e63-8a61-d1f941068ce6" />
@@ -117,6 +130,10 @@ Key sections:
 <img width="1912" height="931" alt="image" src="https://github.com/user-attachments/assets/eec587a9-4b08-4c8d-8b26-918a44b27997" />
 
 
+### Project submission
+<img width="1455" height="786" alt="image" src="https://github.com/user-attachments/assets/ddd498c4-9fdc-4e95-9d82-a06e584bc174" />
+
+<img width="1467" height="804" alt="image" src="https://github.com/user-attachments/assets/9b1995e8-8bab-4745-9039-818d22ca0acd" />
 
 
 

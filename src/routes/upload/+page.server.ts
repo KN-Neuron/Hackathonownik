@@ -3,6 +3,7 @@ import PocketBase from 'pocketbase';
 import type { Actions, PageServerLoad } from './$types';
 import 'dotenv/config';
 import { appConfig } from '$lib/server/appConfig';
+import { getTeamSubmission } from '$lib/server/submissions';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// Ensure user is authenticated
@@ -13,9 +14,21 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw e;
 	}
 
+	const teamId = locals.user?.team;
+	let submission = null;
+	if (teamId) {
+		try {
+			submission = await getTeamSubmission(locals.pb, teamId);
+		} catch (e) {
+			console.error('Error fetching team submission:', e);
+		}
+	}
+
 	// Return CSRF token for the form
 	return {
-		csrfToken: locals.csrfToken
+		csrfToken: locals.csrfToken,
+		hasTeam: Boolean(teamId),
+		submission
 	};
 };
 
@@ -27,8 +40,7 @@ export const actions: Actions = {
 		if (now > deadline) {
 			return {
 				success: false,
-				message:
-					`Submission deadline has passed. Presentations can no longer be submitted after ${deadline.toLocaleString()}.`
+				message: `Submission deadline has passed. Presentations can no longer be submitted after ${deadline.toLocaleString()}.`
 			};
 		}
 
@@ -45,8 +57,8 @@ export const actions: Actions = {
 		// 3. Get form data first
 		const formData = await request.formData();
 		const file = formData.get('file') as File;
-		const repoLink = formData.get('repo_link') as string;
-		const videoLink = formData.get('video_link') as string;
+		const repoLink = ((formData.get('repo_link') as string) || '').trim();
+		const videoLink = ((formData.get('video_link') as string) || '').trim();
 		const csrfToken = formData.get('csrf_token') as string;
 
 		// Validate repo link if provided
@@ -82,21 +94,18 @@ export const actions: Actions = {
 			};
 		}
 
-		// 5. Validate file presence
-		if (!file || file.size === 0) {
-			return {
-				success: false,
-				message: 'No file provided'
-			};
-		}
+		// 5. Every item is optional on its own
+		const hasFile = file instanceof File && file.size > 0;
 
 		// 6. Comprehensive file validation
-		const validation = await FileUploadSecurity.validatePdfUpload(file);
-		if (!validation.valid) {
-			return {
-				success: false,
-				message: validation.error || 'Invalid file'
-			};
+		if (hasFile) {
+			const validation = await FileUploadSecurity.validatePdfUpload(file);
+			if (!validation.valid) {
+				return {
+					success: false,
+					message: validation.error || 'Invalid file'
+				};
+			}
 		}
 
 		// 7. Check team association
@@ -108,39 +117,40 @@ export const actions: Actions = {
 			};
 		}
 
-		// 8. Check if team already has too many presentations (prevent spam)
+		// 8. Skip links that didn't change, so they keep their original author
+		let current = null;
 		try {
-			const existingPresentations = await locals.pb.collection('presentations').getFullList({
-				filter: `team = "${teamId}"`
-			});
-
-			// Limit to max 5 presentations per team
-			if (existingPresentations.length >= 5) {
-				return {
-					success: false,
-					message: 'Maximum number of presentations reached. Please delete old presentations first.'
-				};
-			}
+			current = await getTeamSubmission(locals.pb, teamId);
 		} catch (e) {
-			console.error('Error checking existing presentations:', e);
+			console.error('Error fetching team submission:', e);
+		}
+		const newRepoLink = repoLink && repoLink !== current?.repo?.url ? repoLink : '';
+		const newVideoLink = videoLink && videoLink !== current?.video?.url ? videoLink : '';
+
+		if (!hasFile && !newRepoLink && !newVideoLink) {
+			return {
+				success: false,
+				message: 'Nothing new to save. Add a PDF or change one of the links.'
+			};
 		}
 
-		// 9. Upload file using admin credentials
+		// 9. Save only the new items; the jury sees the newest version of each item
 		try {
 			const uploadData = new FormData();
 			uploadData.append('team', teamId);
-			uploadData.append('presentation', file);
-			// Add repo_link if provided
-			if (repoLink) {
-				uploadData.append('repo_link', repoLink);
+			uploadData.append('submitted_by', locals.user.id);
+			if (hasFile) {
+				uploadData.append('presentation', file);
 			}
-			// Add video_link if provided
-			if (videoLink) {
-				uploadData.append('video_link', videoLink);
+			if (newRepoLink) {
+				uploadData.append('repo_link', newRepoLink);
+			}
+			if (newVideoLink) {
+				uploadData.append('video_link', newVideoLink);
 			}
 
 			// Use admin client for upload
-			const adminClient = new PocketBase('https://hotb-pb.knneuron.pl/');
+			const adminClient = new PocketBase(locals.pb.baseURL);
 
 			// Get credentials from environment variables - ensure they are properly set
 			const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL;
@@ -163,7 +173,7 @@ export const actions: Actions = {
 
 			return {
 				success: true,
-				message: 'File uploaded successfully!'
+				message: 'Submission saved!'
 			};
 		} catch (err: unknown) {
 			console.error('Upload error:', err);

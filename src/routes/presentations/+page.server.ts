@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
-import { appConfig } from '$lib/server/appConfig';
+import { getTeamSubmissions } from '$lib/server/submissions';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// Check if user is authenticated
@@ -13,38 +13,21 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw redirect(303, '/');
 	}
 
-	// Get all presentations from PocketBase, sorted by creation time (newest first)
+	// Merge every team's partial uploads, so the jury sees the newest PDF, repo and video
 	try {
-		const allPresentations = await locals.pb.collection('presentations').getFullList({
-			sort: '-created',
-			expand: 'team'
-		});
+		const submissions = await getTeamSubmissions(locals.pb);
 
-		// Group presentations by team and keep only the newest one for each team
-		const newestPresentationsMap = new Map();
-		for (const presentation of allPresentations) {
-			const teamId = presentation.team;
-			// Only store the first (newest) presentation for each team
-			if (!newestPresentationsMap.has(teamId)) {
-				newestPresentationsMap.set(teamId, presentation);
-			}
-		}
-
-		// Convert map values to array
-		const newestPresentations = Array.from(newestPresentationsMap.values());
-
-		// Format the presentations data for the frontend with API endpoint URLs for secure access
-		const formattedPresentations = newestPresentations.map(presentation => ({
-			id: presentation.id,
-			teamName: presentation.expand?.team?.name || 'Unknown Team',
-			teamId: presentation.expand?.team?.id,
-			category: presentation.expand?.team?.category || appConfig.event.categories[0]?.key || 'wellness',
-			created: presentation.created,
-			updated: presentation.updated,
-			repo_link: presentation.repo_link || null,
-			video_link: presentation.video_link || null,
-			// Use our secure API endpoint to access the presentation file
-			presentationUrl: `/api/presentations/${presentation.id}`
+		const formattedPresentations = submissions.map((submission) => ({
+			id: submission.teamId,
+			teamName: submission.teamName,
+			teamId: submission.teamId,
+			category: submission.category,
+			updated: submission.lastUpdated,
+			// Secure API endpoint of the newest PDF, null when the team hasn't uploaded one
+			presentationUrl: submission.presentation?.url ?? null,
+			repo_link: submission.repo?.url ?? null,
+			video_link: submission.video?.url ?? null,
+			submission
 		}));
 
 		return {

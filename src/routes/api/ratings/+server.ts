@@ -1,10 +1,11 @@
 import { json } from '@sveltejs/kit';
+import { isJuryOrAdmin } from '$lib/server/access';
 import { pbError } from '$lib/pocketbase.svelte';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
-	if (!locals.user) {
-		return json({ error: 'Not authorized' }, { status: 401 });
+	if (!isJuryOrAdmin(locals.user)) {
+		return json({ error: 'Not authorized' }, { status: 403 });
 	}
 
 	const teamId = url.searchParams.get('teamId');
@@ -14,9 +15,11 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	}
 
 	try {
-		
 		const existingRatings = await locals.pb.collection('ratings').getList(1, 1, {
-			filter: `jury = "${locals.user.id}" && team = "${teamId}"`,
+			filter: locals.pb.filter('jury = {:jury} && team = {:team}', {
+				jury: locals.user!.id,
+				team: teamId
+			}),
 			sort: '-created'
 		});
 

@@ -4,64 +4,13 @@ import { type Handle, redirect } from '@sveltejs/kit';
 import type { TypedPocketBase } from '$lib/types';
 import { Security, CSRFProtection, SECURITY_HEADERS, rateLimiters } from '$lib/server/security';
 import { SecureCookieHandler } from '$lib/server/secure-cookie';
+import { areAllJuriesConfirmed, areAllTeamsRated } from '$lib/server/access';
+
+const POCKETBASE_URL = process.env.POCKETBASE_URL || 'https://hotb-pb.knneuron.pl/';
 
 // ============================================
 // ROUTE ACCESS CONTROL
 // ============================================
-
-async function areAllTeamsRated(pb: TypedPocketBase): Promise<boolean> {
-	let presentations;
-	try {
-		presentations = await pb.collection('presentations').getFullList();
-	} catch (e) {
-		throw new Error('Failed to fetch presentations list', { cause: e });
-	}
-
-	if (presentations.length === 0) return false;
-
-	let ratings;
-	try {
-		ratings = await pb.collection('ratings').getFullList();
-	} catch (e) {
-		throw new Error('Failed to fetch ratings list', { cause: e });
-	}
-
-	if (ratings.length === 0) return false;
-
-	// Get unique team IDs from presentations (to handle multiple presentations for same team)
-	const uniqueTeamIds = new Set();
-	const presentationToTeamMap = new Map();
-
-	for (const pres of presentations) {
-		if (pres.team && !uniqueTeamIds.has(pres.team)) {
-			uniqueTeamIds.add(pres.team);
-			presentationToTeamMap.set(pres.id, pres.team);
-		}
-	}
-
-	// Get unique team IDs that have been rated
-	const ratedTeamIds = new Set(ratings.map((r: any) => r.team));
-
-	return Array.from(uniqueTeamIds).every((teamId) => ratedTeamIds.has(teamId));
-}
-
-async function areAllJuriesConfirmed(pb: TypedPocketBase): Promise<boolean> {
-	try {
-		// Get all jury members
-		const juries = await pb.collection('users').getFullList({
-			filter: 'role = "jury" || role = "admin"'
-		});
-
-		if (juries.length === 0) return false;
-
-		// Check if all juries have confirmed their ratings
-		const confirmedJuries = juries.filter((jury: any) => jury.confirmedRating === true);
-
-		return confirmedJuries.length === juries.length;
-	} catch (e) {
-		throw new Error('Failed to check jury confirmations', { cause: e });
-	}
-}
 
 async function checkRouteAccess(
 	pathname: string,
@@ -123,7 +72,7 @@ async function checkRouteAccess(
 // ============================================
 
 export const handle: Handle = async ({ event, resolve }) => {
-	const pb = new PocketBase('https://hotb-pb.knneuron.pl/') as TypedPocketBase;
+	const pb = new PocketBase(POCKETBASE_URL) as TypedPocketBase;
 
 	// Try to load session using our secure cookie first
 	const secureSession = SecureCookieHandler.getSessionFromCookie(event);

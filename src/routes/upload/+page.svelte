@@ -1,34 +1,34 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import HeaderText from '$lib/components/HeaderText.svelte';
 	import { IconNames } from '$lib/utils/utils';
 	import PdfUpload from '$lib/components/pdf/PdfUpload.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import PdfViewer from '$lib/components/pdf/PdfViewer.svelte';
+	import SubmissionChecklist from '$lib/components/SubmissionChecklist.svelte';
+	import { SUBMISSION_ITEM_LABELS, type SubmissionItem } from '$lib/types';
 
 	let { data } = $props();
 
 	let icon = IconNames.Upload;
-	let text = 'Upload Presentation';
+	let text = 'Submit Your Project';
 
-	let selectedFiles = $state([]);
-	let repoLink = $state('');
-	let videoLink = $state('');
+	let selectedFiles = $state<File[]>([]);
+	let repoLink = $state(data.submission?.repo?.url ?? '');
+	let videoLink = $state(data.submission?.video?.url ?? '');
 	let showPresentationModal = $state(false);
 	let fullscreenMode = $state(false);
-	let showDeadlineMessage = $state(false);
+	let saving = $state(false);
+	let resultMessage = $state('');
+	let resultSuccess = $state(false);
+	// Remounts the PDF picker after a successful save to clear the selected file
+	let pickerKey = $state(0);
 
-	// Check if submission is after deadline
 	const deadline = new Date(data.eventConfig.deadline);
-	const now = new Date();
-	if (now > deadline) {
-		showDeadlineMessage = true;
-	}
+	const showDeadlineMessage = new Date() > deadline;
 
 	function handleFiles(e: CustomEvent) {
 		selectedFiles = e.detail.files;
-		if (selectedFiles.length > 0) {
-			showPresentationModal = true;
-		}
 	}
 
 	function toggleFullscreen() {
@@ -39,6 +39,15 @@
 <div class="upload-page">
 	<HeaderText {icon} {text} />
 
+	{#if data.hasTeam}
+		<div class="checklist-wrapper">
+			<SubmissionChecklist
+				submission={data.submission}
+				required={data.eventConfig.submission.required}
+			/>
+		</div>
+	{/if}
+
 	{#if showDeadlineMessage}
 		<div class="deadline-notice">
 			<h3>Submission Deadline Passed</h3>
@@ -48,36 +57,58 @@
 	{:else}
 		<div class="intro-section">
 			<p>
-				<b class="camelCase"
-					>File name should be your team name in camelCase. For example "Neuron Team" =>
-					neuronTeam.pdf</b
-				>
-				<br />
-				Upload your team's presentation in PDF format. Maximum file size is 40MB. After uploading, your
-				presentation will be available for jury members to review and rate.
+				You can add each item separately – fill in <b>only what you want to add or change</b>,
+				everything else stays as it is. The jury always sees the latest version of the PDF, the
+				repository link and the video link, no matter who in your team added them.
 			</p>
 			<p class="deadline-info">Deadline: {deadline.toLocaleString()}</p>
 		</div>
 
 		<div class="upload-container">
 			<div class="upload-card">
-				<h2 class="section-title">
-					<span class="section-indicator"></span>
-					PDF Upload & Preview
-				</h2>
+				<form
+					method="post"
+					action="?/upload"
+					class="upload-form"
+					enctype="multipart/form-data"
+					use:enhance={({ formData }) => {
+						saving = true;
+						resultMessage = '';
+						if (selectedFiles.length > 0) {
+							formData.set('file', selectedFiles[0]);
+						}
 
-				<form method="post" action="?/upload" class="upload-form" enctype="multipart/form-data">
+						return async ({ result, update }) => {
+							saving = false;
+							const payload = result.type === 'success' ? result.data : null;
+							resultSuccess = Boolean(payload?.success);
+							resultMessage = (payload?.message as string) || 'Saving failed. Please try again.';
+							if (resultSuccess) {
+								selectedFiles = [];
+								pickerKey += 1;
+							}
+							// Keep typed links; refresh the checklist from the server
+							await update({ reset: false });
+						};
+					}}
+				>
 					<input type="hidden" name="csrf_token" value={data.csrfToken} />
 
+					<h2 class="section-title" id="presentation_file">
+						<span class="section-indicator"></span>
+						Presentation (PDF)
+					</h2>
+					<p class="repo-help">
+						{data.submission?.presentation
+							? `Current file: ${data.submission.presentation.fileName}. Select a new one only if you want to replace it.`
+							: 'No presentation uploaded yet.'}
+						Suggested file name: your team name in camelCase, e.g. "Neuron Team" → neuronTeam.pdf.
+					</p>
+
 					<div class="upload-area">
-						<PdfUpload
-							multiple={false}
-							uploadUrl="?/upload"
-							csrfToken={data.csrfToken}
-							{repoLink}
-							{videoLink}
-							on:files={handleFiles}
-						/>
+						{#key pickerKey}
+							<PdfUpload multiple={false} on:files={handleFiles} />
+						{/key}
 
 						{#if selectedFiles.length > 0}
 							<button
@@ -111,10 +142,9 @@
 							placeholder="https://github.com/username/repository"
 							bind:value={repoLink}
 							class="repo-input"
-							required
 						/>
 						<p class="repo-help">
-							Provide a link to your project's source code repository (e.g., GitHub, GitLab)
+							Link to your project's source code repository (e.g., GitHub, GitLab)
 						</p>
 					</div>
 
@@ -127,26 +157,45 @@
 							placeholder="https://youtube.com/watch?v=..."
 							bind:value={videoLink}
 							class="repo-input"
-							required
 						/>
-						<p class="repo-help">
-							Provide a link to your project's demo video (e.g., YouTube, Loom)
-						</p>
+						<p class="repo-help">Link to your project's demo video (e.g., YouTube, Loom)</p>
+					</div>
+
+					<div class="submit-row">
+						<button type="submit" class="btn btn-primary" disabled={saving}>
+							{#if saving}
+								<span class="loading loading-spinner loading-sm"></span>
+								Saving...
+							{:else}
+								Save submission
+							{/if}
+						</button>
+						{#if resultMessage}
+							<div
+								class="alert"
+								class:alert-success={resultSuccess}
+								class:alert-error={!resultSuccess}
+							>
+								{resultMessage}
+							</div>
+						{/if}
 					</div>
 				</form>
 
 				<div class="guidelines">
 					<h3>Upload Guidelines:</h3>
 					<ul>
-						<li>Only PDF files are accepted</li>
-						<li>Maximum file size: 40MB</li>
-						<li>Ensure your presentation is complete and final before uploading</li>
+						<li>Only PDF files are accepted, maximum file size: 40MB</li>
 						<li>
-							Jury will see only the latest uploaded presentation. Maximum 5 presentations per team
-							are allowed.
+							Required for a complete submission:
+							{data.eventConfig.submission.required
+								.map((item: SubmissionItem) => SUBMISSION_ITEM_LABELS[item])
+								.join(', ')}
 						</li>
-						<li>Repository link is required for jury review</li>
-						<li>Video link is required to showcase your project demo</li>
+						<li>
+							You can update any item until the deadline – the newest version replaces the old one
+						</li>
+						<li>Every change is listed with its author on the "My Submission" page</li>
 					</ul>
 				</div>
 			</div>
@@ -238,8 +287,15 @@
 		gap: 0.5rem;
 	}
 
-	.camelCase {
-		font-size: 2em;
+	.checklist-wrapper {
+		margin-bottom: 1.5rem;
+	}
+
+	.submit-row {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.75rem;
 	}
 	.section-indicator {
 		display: block;
