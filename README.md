@@ -17,7 +17,6 @@
     *   Real-time progress tracking and rating confirmation workflow.
 *   **Real-time Ranking:** Automatic calculation of team rankings based on jury scores.
 *   **Admin Dashboard:** Overview of system status and event metrics.
-*   **Internationalization (i18n):** Multi-language support (English, Polish) using Paraglide.
 *   **Responsive Design:** optimized for desktop and mobile devices.
 
 ## 🛠️ Tech Stack
@@ -26,7 +25,6 @@
 *   **Language:** [TypeScript](https://www.typescriptlang.org/)
 *   **Styling:** [Tailwind CSS](https://tailwindcss.com/) & [DaisyUI](https://daisyui.com/)
 *   **Backend & Auth:** [PocketBase](https://pocketbase.io/)
-*   **Internationalization:** [Paraglide JS](https://inlang.com/m/gerre34r/library-inlang-paraglideJs)
 *   **Testing:** [Vitest](https://vitest.dev/) & [Playwright](https://playwright.dev/)
 
 ## ⚙️ Configuration (`app_config.yaml`)

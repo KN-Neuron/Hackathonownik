@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	let submission = null;
 	if (teamId) {
 		try {
-			submission = await getTeamSubmission(locals.pb, teamId);
+			submission = await getTeamSubmission(teamId);
 		} catch (e) {
 			console.error('Error fetching team submission:', e);
 		}
@@ -120,7 +120,7 @@ export const actions: Actions = {
 		// 8. Skip links that didn't change, so they keep their original author
 		let current = null;
 		try {
-			current = await getTeamSubmission(locals.pb, teamId);
+			current = await getTeamSubmission(teamId);
 		} catch (e) {
 			console.error('Error fetching team submission:', e);
 		}

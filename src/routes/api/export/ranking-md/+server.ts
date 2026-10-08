@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { isJuryOrAdmin } from '$lib/server/access';
+import { canSeeInternalResults } from '$lib/server/access';
 import { appConfig } from '$lib/server/appConfig';
 import type { RequestHandler } from './$types';
 
@@ -9,7 +9,7 @@ export const GET: RequestHandler = async ({ locals, url, fetch }) => {
 	}
 
 	// Exports include every team's feedback, so they stay internal
-	if (!isJuryOrAdmin(locals.user)) {
+	if (!(await canSeeInternalResults(locals))) {
 		return json({ error: 'Not authorized' }, { status: 403 });
 	}
 

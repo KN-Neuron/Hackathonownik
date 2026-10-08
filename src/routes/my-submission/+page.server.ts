@@ -43,7 +43,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	try {
 		const [submission, { published }, members] = await Promise.all([
-			getTeamSubmission(locals.pb, teamId),
+			getTeamSubmission(teamId),
 			getResultsState(),
 			getTeamMembers(teamId).catch((e) => {
 				console.error('Error fetching team members:', e);
