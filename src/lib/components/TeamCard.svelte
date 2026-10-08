@@ -5,6 +5,7 @@
 	import PdfViewer from './pdf/PdfViewer.svelte';
 	import SubmissionChecklist from './SubmissionChecklist.svelte';
 	import { toEmbedUrl } from '$lib/utils/videoEmbed';
+	import type { EventCategory, RatingCriterion } from '$lib/types';
 	import { Button } from '$lib/components/ui';
 	import { page } from '$app/stores';
 
@@ -126,10 +127,9 @@
 		return 'metric-fill-poor';
 	}
 
-	async function getPresentationFiles(team) {
-		if (team.presentationUrl) {
-			const filename = team.presentationUrl.split('/').pop() || 'presentation.pdf';
-			const file = await urlToFile(team.presentationUrl, filename);
+	async function getPresentationFiles(url: string | null) {
+		if (url) {
+			const file = await urlToFile(url, `${team.name}.pdf`);
 			return [file];
 		}
 		return [];
@@ -149,10 +149,13 @@
 		}
 	}
 
-	async function showPresentationModalHandler() {
+	async function showPresentationModalHandler(url: string | null = team.presentationUrl) {
 		loadingPresentation = true;
 		try {
-			presentationFiles = await getPresentationFiles(team);
+			presentationFiles = await getPresentationFiles(url);
+			// The server records the view when it serves the file
+			if (url === team.finalPresentationUrl) viewed.final_presentation = true;
+			else viewed.presentation = true;
 			showPresentationModal = true;
 		} catch (err) {
 			console.error('Error loading presentation:', err);
@@ -161,31 +164,50 @@
 		}
 	}
 
-	// Calculate final grade from individual scores
-	function calculateFinalGrade() {
-		let total = 0;
-		let hasAll = true;
-
-		eventConfig.rating_criteria.forEach((criterion) => {
-			if (team[criterion.key] == null) {
-				hasAll = false;
-			} else {
-				total += team[criterion.key];
-			}
-		});
-
-		return hasAll ? total : null;
+	// What this juror opened; the organizers see it too (rules: jury must review the material)
+	let viewed = $state<Record<string, boolean>>({ ...(team.viewed ?? {}) });
+	function videoOpened() {
+		viewed.video = true;
+		fetch('/api/jury/views', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ teamId: team.id, item: 'video' })
+		}).catch(() => {});
 	}
 
-	const maxTotalScore = $derived(
-		eventConfig.rating_criteria.reduce((acc, curr) => acc + curr.maxScore, 0)
+	// Criteria and required items come from the team's category
+	const category = $derived(
+		(eventConfig.categories as EventCategory[]).find((c) => c.key === team.category)
 	);
-	let finalGrade = $derived(calculateFinalGrade());
+	// Preliminary round: the preliminary criteria; final: every criterion (rules §8)
+	const criteria = $derived(
+		((category?.rating_criteria ?? eventConfig.rating_criteria) as RatingCriterion[]).filter(
+			(c) => team.stage === 'final' || c.stage !== 'final'
+		)
+	);
+	const maxTotalScore = $derived(
+		criteria.reduce((acc: number, c: RatingCriterion) => acc + c.maxScore, 0)
+	);
+	// This juror's scores (null until rated)
+	const score = (key: string): number | null => team.scores?.[key] ?? null;
+	let finalGrade = $derived(team.scores ? team.finalGradeDisplay : null);
 </script>
 
 <div class="team-card">
 	<Modal bind:show={showFormModal}>
-		<GradeTeamForm teamId={team.id} onsaved={() => (showFormModal = false)} />
+		<!-- Mounted only while open: it loads the saved rating when the juror opens it -->
+		{#if showFormModal}
+			<GradeTeamForm
+				teamId={team.id}
+				teamName={team.name}
+				{criteria}
+				onsaved={() => (showFormModal = false)}
+				bind:notes
+				{notesStatus}
+				onnotesinput={onNotesInput}
+				onnotesblur={flushNotes}
+			/>
+		{/if}
 	</Modal>
 
 	<Modal bind:show={showVideoModal} wide={true}>
@@ -231,17 +253,31 @@
 
 	<div class="team-info">
 		<div class="team-header">
-			<h3>{team.name}</h3>
+			<h3>
+				{#if team.order}<span class="order-number">#{team.order}</span>{/if}
+				{team.name}
+			</h3>
 			<span class="team-id">ID: {team.id}</span>
 		</div>
 
 		<div class="submission-status">
 			<SubmissionChecklist
 				submission={team.submission}
-				required={eventConfig.submission.required}
+				required={category?.submission.required ?? eventConfig.submission.required}
 				mode="jury"
 			/>
 		</div>
+
+		<p class="opened">
+			You opened:
+			<span class:yes={viewed.presentation}>PDF {viewed.presentation ? '✓' : '–'}</span>
+			· <span class:yes={viewed.video}>video {viewed.video ? '✓' : '–'}</span>
+			{#if team.stage === 'final'}
+				· <span class:yes={viewed.final_presentation}
+					>final PDF {viewed.final_presentation ? '✓' : '–'}</span
+				>
+			{/if}
+		</p>
 
 		<details class="jury-notes" open={Boolean(notes)}>
 			<summary>
@@ -262,17 +298,17 @@
 		</details>
 
 		<div class="metrics">
-			{#each eventConfig.rating_criteria as criterion}
+			{#each criteria as criterion (criterion.key)}
 				<div class="metric">
 					<div class="metric-label">{criterion.name}</div>
 					<div class="metric-bar">
 						<div
-							class="metric-fill {getScoreClass(team[criterion.key], criterion.maxScore)}"
-							style="width: {getScoreWidth(team[criterion.key], criterion.maxScore)}"
+							class="metric-fill {getScoreClass(score(criterion.key), criterion.maxScore)}"
+							style="width: {getScoreWidth(score(criterion.key), criterion.maxScore)}"
 						></div>
 					</div>
 					<div class="metric-value">
-						{team[criterion.key] != null ? `${team[criterion.key]}/${criterion.maxScore}` : '-'}
+						{score(criterion.key) != null ? `${score(criterion.key)}/${criterion.maxScore}` : '-'}
 					</div>
 				</div>
 			{/each}
@@ -320,7 +356,13 @@
 					<span class="btn btn-missing">No repository</span>
 				{/if}
 				{#if videoEmbedUrl}
-					<button class="btn btn-video" onclick={() => (showVideoModal = true)}>
+					<button
+						class="btn btn-video"
+						onclick={() => {
+							showVideoModal = true;
+							videoOpened();
+						}}
+					>
 						<svg
 							width="16"
 							height="16"
@@ -334,7 +376,13 @@
 						Watch Video
 					</button>
 				{:else if team.video_link}
-					<a href={team.video_link} target="_blank" rel="noopener noreferrer" class="btn btn-video">
+					<a
+						href={team.video_link}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="btn btn-video"
+						onclick={videoOpened}
+					>
 						<svg
 							width="16"
 							height="16"
@@ -353,7 +401,7 @@
 				{#if team.presentationUrl}
 					<Button
 						variant="secondary"
-						onclick={showPresentationModalHandler}
+						onclick={() => showPresentationModalHandler(team.presentationUrl)}
 						{...loadingPresentation ? { loading: true } : {}}
 						class="btn-presentation"
 					>
@@ -377,6 +425,17 @@
 					</button>
 				{:else}
 					<span class="btn btn-missing">No PDF</span>
+				{/if}
+				{#if team.stage === 'final'}
+					{#if team.finalPresentationUrl}
+						<button
+							class="btn btn-final"
+							onclick={() => showPresentationModalHandler(team.finalPresentationUrl)}
+							>Final presentation</button
+						>
+					{:else}
+						<span class="btn btn-missing">No final PDF</span>
+					{/if}
 				{/if}
 
 				{#if locked}
@@ -407,8 +466,29 @@
 		position: relative;
 	}
 
+	.order-number {
+		margin-right: 0.35rem;
+		color: rgba(255, 255, 255, 0.5);
+		font-variant-numeric: tabular-nums;
+	}
+
 	.submission-status {
 		margin: 0.5rem 0 0.75rem;
+	}
+
+	.opened {
+		margin: -0.25rem 0 0.5rem;
+		font-size: 0.75rem;
+		color: rgba(255, 255, 255, 0.5);
+	}
+
+	.opened .yes {
+		color: #36c399;
+	}
+
+	.btn-final {
+		background: #f7a654;
+		color: #1a1206;
 	}
 
 	.jury-notes {

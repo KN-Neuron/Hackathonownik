@@ -2,13 +2,13 @@
 	import { onMount } from 'svelte';
 	import Modal from './Modal.svelte';
 
-	import { page } from '$app/stores';
 
 	export let teamId: string;
 	export let teamName: string;
-	const eventConfig = $page.data.eventConfig;
 
 	let ratings = [];
+	// Criteria of the team's category, sent with the ratings
+	let criteria: import('$lib/types').RatingCriterion[] = [];
 	let loading = true;
 	let error = '';
 	let showModal = false;
@@ -27,6 +27,7 @@
 
 			const data = await response.json();
 			ratings = data.ratings ?? [];
+			criteria = data.criteria ?? [];
 		} catch (err) {
 			console.error('Error fetching rating details:', err);
 			error = err instanceof Error ? err.message : 'An error occurred';
@@ -43,7 +44,7 @@
 		return 'text-error';
 	}
 
-	const maxTotalScore = eventConfig.rating_criteria.reduce((acc, curr) => acc + curr.maxScore, 0);
+	$: maxTotalScore = criteria.reduce((acc, curr) => acc + curr.maxScore, 0);
 
 	function formatDate(dateStr) {
 		if (!dateStr) return 'N/A';
@@ -96,7 +97,7 @@
 					<thead>
 						<tr>
 							<th>Jury</th>
-							{#each eventConfig.rating_criteria as criterion}
+							{#each criteria as criterion}
 								<th>{criterion.name}</th>
 							{/each}
 							<th>Final Grade</th>
@@ -107,9 +108,9 @@
 						{#each ratings as rating}
 							<tr class="hover:bg-base-200">
 								<td>{rating.juryName}</td>
-								{#each eventConfig.rating_criteria as criterion}
-									<td class={getRatingColor(rating[criterion.key], criterion.maxScore)}
-										>{rating[criterion.key]}</td
+								{#each criteria as criterion}
+									<td class={getRatingColor(rating.scores?.[criterion.key], criterion.maxScore)}
+										>{rating.scores?.[criterion.key] ?? 0}</td
 									>
 								{/each}
 								<td class="font-bold {getRatingColor(rating.finalGrade, maxTotalScore)}"

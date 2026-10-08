@@ -1,6 +1,9 @@
 <script lang="ts">
 	import TeamSection from '$lib/components/TeamSection.svelte';
+	import CategoryTabs from '$lib/components/CategoryTabs.svelte';
 	import { invalidateAll } from '$app/navigation';
+	import { matchesTeam } from '$lib/utils/teamSearch';
+	import { onMount } from 'svelte';
 
 	let { data } = $props();
 	let teams = $derived(data.teams);
@@ -8,16 +11,84 @@
 	let showConfirmationModal = $state(false);
 	let confirmationError = $state('');
 	let filter = $state<'all' | 'todo' | 'done'>('all');
+	let search = $state('');
+
+	// "Now on stage": polled from the organizers' presenter mode
+	type OnStage = {
+		teamId: string;
+		teamName: string;
+		order: number | null;
+		startedAt: string | null;
+		durationSec: number;
+	};
+	let onStage = $state<OnStage | null>(null);
+	let clockOffset = 0;
+	let followStage = $state(false);
+	let now = $state(Date.now());
+
+	onMount(() => {
+		let stopped = false;
+		// Background tabs skip the periodic polls; the first load and coming back always ask
+		async function poll(force = false) {
+			if (!data.category || (document.hidden && !force)) return;
+			try {
+				const res = await fetch(`/api/stage?category=${encodeURIComponent(data.category)}`);
+				if (!res.ok) return;
+				const body = await res.json();
+				if (stopped) return;
+				clockOffset = new Date(body.serverTime).getTime() - Date.now();
+				onStage = body.onStage;
+			} catch {
+				// Offline for a moment: keep the last state
+			}
+		}
+		poll(true);
+		const pollTimer = setInterval(() => poll(), 3000);
+		const onVisible = () => !document.hidden && poll(true);
+		document.addEventListener('visibilitychange', onVisible);
+		const tick = setInterval(() => (now = Date.now()), 1000);
+		return () => {
+			stopped = true;
+			document.removeEventListener('visibilitychange', onVisible);
+			clearInterval(pollTimer);
+			clearInterval(tick);
+		};
+	});
+
+	let stageRemaining = $derived(
+		onStage?.startedAt
+			? onStage.durationSec * 1000 - (now + clockOffset - new Date(onStage.startedAt).getTime())
+			: null
+	);
+	const formatTime = (ms: number) => {
+		const total = Math.ceil(Math.abs(ms) / 1000);
+		return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+	};
+	let onStageTeam = $derived(teams.find((t) => t.id === onStage?.teamId));
+
+	// "rated/total" per category, ✓ once confirmed
+	let badges = $derived(
+		Object.fromEntries(
+			Object.entries(
+				data.progress as Record<string, { rated: number; total: number; confirmed: boolean }>
+			).map(([key, p]) => [key, p.confirmed ? `✓ ${p.rated}/${p.total}` : `${p.rated}/${p.total}`])
+		)
+	);
 
 	let ratedCount = $derived(teams.filter((team) => team.isRatedByCurrentJury).length);
 	let allTeamsRated = $derived(teams.length > 0 && ratedCount === teams.length);
 	let progressPercent = $derived(teams.length ? Math.round((ratedCount / teams.length) * 100) : 0);
 	let visibleTeams = $derived(
-		filter === 'todo'
+		(filter === 'todo'
 			? teams.filter((team) => !team.isRatedByCurrentJury)
 			: filter === 'done'
 				? teams.filter((team) => team.isRatedByCurrentJury)
 				: teams
+		).filter((team) =>
+			followStage && onStage
+				? team.id === onStage.teamId
+				: matchesTeam(search, team.name, team.order)
+		)
 	);
 
 	async function handleConfirmation(confirmed: boolean) {
@@ -26,7 +97,7 @@
 			const response = await fetch('/api/jury/confirm-grading', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ confirmed })
+				body: JSON.stringify({ category: data.category, confirmed })
 			});
 			const result = await response.json().catch(() => ({}));
 			if (!response.ok || result.success === false) {
@@ -42,83 +113,201 @@
 	}
 </script>
 
-<div class="jury-progress">
-	<div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-		<span class="font-semibold">You rated {ratedCount} of {teams.length} teams</span>
-		<div class="join">
-			<button
-				class="btn btn-sm join-item"
-				class:btn-active={filter === 'all'}
-				onclick={() => (filter = 'all')}>All ({teams.length})</button
-			>
-			<button
-				class="btn btn-sm join-item"
-				class:btn-active={filter === 'todo'}
-				onclick={() => (filter = 'todo')}>Not rated ({teams.length - ratedCount})</button
-			>
-			<button
-				class="btn btn-sm join-item"
-				class:btn-active={filter === 'done'}
-				onclick={() => (filter = 'done')}>Rated ({ratedCount})</button
-			>
-		</div>
+{#if !data.category}
+	<div class="alert alert-info">
+		You are not assigned to any category yet. Ask the organizers to assign you.
 	</div>
-	<progress class="progress progress-success w-full" value={progressPercent} max="100"></progress>
-</div>
+{:else}
+	<CategoryTabs keys={data.categories} selected={data.category} {badges} />
 
-{#if data.resultsPublished}
-	<div class="confirmation-top-section confirmed">
-		<div class="confirmation-banner confirmed">
-			<h3>Results are published</h3>
-			<p>Ratings are locked and can no longer be changed.</p>
-		</div>
-	</div>
-{:else if data.currentJuryConfirmed}
-	<div class="confirmation-top-section confirmed">
-		<div class="confirmation-banner confirmed">
-			<h3>Your ratings are confirmed</h3>
-			<p>
-				Organizers will publish the results once every jury member confirms. Changing any rating
-				withdraws your confirmation.
-			</p>
-		</div>
-	</div>
-{:else if allTeamsRated}
-	<div class="confirmation-top-section">
-		<div class="confirmation-banner">
-			<h3>You've rated all teams!</h3>
-			<p>Confirm your ratings as final so the organizers can publish the results.</p>
-			<button class="btn btn-confirm" onclick={() => (showConfirmationModal = true)}>
-				Confirm My Ratings
-			</button>
-		</div>
-	</div>
-{/if}
-
-<!-- Confirmation Modal -->
-{#if showConfirmationModal}
-	<div class="modal-overlay">
-		<div class="modal-content">
-			<h3>Confirm Your Ratings</h3>
-			<p>You have rated all teams. Do you confirm these ratings as final?</p>
-			{#if confirmationError}
-				<p class="text-error">{confirmationError}</p>
+	{#if onStage}
+		<div class="on-stage" role="status">
+			<span class="live-dot" aria-hidden="true"></span>
+			<span>
+				Now on stage:
+				<b>{onStage.order ? `#${onStage.order} ` : ''}{onStage.teamName}</b>
+				{#if stageRemaining !== null}
+					· <span class:overtime={stageRemaining <= 0}>
+						{stageRemaining > 0
+							? `${formatTime(stageRemaining)} left`
+							: `${formatTime(stageRemaining)} over time`}
+					</span>
+				{:else}
+					· timer not started
+				{/if}
+				{#if onStageTeam?.isRatedByCurrentJury}· <span class="rated">you rated it</span>{/if}
+			</span>
+			{#if onStageTeam}
+				<label class="label cursor-pointer gap-2 ml-auto">
+					<input
+						type="checkbox"
+						class="toggle toggle-sm toggle-warning"
+						bind:checked={followStage}
+					/>
+					<span class="label-text">Follow the stage</span>
+				</label>
 			{/if}
-			<div class="modal-buttons">
-				<button class="btn btn-primary" onclick={() => handleConfirmation(true)}>
-					Yes, Confirm
-				</button>
-				<button class="btn btn-secondary" onclick={() => (showConfirmationModal = false)}>
-					Not Yet
+		</div>
+	{/if}
+
+	<div class="stage-banner" class:final={data.stage === 'final'}>
+		{#if data.stage === 'final'}
+			<b>Final</b>
+			<span>
+				Rate the finalists' stage presentations. You can also adjust your earlier scores.
+			</span>
+		{:else}
+			<b>Preliminary round</b>
+			<span>
+				Rate every team from its presentation (PDF) and demo video. The best teams go to the final.
+			</span>
+		{/if}
+	</div>
+
+	<div class="jury-progress">
+		<div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+			<span class="font-semibold">You rated {ratedCount} of {teams.length} teams</span>
+			<div class="join">
+				<button
+					class="btn btn-sm join-item"
+					class:btn-active={filter === 'all'}
+					onclick={() => (filter = 'all')}>All ({teams.length})</button
+				>
+				<button
+					class="btn btn-sm join-item"
+					class:btn-active={filter === 'todo'}
+					onclick={() => (filter = 'todo')}>Not rated ({teams.length - ratedCount})</button
+				>
+				<button
+					class="btn btn-sm join-item"
+					class:btn-active={filter === 'done'}
+					onclick={() => (filter = 'done')}>Rated ({ratedCount})</button
+				>
+			</div>
+		</div>
+		<progress class="progress progress-success w-full" value={progressPercent} max="100"></progress>
+		<input
+			type="search"
+			class="input input-bordered input-sm w-full mt-3"
+			placeholder="Find a team: name or number, e.g. 7"
+			bind:value={search}
+			aria-label="Find a team"
+		/>
+		{#if search && visibleTeams.length === 0}
+			<p class="text-sm text-base-content/60 mt-2">No team matches “{search}”.</p>
+		{/if}
+	</div>
+
+	{#if data.published}
+		<div class="confirmation-top-section confirmed">
+			<div class="confirmation-banner confirmed">
+				<h3>Results of this category are published</h3>
+				<p>Ratings are locked and can no longer be changed.</p>
+			</div>
+		</div>
+	{:else if data.confirmed}
+		<div class="confirmation-top-section confirmed">
+			<div class="confirmation-banner confirmed">
+				<h3>Your ratings are confirmed</h3>
+				<p>
+					Organizers will publish this category once all of its jurors confirm. Changing any rating
+					withdraws your confirmation.
+				</p>
+			</div>
+		</div>
+	{:else if allTeamsRated}
+		<div class="confirmation-top-section">
+			<div class="confirmation-banner">
+				<h3>You've rated all teams!</h3>
+				<p>Confirm your ratings as final so the organizers can publish the results.</p>
+				<button class="btn btn-confirm" onclick={() => (showConfirmationModal = true)}>
+					Confirm My Ratings
 				</button>
 			</div>
 		</div>
-	</div>
+	{/if}
+
+	<!-- Confirmation Modal -->
+	{#if showConfirmationModal}
+		<div class="modal-overlay">
+			<div class="modal-content">
+				<h3>Confirm Your Ratings</h3>
+				<p>You have rated all teams. Do you confirm these ratings as final?</p>
+				{#if confirmationError}
+					<p class="text-error">{confirmationError}</p>
+				{/if}
+				<div class="modal-buttons">
+					<button class="btn btn-primary" onclick={() => handleConfirmation(true)}>
+						Yes, Confirm
+					</button>
+					<button class="btn btn-secondary" onclick={() => (showConfirmationModal = false)}>
+						Not Yet
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<TeamSection teams={visibleTeams} locked={data.published} />
 {/if}
 
-<TeamSection teams={visibleTeams} locked={data.resultsPublished} />
-
 <style>
+	.on-stage {
+		position: sticky;
+		top: 0.5rem;
+		z-index: 20;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.6rem;
+		margin-bottom: 1rem;
+		padding: 0.75rem 1rem;
+		border-radius: 0.75rem;
+		background: #2a1f12;
+		border: 1px solid rgba(247, 166, 84, 0.6);
+		color: #fff;
+	}
+
+	.live-dot {
+		width: 0.65rem;
+		height: 0.65rem;
+		border-radius: 9999px;
+		background: #f87272;
+		animation: pulse 1.2s ease-in-out infinite;
+	}
+
+	@keyframes pulse {
+		50% {
+			opacity: 0.3;
+		}
+	}
+
+	.overtime {
+		color: #f87272;
+		font-weight: 700;
+	}
+
+	.rated {
+		color: #36c399;
+	}
+
+	.stage-banner {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		align-items: baseline;
+		margin-bottom: 1rem;
+		padding: 0.75rem 1rem;
+		border-radius: 0.75rem;
+		background: rgba(127, 123, 255, 0.1);
+		border: 1px solid rgba(127, 123, 255, 0.4);
+	}
+
+	.stage-banner.final {
+		background: rgba(247, 166, 84, 0.1);
+		border-color: rgba(247, 166, 84, 0.45);
+	}
+
 	.jury-progress {
 		margin-bottom: 1rem;
 		padding: 1rem;

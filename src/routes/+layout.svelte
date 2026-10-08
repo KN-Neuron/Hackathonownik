@@ -53,6 +53,9 @@
 		display: flex;
 		flex-direction: column;
 		width: 100%;
+		/* Let the content shrink next to the sidebar instead of pushing the page wider */
+		min-width: 0;
+		flex: 1;
 		min-height: 100vh;
 		position: relative;
 	}

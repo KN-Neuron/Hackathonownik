@@ -4,7 +4,7 @@ import { type Handle, redirect } from '@sveltejs/kit';
 import type { TypedPocketBase } from '$lib/types';
 import { Security, CSRFProtection, SECURITY_HEADERS, rateLimiters } from '$lib/server/security';
 import { SecureCookieHandler } from '$lib/server/secure-cookie';
-import { areResultsPublic } from '$lib/server/access';
+import { getResultsState } from '$lib/server/results';
 import { POCKETBASE_URL } from '$lib/server/adminClient';
 
 // ============================================
@@ -12,7 +12,8 @@ import { POCKETBASE_URL } from '$lib/server/adminClient';
 // ============================================
 
 async function checkRouteAccess(pathname: string, user: any): Promise<boolean> {
-	const publicRoutes = ['/login', '/'];
+	// The info page (schedule, links) is for everyone, logged in or not
+	const publicRoutes = ['/login', '/', '/info'];
 	if (publicRoutes.includes(pathname)) {
 		return true;
 	}
@@ -35,13 +36,13 @@ async function checkRouteAccess(pathname: string, user: any): Promise<boolean> {
 		}
 
 		if (pathname === '/presentations' || pathname.startsWith('/presentations/')) {
-			// Participants can see other teams' presentations once results are published
-			return areResultsPublic();
+			// The gallery is for jury and admins
+			return false;
 		}
 
 		if (pathname === '/ranking' || pathname.startsWith('/ranking/')) {
-			// Participants can see rankings only after an organizer publishes the results
-			return areResultsPublic();
+			// Participants can see rankings once an organizer published at least one category
+			return (await getResultsState()).publishedCategories.length > 0;
 		}
 
 		return false;
@@ -78,17 +79,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 		pb.authStore.loadFromCookie(event.request.headers.get('cookie') || '');
 	}
 
-	// Verify the connection is still valid (optional health check)
-	try {
-		if (pb.authStore.isValid) {
-			// Attempt a lightweight request to verify session is still valid
-			// This could help catch expired sessions earlier
-			// Commenting out to avoid extra API calls, but keeping as reference
-			// await pb.collection('users').authRefresh();
+	const isAsset = event.url.pathname.startsWith('/_app') || event.url.pathname.includes('.');
+
+	// The cookie keeps the user record from login time; reload it so role and jury category
+	// changes made by organizers apply immediately, and deleted accounts lose access
+	if (pb.authStore.isValid && !isAsset) {
+		try {
+			const fresh = await pb.collection('users').getOne(pb.authStore.record!.id);
+			pb.authStore.save(pb.authStore.token, fresh);
+		} catch (e) {
+			console.warn('Session user could not be loaded, clearing auth:', e);
+			pb.authStore.clear();
 		}
-	} catch (e) {
-		console.warn('Session validation failed, clearing auth:', e);
-		pb.authStore.clear();
 	}
 
 	event.locals.pb = pb;
@@ -223,6 +225,19 @@ export const handle: Handle = async ({ event, resolve }) => {
 	Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
 		response.headers.set(key, value);
 	});
+
+	// Presentation PDFs are shown in a frame on our own pages (jury view, presenter mode);
+	// everything else stays unframeable
+	if (pathname.startsWith('/api/presentations/')) {
+		response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+		const csp = response.headers.get('Content-Security-Policy');
+		if (csp) {
+			response.headers.set(
+				'Content-Security-Policy',
+				csp.replace("frame-ancestors 'none'", "frame-ancestors 'self'")
+			);
+		}
+	}
 
 	response.headers.set('X-RateLimit-Limit', '1000');
 	response.headers.set('X-RateLimit-Remaining', generalLimit.remaining.toString());

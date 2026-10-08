@@ -1,64 +1,47 @@
-import { json, error } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { Role } from '$lib/utils/utils';
+import { canJudgeCategory } from '$lib/server/access';
 import { getRatingProgress, getResultsState } from '$lib/server/results';
+import { setCategoryConfirmed } from '$lib/server/confirmations';
 
+// Confirm (or withdraw) the logged-in juror's ratings of one category: { category, confirmed }
 export const POST: RequestHandler = async ({ locals, request }) => {
-	if (!locals.user || (locals.user.role !== Role.Jury && locals.user.role !== Role.Admin)) {
-		throw error(403, 'Unauthorized');
+	const body = await request.json().catch(() => null);
+	const category = typeof body?.category === 'string' ? body.category : null;
+	const confirmed = body?.confirmed === true;
+
+	if (!locals.user || !canJudgeCategory(locals.user, category)) {
+		return json({ success: false, message: 'Not authorized' }, { status: 403 });
 	}
 
 	try {
-		const { confirmed } = await request.json();
-
-		if ((await getResultsState()).published) {
+		if ((await getResultsState()).publishedCategories.includes(category!)) {
 			return json(
-				{ success: false, message: 'Results are already published.' },
+				{ success: false, message: 'Results of this category are already published.' },
 				{ status: 409 }
 			);
 		}
 
 		// Confirming means "all my ratings are final", so every team must be rated first
 		if (confirmed) {
-			const progress = await getRatingProgress(locals.pb);
-			const me = progress.juries.find((j) => j.id === locals.user!.id);
-			if (me && me.ratedTeams < progress.totalTeams) {
+			const progress = (await getRatingProgress())[category!];
+			const me = progress?.juries.find((j) => j.id === locals.user!.id);
+			const rated = me?.ratedTeams ?? 0;
+			if (!progress || rated < progress.totalTeams) {
 				return json(
 					{
 						success: false,
-						message: `You have rated ${me.ratedTeams} of ${progress.totalTeams} teams.`
+						message: `You have rated ${rated} of ${progress?.totalTeams ?? 0} teams.`
 					},
 					{ status: 400 }
 				);
 			}
 		}
 
-		// Update the user's confirmedRating field
-		await locals.pb.collection('users').update(locals.user.id, {
-			confirmedRating: confirmed === true
-		});
-
+		await setCategoryConfirmed(locals.user.id, category!, confirmed);
 		return json({ success: true, confirmed });
 	} catch (err) {
 		console.error('Error updating confirmation status:', err);
-		throw error(500, 'Failed to update confirmation status');
-	}
-};
-
-export const GET: RequestHandler = async ({ locals }) => {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
-
-	try {
-		// Get current user's confirmation status
-		const user = await locals.pb.collection('users').getOne(locals.user.id);
-
-		return json({
-			confirmed: user.confirmedRating || false
-		});
-	} catch (err) {
-		console.error('Error fetching confirmation status:', err);
-		throw error(500, 'Failed to fetch confirmation status');
+		return json({ success: false, message: 'Failed to update confirmation' }, { status: 500 });
 	}
 };

@@ -2,19 +2,41 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
+	import type { RatingCriterion } from '$lib/types';
 
-	let { teamId, onsaved }: { teamId: string; onsaved?: () => void } = $props();
-	const eventConfig = $page.data.eventConfig;
+	let {
+		teamId,
+		teamName,
+		criteria,
+		onsaved,
+		notes = $bindable(''),
+		notesStatus = 'idle',
+		onnotesinput,
+		onnotesblur
+	}: {
+		teamId: string;
+		teamName: string;
+		criteria: RatingCriterion[];
+		onsaved?: () => void;
+		// Private notes, shared with the team card and autosaved by it
+		notes?: string;
+		notesStatus?: 'idle' | 'saving' | 'saved' | 'error';
+		onnotesinput?: () => void;
+		onnotesblur?: () => void;
+	} = $props();
 
-	// Dynamic scores based on criteria
-	let scores = $state(
-		Object.fromEntries(eventConfig.rating_criteria.map((c) => [c.key, Math.floor(c.maxScore / 2)]))
+	// One slider per criterion of the team's category
+	let scores = $state<Record<string, number>>(
+		Object.fromEntries(criteria.map((c) => [c.key, Math.floor(c.maxScore / 2)]))
 	);
 
 	let comments = $state('');
 	let error = $state('');
-	let existingRating = $state(null);
+	let existingRating = $state<{
+		id: string;
+		scores?: Record<string, number>;
+		comments?: string;
+	} | null>(null);
 	let loading = $state(true);
 
 	// Scale constants
@@ -24,9 +46,7 @@
 	const totalScore = $derived(
 		Object.values(scores).reduce((acc, curr) => acc + (Number(curr) || 0), 0)
 	);
-	const maxTotalScore = $derived(
-		eventConfig.rating_criteria.reduce((acc, curr) => acc + curr.maxScore, 0)
-	);
+	const maxTotalScore = $derived(criteria.reduce((acc, curr) => acc + curr.maxScore, 0));
 
 	onMount(async () => {
 		try {
@@ -37,12 +57,13 @@
 			if (data.found) {
 				existingRating = data.rating;
 				// Load existing scores
-				eventConfig.rating_criteria.forEach((criterion) => {
-					if (existingRating[criterion.key] !== undefined) {
-						scores[criterion.key] = existingRating[criterion.key];
+				criteria.forEach((criterion) => {
+					const saved = existingRating?.scores?.[criterion.key];
+					if (typeof saved === 'number') {
+						scores[criterion.key] = saved;
 					}
 				});
-				comments = existingRating.comments ?? '';
+				comments = existingRating?.comments ?? '';
 			}
 		} catch (err) {
 			console.error('Error checking existing rating:', err);
@@ -76,28 +97,12 @@
 			<p>Loading rating data...</p>
 		</div>
 	{:else}
-		<h2 class="text-2xl font-bold mb-3">Project Grading</h2>
+		<h2 class="text-2xl font-bold mb-3">Rate {teamName}</h2>
 		<p class="text-gray-400 mb-6">Please grade this project based on the criteria below</p>
 
-		<div class="form-section">
-			<label class="form-control">
-				<div class="label">
-					<span class="label-text">Project ID</span>
-				</div>
+		<input type="hidden" name="teamId" value={teamId} />
 
-				<input
-					class="input input-bordered w-full"
-					id="teamId"
-					name="teamId"
-					type="text"
-					value={teamId}
-					readonly
-					required
-				/>
-			</label>
-		</div>
-
-		{#each eventConfig.rating_criteria as criterion}
+		{#each criteria as criterion (criterion.key)}
 			<div class="form-section">
 				<div class="label">
 					<span class="label-text font-bold">{criterion.name}</span>
@@ -126,13 +131,35 @@
 			</div>
 		{/each}
 
+		<!-- Private notes: only this juror sees them, saved automatically -->
+		<div class="form-section">
+			<div class="label flex-col items-start">
+				<span class="label-text">
+					My private notes
+					<span class="text-xs text-base-content/50 ml-1">
+						{#if notesStatus === 'saving'}Saving…{:else if notesStatus === 'saved'}Saved{:else if notesStatus === 'error'}Not
+							saved – check your connection{/if}
+					</span>
+				</span>
+				<span class="label-text-alt text-base-content/60 whitespace-normal">
+					Only you can see these. Saved automatically, also when you don't submit the rating.
+				</span>
+			</div>
+			<textarea
+				class="textarea textarea-bordered w-full h-24"
+				bind:value={notes}
+				oninput={onnotesinput}
+				onblur={onnotesblur}
+				placeholder="Questions to ask, strengths, doubts..."
+			></textarea>
+		</div>
+
 		<!-- Comments Section -->
 		<div class="form-section">
 			<div class="label flex-col items-start">
 				<span class="label-text">Feedback for the team (optional)</span>
-				<span class="label-text-alt text-base-content/60">
-					Shared with this team only, after the organizers publish the results. For notes just for
-					yourself, use "My private notes" on the team card.
+				<span class="label-text-alt text-base-content/60 whitespace-normal">
+					Shared with this team only (without your name), after the organizers publish the results.
 				</span>
 			</div>
 			<textarea

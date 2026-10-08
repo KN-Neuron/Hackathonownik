@@ -6,17 +6,30 @@ event:
   # The full name of the event (e.g., "Heroes of the Brain")
   name: "Heroes Of The Brain"
 
-  # The year of the event (e.g., "2025")
-  year: "2025"
+  # The year of the event (e.g., "2026")
+  year: "2026"
 
   # The organizer of the event (displayed in footers, copyright, etc.)
   organizer: "KN Neuron"
 
   # The submission deadline (ISO format). Always include the UTC offset, otherwise the
   # server's timezone is used: +01:00 is Polish winter time (CET), +02:00 summer time (CEST)
-  deadline: "2026-11-30T12:00:00+01:00"
+  # TODO: confirm the exact hour work ends on Sunday with the organizers
+  deadline: "2026-11-15T12:00:00+01:00"
 
-  # Submission requirements
+  # Check-in: every team uploads anything (e.g. just the repository link) before this time,
+  # so organizers know how many teams are really competing and teams try the system early.
+  # Teams that miss it can still submit; organizers see who missed it. Remove to turn it off.
+  checkin_deadline: "2026-11-14T23:59:00+01:00"
+
+  # The final presentation (shown on stage by the finalists) can come later than the rest.
+  # TODO: confirm the hour with the organizers
+  final_presentation_deadline: "2026-11-15T14:00:00+01:00"
+
+  # Length of a stage presentation, for the timer in the presenter mode
+  stage_presentation_minutes: 5
+
+  # Submission requirements (default for categories that don't set their own)
   # required: which items a team must provide for its submission to count as complete.
   # Allowed values: presentation (PDF), repo (repository link), video (demo video link)
   # Teams can add each item separately; the jury always sees the latest version of every item.
@@ -27,41 +40,64 @@ event:
       - video
 
   # Team Categories
-  # You can define multiple categories here.
-  # key: The internal identifier for the category (must be unique, lowercase, no spaces)
+  # key: The internal identifier for the category (must be unique, lowercase, no spaces).
+  #      Teams store it in teams.category and jurors in users.jury_categories.
   # name: The display name of the category
   # color: The color associated with the category (hex code)
+  # rating_criteria: optional, overrides the default rating_criteria below for this category
+  # submission.required: optional, overrides the default submission requirements above
+  # Every category is rated by its own jurors (3 per category, rules §8) and its results are
+  # published separately.
   categories:
-    - key: "wellness"
-      name: "Wellness"
+    - key: "adaptive"
+      name: "Adaptive Systems"
       color: "#36c399"
-    - key: "commerce"
-      name: "Commerce"
+    - key: "handsfree"
+      name: "Hands-free Interaction"
+      color: "#4df2ff"
+    - key: "fnirs"
+      name: "Breath, Brain and Body (fNIRS)"
       color: "#f7a654"
+    - key: "neurogaming"
+      name: "Neurogaming"
+      color: "#f472b6"
+    - key: "neurorehab"
+      name: "BCI in Neurorehabilitation, Entertainment and Art"
+      color: "#a78bfa"
 
-  # Rating Criteria
-  # Define the criteria used for rating presentations.
-  # key: Internal identifier (must match database field names)
+  # Rating Criteria (rules §8: max 25 points, every score at least 1)
+  # key: Internal identifier, unique within a category (scores are stored per key)
   # name: Display name for the criteria
-  # maxScore: Maximum points for this criteria
+  # maxScore: Maximum points (scores go from 1 to maxScore)
+  # stage: "preliminary" – rated from the submitted presentation and demo video to pick the
+  #        finalists; "final" – rated during the stage presentations of the finalists
   # description: Optional description shown to juries
+  # A category can override the list with its own rating_criteria.
   rating_criteria:
+    - key: "implementation"
+      name: "Implementation quality"
+      maxScore: 10
+      stage: "preliminary"
+      description: "Technical quality of the implementation"
     - key: "innovation"
       name: "Innovation"
       maxScore: 5
+      stage: "preliminary"
       description: "How innovative is the solution?"
     - key: "usefulness"
       name: "Usefulness"
       maxScore: 5
+      stage: "preliminary"
       description: "Is the solution useful and practical?"
     - key: "finalPresentation"
-      name: "Presentation"
+      name: "Final presentation"
       maxScore: 5
-      description: "Quality of the final presentation"
-    - key: "implementation"
-      name: "Implementation"
-      maxScore: 10
-      description: "Technical quality of the implementation"
+      stage: "final"
+      description: "Quality of the presentation on stage in the final"
+
+  # Two-stage judging (rules §8): after the preliminary rating the jury picks at most this many
+  # finalists per category; only finalists are rated in the final
+  finalists_per_category: 5
 
   # Useful links
   # You can define multiple links here to be displayed on the info page.
@@ -78,6 +114,14 @@ event:
       description: "Repository with sample code"
       url: "https://github.com/KN-Neuron/heroes-of-the-brain-starter-pack"
       buttonText: "Open Repository →"
+    - title: "Rules"
+      description: "Official rules of Heroes of the Brain 2026"
+      url: "https://heroesofthebrain.pwr.edu.pl/regulamin"
+      buttonText: "Read the rules →"
+    - title: "Contact"
+      description: "Questions, problems with your team or appeals (within 24 h of the results)"
+      url: "mailto:heroesofthebrain@pwr.edu.pl"
+      buttonText: "heroesofthebrain@pwr.edu.pl →"
     - title: "WiFi Instructions"
       description: "How to connect to the university WiFi"
       url: "https://di.pwr.edu.pl/uslugi/siec/pwrguest"
@@ -85,29 +129,22 @@ event:
 
   # Event schedule
   schedule:
-    - day: "Saturday, November 29"
+    - day: "Saturday, November 14"
       events:
-        - time: "09:00 - 11:00"
+        - time: "09:00 - 10:00"
           description: "Participant Registration"
-        - time: "11:30 - 12:00"
-          description: "Opening Lecture"
-        - time: "12:00"
+        - time: "10:00 - 10:30"
+          description: "Official Opening"
+        - time: "10:30"
           description: "Code Work Begins"
-        - time: "17:00"
+        - time: "17:30"
           description: "Catering"
-    - day: "Sunday, November 30"
+    # TODO: Sunday's agenda isn't published yet (rules §3: the event ends at 16:00)
+    - day: "Sunday, November 15"
       events:
-        - time: "until 12:00"
-          description: "Code Work Ends"
-        - time: "12:00 - 12:30"
-          description: "Lecture"
-        - time: "12:30 - 14:00"
-          description: "Project Presentations - Part I"
-        - time: "14:00 - 14:30"
-          description: "Coffee Break"
-        - time: "14:30 - 16:00"
-          description: "Project Presentations - Part II"
-        - time: "16:00 - 16:30"
-          description: "Jury Evaluation"
-        - time: "16:30 - 17:00"
+        - time: "12:00"
+          description: "Code Work Ends – submission deadline"
+        - time: "after 12:00"
+          description: "Preliminary judging, then the finalists present on stage"
+        - time: "16:00"
           description: "Award Ceremony and Event Conclusion"

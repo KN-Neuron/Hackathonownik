@@ -19,7 +19,8 @@
 	const anchors: Record<SubmissionItem, string> = {
 		presentation: 'presentation_file',
 		repo: 'repo_link',
-		video: 'video_link'
+		video: 'video_link',
+		final_presentation: 'final_presentation_file'
 	};
 
 	let missing = $derived(submission ? submission.missing : required);
@@ -61,8 +62,9 @@
 	<ul>
 		{#each SUBMISSION_ITEMS as item (item)}
 			{@const entry = submission?.[item] ?? null}
-			<li class:done={entry} class:missing={!entry}>
-				<span class="status-icon" aria-hidden="true">{entry ? '✓' : '✗'}</span>
+			{@const optional = !entry && !required.includes(item)}
+			<li class:done={entry} class:missing={!entry && !optional} class:optional>
+				<span class="status-icon" aria-hidden="true">{entry ? '✓' : optional ? '–' : '✗'}</span>
 				<div class="item-body">
 					<span class="item-label">
 						{SUBMISSION_ITEM_LABELS[item]}
@@ -80,7 +82,13 @@
 							Added by {entry.submittedBy ?? 'unknown'} · {formatDate(entry.at)}
 						</span>
 					{:else}
-						<span class="item-meta">Not submitted yet</span>
+						<span class="item-meta">
+							{item === 'final_presentation'
+								? 'Needed only if the team reaches the final'
+								: optional
+									? 'Not required in this category'
+									: 'Not submitted yet'}
+						</span>
 					{/if}
 				</div>
 				{#if mode === 'participant'}
@@ -138,6 +146,10 @@
 
 	li.done {
 		border-left-color: #36c399;
+	}
+
+	li.optional {
+		opacity: 0.6;
 	}
 
 	li.missing {

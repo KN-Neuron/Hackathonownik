@@ -6,7 +6,9 @@
 
 	export let rankings = [];
 	export let totalJuries = 0;
-	export let categoryFilter = 'all'; 
+	export let categoryFilter = 'all';
+	// Rating criteria of the ranked category
+	export let criteria: import('$lib/types').RatingCriterion[] = [];
 	const eventConfig = $page.data.eventConfig;
 	// Exports contain every team's feedback, so only jury and admins get them
 	const user = $page.data.user;
@@ -31,8 +33,9 @@
 
 	$: sortedRankings = [...rankings]
 		.sort((a, b) => {
-			const valueA = a[sortField];
-			const valueB = b[sortField];
+			// Criterion columns read from the per-criterion averages
+			const valueA = a[sortField] ?? a.scores?.[sortField];
+			const valueB = b[sortField] ?? b.scores?.[sortField];
 			
 			if (typeof valueA === 'string' && typeof valueB === 'string') {
 				return sortDirection === 'desc' 
@@ -81,7 +84,7 @@
 		}
 	}
 
-	const maxTotalScore = eventConfig.rating_criteria.reduce((acc, curr) => acc + curr.maxScore, 0);
+	const maxTotalScore = criteria.reduce((acc, curr) => acc + curr.maxScore, 0);
 
 	async function exportToPdf() {
 		try {
@@ -124,16 +127,16 @@
 				'Rank',
 				'Team',
 				'Category',
-				...eventConfig.rating_criteria.map(c => c.name),
+				...criteria.map(c => c.name),
 				'Final Grade',
 				'Status'
 			];
 
 			const tableRows = sortedRankings.map((team, index) => [
-				index + 1,
+				team.rank ?? index + 1,
 				team.team,
 				eventConfig.categories.find(c => c.key === team.category)?.name || 'N/A',
-				...eventConfig.rating_criteria.map(c => team[c.key]?.toFixed(1) || '0.0'),
+				...criteria.map(c => team.scores?.[c.key]?.toFixed(1) || '0.0'),
 				team.finalGrade.toFixed(2),
 				`${team.status === 'final' ? 'Final' : 'Provisional'} (${team.ratingCount}/${totalJuries})`
 			]);
@@ -152,7 +155,7 @@
 				},
 				didDrawCell: (data) => {
 					// Final Grade column is at index: 3 (Rank, Team, Category) + criteria length
-					const finalGradeIdx = 3 + eventConfig.rating_criteria.length;
+					const finalGradeIdx = 3 + criteria.length;
 					
 					if (data.column.index === finalGradeIdx && data.section === 'body') {
 						const score = parseFloat(data.cell.text[0]);
@@ -194,13 +197,13 @@
 
 				const juryColumns = [
 					'Jury',
-					...eventConfig.rating_criteria.map(c => c.name),
+					...criteria.map(c => c.name),
 					'Final Grade'
 				];
 
 				const juryRows = ratings.map((rating) => [
 					rating.juryName,
-					...eventConfig.rating_criteria.map(c => rating[c.key]?.toString() || '0'),
+					...criteria.map(c => rating.scores?.[c.key]?.toString() || '0'),
 					rating.finalGrade.toFixed(2)
 				]);
 
@@ -215,7 +218,7 @@
 						0: { cellWidth: 'auto', fontStyle: 'bold' }
 					},
 					didDrawCell: (data) => {
-						const lastIdx = 1 + eventConfig.rating_criteria.length;
+						const lastIdx = 1 + criteria.length;
 						if (data.column.index === lastIdx && data.section === 'body') {
 							const score = parseFloat(data.cell.text[0]);
 							const percentage = (score / maxTotalScore) * 100;
@@ -291,7 +294,7 @@
 
 	async function exportToMarkdown() {
 		try {
-			const response = await fetch('/api/export/ranking-md');
+			const response = await fetch(`/api/export/ranking-md?category=${encodeURIComponent(categoryFilter)}`);
 			if (!response.ok) {
 				throw new Error('Failed to export markdown');
 			}
@@ -409,7 +412,7 @@
 					<th class="cursor-pointer" on:click={() => sort('team')}>
 						Team {sortField === 'team' ? (sortDirection === 'desc' ? '↓' : '↑') : ''}
 					</th>
-					{#each eventConfig.rating_criteria as criterion}
+					{#each criteria as criterion}
 						<th class="cursor-pointer" on:click={() => sort(criterion.key)}>
 							{criterion.name} {sortField === criterion.key ? (sortDirection === 'desc' ? '↓' : '↑') : ''}
 						</th>
@@ -424,7 +427,7 @@
 			<tbody>
 				{#each sortedRankings as team, index}
 					<tr class="hover:bg-base-200 transition-colors">
-						<td class="font-bold">{index + 1}</td>
+						<td class="font-bold">{team.rank ?? index + 1}</td>
 						<td>
 							<div class="team-name-cell">
 								<span class="font-semibold">{team.team}</span>
@@ -436,8 +439,8 @@
 								{/if}
 							</div>
 						</td>
-						{#each eventConfig.rating_criteria as criterion}
-							<td class={getScoreColor(team[criterion.key], criterion.maxScore)}>{team[criterion.key]?.toFixed(1) || '0.0'}</td>
+						{#each criteria as criterion}
+							<td class={getScoreColor(team.scores?.[criterion.key], criterion.maxScore)}>{team.scores?.[criterion.key]?.toFixed(1) || '0.0'}</td>
 						{/each}
 						<td class="font-bold {getScoreColor(team.finalGrade, maxTotalScore)}">
 							{team.finalGrade.toFixed(2)}
@@ -464,7 +467,7 @@
 
 				{#if sortedRankings.length === 0}
 					<tr>
-						<td colspan={5 + eventConfig.rating_criteria.length} class="text-center py-8 text-base-content/60">
+						<td colspan={5 + criteria.length} class="text-center py-8 text-base-content/60">
 							No teams found matching the selected filter
 						</td>
 					</tr>

@@ -7,7 +7,7 @@ const validForm = Object.fromEntries(criteria.map((c) => [c.key, String(c.maxSco
 
 describe('parseScores', () => {
 	it('accepts scores within range and sums them', () => {
-		const parsed = parseScores(validForm);
+		const parsed = parseScores(validForm, criteria);
 		expect(parsed).toEqual({
 			ok: true,
 			scores: Object.fromEntries(criteria.map((c) => [c.key, c.maxScore])),
@@ -17,17 +17,17 @@ describe('parseScores', () => {
 
 	it('rejects a score above maxScore', () => {
 		const [first] = criteria;
-		const parsed = parseScores({ ...validForm, [first.key]: String(first.maxScore + 1) });
+		const parsed = parseScores({ ...validForm, [first.key]: String(first.maxScore + 1) }, criteria);
 		expect(parsed.ok).toBe(false);
 	});
 
-	it.each(['-1', '2.5', 'abc', ''])('rejects %j', (value) => {
-		const parsed = parseScores({ ...validForm, [criteria[0].key]: value });
+	it.each(['0', '-1', '2.5', 'abc', ''])('rejects %j', (value) => {
+		const parsed = parseScores({ ...validForm, [criteria[0].key]: value }, criteria);
 		expect(parsed.ok).toBe(false);
 	});
 
 	it('rejects a missing criterion', () => {
 		const { [criteria[0].key]: _omitted, ...rest } = validForm;
-		expect(parseScores(rest).ok).toBe(false);
+		expect(parseScores(rest, criteria).ok).toBe(false);
 	});
 });

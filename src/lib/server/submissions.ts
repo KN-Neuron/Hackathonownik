@@ -1,6 +1,7 @@
 import type { Presentation, SubmissionEntry, SubmissionItem, TeamSubmission } from '$lib/types';
-import { appConfig } from './appConfig';
+import { requiredFor } from './appConfig';
 import { getAdminClient } from './adminClient';
+import { CACHE_TTL_MS, cached, invalidate } from './cache';
 
 function submitterName(record: Presentation): string | null {
 	const user = record.expand?.submitted_by;
@@ -12,6 +13,7 @@ function itemsIn(record: Presentation): SubmissionItem[] {
 	if (record.presentation) items.push('presentation');
 	if (record.repo_link) items.push('repo');
 	if (record.video_link) items.push('video');
+	if (record.final_presentation) items.push('final_presentation');
 	return items;
 }
 
@@ -24,6 +26,12 @@ function entryFor(record: Presentation, item: SubmissionItem): SubmissionEntry {
 			return { ...base, url: record.repo_link! };
 		case 'video':
 			return { ...base, url: record.video_link! };
+		case 'final_presentation':
+			return {
+				...base,
+				url: `/api/presentations/${record.id}?file=final`,
+				fileName: record.final_presentation
+			};
 	}
 }
 
@@ -42,7 +50,8 @@ export function mergeTeamRecords(
 	const latest: Record<SubmissionItem, SubmissionEntry | null> = {
 		presentation: null,
 		repo: null,
-		video: null
+		video: null,
+		final_presentation: null
 	};
 	for (const record of sorted) {
 		for (const item of itemsIn(record)) {
@@ -55,11 +64,13 @@ export function mergeTeamRecords(
 	return {
 		teamId: newest.team,
 		teamName: newest.expand?.team?.name || 'Unknown Team',
-		category: newest.expand?.team?.category || appConfig.event.categories[0]?.key || 'wellness',
+		// Teams without a valid category are shown to admins only
+		category: newest.expand?.team?.category || '',
 		...latest,
 		missing,
 		complete: missing.length === 0,
 		lastUpdated: newest.created,
+		firstSubmittedAt: sorted[sorted.length - 1].created,
 		history: sorted.map((record) => ({
 			recordId: record.id,
 			at: record.created,
@@ -75,13 +86,26 @@ export function mergeTeamRecords(
  * callers must check access (participants: own team only; jury/admin pages: role).
  */
 export async function getTeamSubmissions(
-	options: { teamId?: string } = {}
+	options: { teamId?: string; categories?: string[] } = {}
 ): Promise<TeamSubmission[]> {
+	// A team's own view is always fresh; the all-teams list is shared for a moment
+	const all = options.teamId
+		? await loadSubmissions(options.teamId)
+		: await cached('submissions', CACHE_TTL_MS, () => loadSubmissions());
+	return options.categories ? all.filter((s) => options.categories!.includes(s.category)) : all;
+}
+
+/** Call after an upload or a team changing category. */
+export function invalidateSubmissions(): void {
+	invalidate('submissions', 'rating-progress', 'ranking:');
+}
+
+async function loadSubmissions(teamId?: string): Promise<TeamSubmission[]> {
 	const pb = await getAdminClient();
 	const records = await pb.collection('presentations').getFullList<Presentation>({
 		sort: '-created',
 		expand: 'team,submitted_by',
-		...(options.teamId ? { filter: pb.filter('team = {:team}', { team: options.teamId }) } : {})
+		...(teamId ? { filter: pb.filter('team = {:team}', { team: teamId }) } : {})
 	});
 
 	const byTeam = new Map<string, Presentation[]>();
@@ -92,8 +116,10 @@ export async function getTeamSubmissions(
 		byTeam.set(record.team, list);
 	}
 
-	const required = appConfig.event.submission.required;
-	return Array.from(byTeam.values()).map((teamRecords) => mergeTeamRecords(teamRecords, required));
+	// Required items depend on the team's (current) category
+	return Array.from(byTeam.values()).map((teamRecords) =>
+		mergeTeamRecords(teamRecords, requiredFor(teamRecords[0].expand?.team?.category))
+	);
 }
 
 export async function getTeamSubmission(teamId: string): Promise<TeamSubmission | null> {
