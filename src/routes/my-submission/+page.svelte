@@ -43,6 +43,22 @@
 			</div>
 		{/if}
 
+		{#if data.feedback}
+			<div class="feedback-section">
+				<h3>Jury feedback</h3>
+				{#if data.feedback.length > 0}
+					<ul>
+						{#each data.feedback as text, i (i)}
+							<li>{text}</li>
+						{/each}
+					</ul>
+				{:else}
+					<p class="history-help">The jury didn't leave written feedback for your team.</p>
+				{/if}
+				<a href="/ranking" class="btn btn-sm btn-outline mt-2">See the ranking</a>
+			</div>
+		{/if}
+
 		<SubmissionChecklist {submission} required={eventConfig.submission.required} />
 
 		{#if submission}
@@ -147,6 +163,32 @@
 		font-size: 0.8rem;
 		color: rgba(255, 255, 255, 0.6);
 		margin: 0.5rem 0;
+	}
+
+	.feedback-section {
+		padding: 1.25rem;
+		border-radius: 0.75rem;
+		background: rgba(54, 195, 153, 0.08);
+		border: 1px solid rgba(54, 195, 153, 0.3);
+	}
+
+	.feedback-section h3 {
+		font-size: 1.25rem;
+		font-weight: 700;
+		margin-bottom: 0.75rem;
+	}
+
+	.feedback-section ul {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.feedback-section li {
+		white-space: pre-line;
+		padding: 0.75rem;
+		border-radius: 0.5rem;
+		background: rgba(0, 0, 0, 0.2);
 	}
 
 	.actions {

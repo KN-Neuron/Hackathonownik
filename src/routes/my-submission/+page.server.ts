@@ -1,6 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { getTeamSubmission } from '$lib/server/submissions';
+import { getResultsState, getTeamFeedback } from '$lib/server/results';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
@@ -20,8 +21,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 	}
 
 	try {
+		const [submission, { published }] = await Promise.all([
+			getTeamSubmission(locals.pb, teamId),
+			getResultsState()
+		]);
 		return {
-			submission: await getTeamSubmission(locals.pb, teamId),
+			submission,
+			// Feedback from the jury reaches the team only after results are published
+			feedback: published ? await getTeamFeedback(teamId) : null,
 			error: null
 		};
 	} catch (err) {

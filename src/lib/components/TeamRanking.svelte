@@ -8,6 +8,9 @@
 	export let totalJuries = 0;
 	export let categoryFilter = 'all'; 
 	const eventConfig = $page.data.eventConfig;
+	// Exports contain every team's feedback, so only jury and admins get them
+	const user = $page.data.user;
+	const canExport = Boolean(user && (user.admin || user.role === 'admin' || user.role === 'jury'));
 
 	let sortField = 'finalGrade';
 	let sortDirection = 'desc';
@@ -336,6 +339,7 @@
 		</div>
 
 		<div class="flex items-center gap-3">
+			{#if canExport}
 			<button
 				class="btn btn-sm btn-accent {isPdfExporting ? 'loading' : ''}"
 				on:click={exportToPdf}
@@ -381,6 +385,7 @@
 				</svg>
 				Export as Markdown
 			</button>
+			{/if}
 
 			<div class="stats shadow">
 				<div class="stat">

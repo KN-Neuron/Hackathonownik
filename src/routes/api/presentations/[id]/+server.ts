@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
+import { areResultsPublic } from '$lib/server/access';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	// Check if user is authenticated
@@ -27,28 +28,9 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		const isOwnTeamPresentation = locals.user.team === presentation.team;
 
 		if (!isJuryOrAdmin && !isOwnTeamPresentation) {
-			// 3. For other participants, access is only allowed if ALL teams are rated
-			try {
-				const allPresentations = await locals.pb.collection('presentations').getFullList();
-				// Use Set for unique team IDs, as multiple presentations can exist per team
-				const allTeamIds = new Set(allPresentations.map(p => p.team));
-				
-				const ratings = await locals.pb.collection('ratings').getFullList();
-				const ratedTeamIds = new Set(ratings.map((r) => r.team));
-
-				// Check if every team has at least one rating
-				const allTeamsRated = Array.from(allTeamIds).every(teamId => ratedTeamIds.has(teamId));
-
-				if (!allTeamsRated) {
-					throw error(403, 'Presentations not yet publicly available');
-				}
-			} catch (err) {
-				// If checking fails or throws 403, propagate the error
-				if (err instanceof Error && 'status' in err && (err as any).status === 403) {
-					throw err;
-				}
-				console.error('Error checking global access:', err);
-				throw error(403, 'Access not authorized');
+			// 3. Other participants get access only once results are published
+			if (!(await areResultsPublic())) {
+				throw error(403, 'Presentations not yet publicly available');
 			}
 		}
 

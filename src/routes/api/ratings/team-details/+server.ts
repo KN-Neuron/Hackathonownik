@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { canSeeResults } from '$lib/server/access';
+import { canSeeResults, isJuryOrAdmin, resultsClient } from '$lib/server/access';
 import type { RequestHandler } from './$types';
 import { appConfig } from '$lib/server/appConfig';
 
@@ -18,9 +18,13 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		return json({ error: 'Team ID is required' }, { status: 400 });
 	}
 
+	// Feedback is meant for the rated team only
+	const showFeedback = isJuryOrAdmin(locals.user) || locals.user.team === teamId;
+
 	try {
-		const ratingsList = await locals.pb.collection('ratings').getList(1, 100, {
-			filter: locals.pb.filter('team = {:team}', { team: teamId }),
+		const pb = await resultsClient(locals);
+		const ratingsList = await pb.collection('ratings').getList(1, 100, {
+			filter: pb.filter('team = {:team}', { team: teamId }),
 			sort: '-created',
 			expand: 'jury'
 		});
@@ -31,7 +35,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 				id: rating.id,
 				juryId: rating.jury,
 				juryName: rating.expand?.jury?.name || 'Unknown Jury',
-				comments: rating.comments || '',
+				comments: showFeedback ? rating.comments || '' : '',
 				created: rating.created
 			};
 
