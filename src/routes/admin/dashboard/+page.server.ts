@@ -2,6 +2,7 @@ import { error, fail } from '@sveltejs/kit';
 import { appConfig, getCategory, requiredFor } from '$lib/server/appConfig';
 import { getAdminClient } from '$lib/server/adminClient';
 import {
+	getRatedPairs,
 	getRatingProgress,
 	getResultsState,
 	invalidateRatings,
@@ -18,6 +19,7 @@ import { setCategoryConfirmed } from '$lib/server/confirmations';
 import { getTeamSubmissions, invalidateSubmissions } from '$lib/server/submissions';
 import type { Actions, PageServerLoad } from './$types';
 import { checkinStatus } from '$lib/utils/checkin';
+import { generatePassword } from '$lib/server/passwords';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	try {
@@ -111,12 +113,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 		// Live ranking of the selected category (preliminary or final, by its stage)
 		const categoryTeamIds = submissions.filter((s) => s.category === category).map((s) => s.teamId);
-		const [ranking, views] = await Promise.all([
+		const [ranking, views, ratedPairs] = await Promise.all([
 			getCategoryRanking(category),
 			getViews(categoryTeamIds).catch((e) => {
 				console.error('Error loading jury views:', e);
 				return [];
-			})
+			}),
+			getRatedPairs(category)
 		]);
 
 		return {
@@ -144,6 +147,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			finalists: resultsState.finalists[category] ?? [],
 			finalistsLimit: appConfig.event.finalists_per_category,
 			ranking,
+			// "jury:team" for every juror who already rated a team in the current stage
+			rated: [...ratedPairs],
 			// Which juror opened which material, per team (team → jury → items)
 			views: views.reduce<Record<string, Record<string, string[]>>>((acc, v) => {
 				((acc[v.team] ??= {})[v.jury] ??= []).push(v.item);
@@ -185,14 +190,6 @@ async function checkAdminForm(locals: App.Locals, formData: FormData) {
 		return 'Invalid security token';
 	}
 	return null;
-}
-
-/** Readable random password (no 0/O/1/l to avoid typos when it's dictated). */
-function generatePassword(): string {
-	const alphabet = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-	const bytes = crypto.getRandomValues(new Uint8Array(12));
-	const chars = [...bytes].map((b) => alphabet[b % alphabet.length]).join('');
-	return `${chars.slice(0, 4)}-${chars.slice(4, 8)}-${chars.slice(8)}`;
 }
 
 /** Names of the given categories whose results are already published. */
