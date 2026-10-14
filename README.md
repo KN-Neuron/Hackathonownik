@@ -29,6 +29,8 @@
 - **People**: add a juror (a password is generated and shown once), reset a password, assign jurors to categories, move a team to another category.
 - **Import teams and participants from a CSV** (`/admin/import`): columns `name`, `email`, `team`, `category` (Excel exports with Polish headers and `;` work). The file is checked first (bad e-mails, unknown categories, a team in two categories, duplicates, team sizes), then teams and accounts are created and a CSV with the generated passwords can be downloaded once.
 - **Printable jury protocol** per category (ranking, every juror's scores, signature lines).
+- **Sees everything**: *All ratings* (every juror's scores and comments, every stage), *People and teams* (accounts, team sizes, who submitted what) and the *Audit log*. Only the jurors' private notes stay private.
+- **Second password for decisions**: publishing or hiding results, starting the final, tie-breaks, presentation order, adding jurors, resetting passwords, assigning jurors, moving teams and importing participants need the *admin action password* (`ADMIN_ACTION_PASSWORD`) on top of the admin login. It unlocks for 15 minutes (box at the top of the dashboard, "Lock now" ends it), is checked on the server, and a stolen admin session can't use these actions without it. Wrong guesses are limited, and every action and every refused attempt is written to the audit log (`/admin/audit`). Without the variable set, sensitive actions stay locked.
 - Info page with the schedule and useful links.
 
 ### Rankings and privacy
@@ -39,6 +41,7 @@
 ### Under the hood
 - English-only UI, responsive layout.
 - Handles ~300 simultaneous users (load-tested on the production build); short in-memory caches for the hot pages.
+- Uploaded PDFs are *protected* files in PocketBase: they are only served through the app, after its access checks.
 
 ## 🛠️ Tech Stack
 
@@ -109,11 +112,14 @@ Participants and jurors can log in to PocketBase directly with their own credent
 | --------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------ |
 | `users` (auth)  | `name`, `role` (text: participant / jury / admin), `team` (relation → `teams`), `jury_categories` (json), `confirmed_categories` (json) | `id = @request.auth.id \|\| @request.auth.role = "admin"`                                     | empty (organizers manage accounts)   |
 | `teams`         | `name` (text), `category` (text, a category key)                                                                        | `@request.auth.id != ""`                                                                   | empty                                |
-| `presentations` | `team` (relation → `teams`, required), `presentation` (file, PDF, **optional**), `repo_link`, `video_link` (text), `final_presentation` (file, PDF, optional), `submitted_by` (relation → `users`) | `team = @request.auth.team \|\| @request.auth.role = "admin"`                                 | empty                                |
+| `presentations` | `team` (relation → `teams`, required), `presentation` (file, PDF, **optional**, *protected*), `repo_link`, `video_link` (text), `final_presentation` (file, PDF, optional, *protected*), `submitted_by` (relation → `users`) | `team = @request.auth.team \|\| @request.auth.role = "admin"`                                 | empty                                |
 | `ratings`       | `jury` (relation → `users`), `team` (relation → `teams`), `scores` (json), `finalGrade` (number), `comments` (text)  | `@request.auth.role = "admin" \|\| (@request.auth.role = "jury" && jury = @request.auth.id)`   | Create/Update: `(@request.auth.role = "jury" \|\| @request.auth.role = "admin") && jury = @request.auth.id`; Delete: `@request.auth.role = "admin"` |
 | `event_state`   | `published_categories`, `published_at`, `stages`, `finalists`, `tie_winners`, `orders`, `on_stage` (all json)                                                                    | empty                                                                                      | empty                                |
 | `jury_notes`    | `jury` (relation → `users`), `team` (relation → `teams`), `content` (text)                                             | empty                                                                                      | empty                                |
 | `jury_views`    | `jury` (relation → `users`), `team` (relation → `teams`), `item` (text), `count` (number), `first_at`, `last_at` (text) | empty | empty |
+| `admin_audit`   | `admin` (relation → `users`), `admin_email`, `action` (text), `ok` (bool), `ip` (text), `details` (json), `created` | empty | empty |
+
+The quickest way to get all of this (collections, fields, protected files, rules) is `node scripts/pocketbase-setup.mjs` with `POCKETBASE_URL`, `POCKETBASE_ADMIN_EMAIL` and `POCKETBASE_ADMIN_PASSWORD` set. It can be run again at any time; an existing database gets the missing fields and the file protection added.
 
 Users must not be able to update their own record: they could change their role, team or jury categories.
 
@@ -125,13 +131,15 @@ The `comments` field of a rating is the feedback for the team: the team sees it 
 npm ci && npm run build
 ```
 
-The project uses `@sveltejs/adapter-auto`, which picks the adapter of the hosting platform it builds on. For your own server install `@sveltejs/adapter-node`, switch `svelte.config.js` to it and start the app with `node build`. (Tested locally with `npm run preview` only.)
+The project uses `@sveltejs/adapter-auto`, which picks the adapter of the hosting platform it builds on. For your own server install `@sveltejs/adapter-node`, switch `svelte.config.js` to it and start the app with `ORIGIN=https://your.domain node build`. (Tested with `@sveltejs/adapter-node@5.2` and the full end-to-end suite.)
 
-`POCKETBASE_URL`, `POCKETBASE_ADMIN_EMAIL`, `POCKETBASE_ADMIN_PASSWORD` and `COOKIE_ENCRYPTION_KEY` are required (see `.env.example`). Set the real deadlines and the schedule in `app_config.yaml`.
+**Do not put `NODE_ENV=development` in the `.env` of a production build.** Vite reads it at build time and the build then skips SvelteKit's cross-site form check. Leave `NODE_ENV` unset: `vite build` and the production server set it themselves.
+
+`POCKETBASE_URL`, `POCKETBASE_ADMIN_EMAIL`, `POCKETBASE_ADMIN_PASSWORD`, `COOKIE_ENCRYPTION_KEY` and `ADMIN_ACTION_PASSWORD` (a different, long password only organizers who decide things know) are required (see `.env.example`). Set the real deadlines and the schedule in `app_config.yaml`.
 
 ### Running it for the event
 
-The app keeps short-lived caches in memory and works as a single Node process. In a load test with 300 simultaneous sessions it answered 95% of requests within 0.45 s; only hundreds of clicks in the same millisecond take a few seconds. For more headroom run several processes behind a load balancer (each has its own cache, data may then be up to 2 s old).
+The app keeps short-lived caches in memory and works as a single Node process. `scripts/load-test.mjs` replays the event day (217 participants, 15 jurors, 62 teams: logins, the upload rush, rating, publishing, everyone opening the ranking at once) against a production build: no failed request, 95% of requests within 0.15 s (ratings 0.5 s), about 270 MB of memory. For more headroom run several processes behind a load balancer (each has its own cache, data may then be up to 2 s old).
 
 ### Steps
 
@@ -172,6 +180,10 @@ The app keeps short-lived caches in memory and works as a single Node process. I
 *   `npm run lint`: Run ESLint and Prettier checks.
 *   `npm run format`: Format code with Prettier.
 *   `npm run test`: Run unit tests with Vitest.
+*   `npm run test:e2e`: Run the end-to-end suite (roles, submissions, judging, the second password, attacks) against a running app and a throw-away PocketBase, see [tests/e2e/README.md](tests/e2e/README.md).
+*   `node scripts/pocketbase-setup.mjs`: Create or update the PocketBase collections, fields and rules.
+*   `DEMO_PASSWORD=… node scripts/seed-demo.mjs`: Fill a *test* PocketBase with an event-sized demo (never production).
+*   `node scripts/load-test.mjs`: Replay the event day against a seeded test stack and print latencies.
 
 ## Screenshots
 ![telegram-cloud-photo-size-4-5944844193983302928-y](https://github.com/user-attachments/assets/37384efa-37cd-49f6-ba67-e951b98691fe)

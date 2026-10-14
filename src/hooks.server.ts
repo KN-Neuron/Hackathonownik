@@ -13,7 +13,8 @@ import { POCKETBASE_URL } from '$lib/server/adminClient';
 
 async function checkRouteAccess(pathname: string, user: any): Promise<boolean> {
 	// The info page (schedule, links) is for everyone, logged in or not
-	const publicRoutes = ['/login', '/', '/info'];
+	// Logging out must work for every role
+	const publicRoutes = ['/login', '/', '/info', '/logout'];
 	if (publicRoutes.includes(pathname)) {
 		return true;
 	}
@@ -65,6 +66,18 @@ async function checkRouteAccess(pathname: string, user: any): Promise<boolean> {
 // ============================================
 
 export const handle: Handle = async ({ event, resolve }) => {
+	// SvelteKit only checks the origin of form posts; JSON endpoints must come from this site too.
+	// Browsers always send Origin on cross-site writes, so a foreign one is never legitimate.
+	if (!['GET', 'HEAD', 'OPTIONS'].includes(event.request.method)) {
+		const origin = event.request.headers.get('origin');
+		if (origin && origin !== event.url.origin) {
+			return new Response(JSON.stringify({ error: 'Cross-origin request refused' }), {
+				status: 403,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		}
+	}
+
 	const pb = new PocketBase(POCKETBASE_URL) as TypedPocketBase;
 	// Loads of the same request run in parallel; the SDK would otherwise cancel duplicate queries
 	pb.autoCancellation(false);

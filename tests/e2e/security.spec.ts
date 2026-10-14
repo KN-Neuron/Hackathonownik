@@ -206,11 +206,15 @@ describe('injection', () => {
 			});
 			expect(res.type, p).not.toBe('success');
 		}
-		const res = await jury.json('/api/jury/notes', 'POST', {
+		const res = await jury.json('/api/jury/notes', 'PUT', {
 			teamId: w.teams.alpha.id,
-			notes: payloads.join('\n')
+			content: payloads.join('\n')
 		});
-		expect(res.status).toBeLessThan(500);
+		expect(res.status).toBe(200);
+		const [note] = await w.pb.collection('jury_notes').getFullList({
+			filter: `jury = "${w.users.juryA1.id}"`
+		});
+		expect(note.content).toContain('DROP TABLE');
 	});
 
 	it('login with injection strings fails cleanly', async () => {
@@ -385,9 +389,9 @@ describe('sessions and CSRF', () => {
 	it('JSON endpoints that change data reject other origins', async () => {
 		const jury = await w.as('juryA1');
 		const res = await jury.request('/api/jury/notes', {
-			method: 'POST',
+			method: 'PUT',
 			origin: 'https://evil.example',
-			body: JSON.stringify({ teamId: w.teams.alpha.id, notes: 'pwned' }),
+			body: JSON.stringify({ teamId: w.teams.alpha.id, content: 'pwned' }),
 			headers: { 'content-type': 'application/json' }
 		});
 		expect(res.status).toBeGreaterThanOrEqual(400);
@@ -407,6 +411,17 @@ describe('sessions and CSRF', () => {
 		for (const cookie of cookies) {
 			expect(cookie, cookie.slice(0, 30)).toMatch(/HttpOnly/i);
 			expect(cookie, cookie.slice(0, 30)).toMatch(/SameSite=(Strict|Lax)/i);
+		}
+	});
+
+	it('every role can log out, and the session is gone afterwards', async () => {
+		for (const who of ['alice', 'juryA1', 'admin'] as const) {
+			const c = await new AppClient().login(w.email(who));
+			const res = await c.request('/logout');
+			expect(res.status, who).toBe(303);
+			expect(res.headers.get('location'), who).toBe('/login');
+			// The session cookie is gone: nothing opens any more
+			expect((await c.data('/my-submission')).status, who).not.toBe(200);
 		}
 	});
 
