@@ -20,8 +20,11 @@ import { getTeamSubmissions, invalidateSubmissions } from '$lib/server/submissio
 import type { Actions, PageServerLoad } from './$types';
 import { checkinStatus } from '$lib/utils/checkin';
 import { generatePassword } from '$lib/server/passwords';
+import { guardSensitive, unlockStatus } from '$lib/server/adminGuard';
+import { audit } from '$lib/server/audit';
 
-export const load: PageServerLoad = async ({ locals, url }) => {
+export const load: PageServerLoad = async (event) => {
+	const { locals, url } = event;
 	try {
 		locals.security.isAdmin();
 	} catch {
@@ -123,6 +126,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		]);
 
 		return {
+			unlock: unlockStatus(event),
 			categories,
 			category,
 			summary,
@@ -179,19 +183,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	}
 };
 
-async function checkAdminForm(locals: App.Locals, formData: FormData) {
-	try {
-		locals.security.isAdmin();
-	} catch (e: any) {
-		return e.body?.message || 'Unauthorized';
-	}
-	const csrfToken = formData.get('csrf_token');
-	if (!locals.csrfToken || locals.csrfToken !== csrfToken) {
-		return 'Invalid security token';
-	}
-	return null;
-}
-
 /** Names of the given categories whose results are already published. */
 async function publishedAmong(keys: string[]): Promise<string[]> {
 	const { publishedCategories } = await getResultsState();
@@ -202,10 +193,11 @@ const validCategory = (value: FormDataEntryValue | null) =>
 	typeof value === 'string' && getCategory(value) ? value : null;
 
 export const actions: Actions = {
-	publishCategory: async ({ locals, request }) => {
+	publishCategory: async (event) => {
+		const { locals, request } = event;
 		const formData = await request.formData();
-		const authError = await checkAdminForm(locals, formData);
-		if (authError) return fail(403, { success: false, message: authError });
+		const denied = await guardSensitive(event, formData, 'publishCategory');
+		if (denied) return denied;
 
 		const category = validCategory(formData.get('category'));
 		if (!category) return fail(400, { success: false, message: 'Unknown category' });
@@ -228,9 +220,17 @@ export const actions: Actions = {
 				message: 'Not every juror of this category has rated all finalists and confirmed.'
 			});
 		}
+		// Rules §8: a tie for first place is decided by a jury vote before the results go out
+		if (!force && (await getCategoryRanking(category)).tie.length > 0) {
+			return fail(400, {
+				success: false,
+				message: 'There is a tie for first place: record the winner of the jury vote first.'
+			});
+		}
 
 		try {
 			await setCategoryPublished(category, true);
+			await audit(event, 'publishCategory', { category, forced: force });
 			return { success: true, message: `${getCategory(category)!.name}: results published` };
 		} catch (e) {
 			console.error('Error publishing results:', e);
@@ -238,16 +238,18 @@ export const actions: Actions = {
 		}
 	},
 
-	unpublishCategory: async ({ locals, request }) => {
+	unpublishCategory: async (event) => {
+		const { locals, request } = event;
 		const formData = await request.formData();
-		const authError = await checkAdminForm(locals, formData);
-		if (authError) return fail(403, { success: false, message: authError });
+		const denied = await guardSensitive(event, formData, 'unpublishCategory');
+		if (denied) return denied;
 
 		const category = validCategory(formData.get('category'));
 		if (!category) return fail(400, { success: false, message: 'Unknown category' });
 
 		try {
 			await setCategoryPublished(category, false);
+			await audit(event, 'unpublishCategory', { category });
 			return { success: true, message: `${getCategory(category)!.name}: results hidden again` };
 		} catch (e) {
 			console.error('Error unpublishing results:', e);
@@ -256,10 +258,11 @@ export const actions: Actions = {
 	},
 
 	// Rules §8: after the preliminary round the jury picks at most N teams for the final
-	startFinal: async ({ locals, request }) => {
+	startFinal: async (event) => {
+		const { locals, request } = event;
 		const formData = await request.formData();
-		const authError = await checkAdminForm(locals, formData);
-		if (authError) return fail(403, { success: false, message: authError });
+		const denied = await guardSensitive(event, formData, 'startFinal');
+		if (denied) return denied;
 
 		const category = validCategory(formData.get('category'));
 		if (!category) return fail(400, { success: false, message: 'Unknown category' });
@@ -289,6 +292,7 @@ export const actions: Actions = {
 
 		try {
 			await setCategoryStage(category, 'final', finalists);
+			await audit(event, 'startFinal', { category, finalists, forced: force });
 			// Every juror confirms again once the final is rated
 			await Promise.all(
 				(progress?.juries ?? []).map((j) => setCategoryConfirmed(j.id, category, false))
@@ -303,10 +307,11 @@ export const actions: Actions = {
 		}
 	},
 
-	backToPreliminary: async ({ locals, request }) => {
+	backToPreliminary: async (event) => {
+		const { locals, request } = event;
 		const formData = await request.formData();
-		const authError = await checkAdminForm(locals, formData);
-		if (authError) return fail(403, { success: false, message: authError });
+		const denied = await guardSensitive(event, formData, 'backToPreliminary');
+		if (denied) return denied;
 
 		const category = validCategory(formData.get('category'));
 		if (!category) return fail(400, { success: false, message: 'Unknown category' });
@@ -316,6 +321,7 @@ export const actions: Actions = {
 
 		try {
 			await setCategoryStage(category, 'preliminary');
+			await audit(event, 'backToPreliminary', { category });
 			return {
 				success: true,
 				message: `${getCategory(category)!.name}: back to the preliminary round`
@@ -326,10 +332,11 @@ export const actions: Actions = {
 		}
 	},
 
-	setOrder: async ({ locals, request }) => {
+	setOrder: async (event) => {
+		const { locals, request } = event;
 		const formData = await request.formData();
-		const authError = await checkAdminForm(locals, formData);
-		if (authError) return fail(403, { success: false, message: authError });
+		const denied = await guardSensitive(event, formData, 'setOrder');
+		if (denied) return denied;
 
 		const category = validCategory(formData.get('category'));
 		if (!category) return fail(400, { success: false, message: 'Unknown category' });
@@ -343,6 +350,7 @@ export const actions: Actions = {
 
 		try {
 			await setPresentationOrder(category, order);
+			await audit(event, 'setOrder', { category, teams: order.length });
 			return { success: true, message: `${getCategory(category)!.name}: presentation order saved` };
 		} catch (e) {
 			console.error('Error saving the order:', e);
@@ -351,10 +359,11 @@ export const actions: Actions = {
 	},
 
 	// Rules §8: a tie is decided by a jury vote, the organizers record the winner
-	setTieWinner: async ({ locals, request }) => {
+	setTieWinner: async (event) => {
+		const { locals, request } = event;
 		const formData = await request.formData();
-		const authError = await checkAdminForm(locals, formData);
-		if (authError) return fail(403, { success: false, message: authError });
+		const denied = await guardSensitive(event, formData, 'setTieWinner');
+		if (denied) return denied;
 
 		const category = validCategory(formData.get('category'));
 		const teamId = formData.get('team_id');
@@ -362,8 +371,18 @@ export const actions: Actions = {
 			return fail(400, { success: false, message: 'Missing category or team' });
 		}
 
+		// Only one of the teams currently tied for first place can win the vote (empty clears it)
+		if (teamId) {
+			const ranking = await getCategoryRanking(category);
+			const tied = [...ranking.tie, ...ranking.rankings.filter((r) => r.wonTieBreak)];
+			if (!tied.some((t) => t.teamId === teamId)) {
+				return fail(400, { success: false, message: 'That team is not tied for first place.' });
+			}
+		}
+
 		try {
 			await setTieWinner(category, teamId || null);
+			await audit(event, 'setTieWinner', { category, teamId: teamId || null });
 			return { success: true, message: teamId ? 'Tie-break winner saved' : 'Tie-break cleared' };
 		} catch (e) {
 			console.error('Error saving the tie-break:', e);
@@ -372,10 +391,11 @@ export const actions: Actions = {
 	},
 
 	// Organizers may confirm on a juror's behalf (e.g. a juror had to leave)
-	confirmForJury: async ({ locals, request }) => {
+	confirmForJury: async (event) => {
+		const { locals, request } = event;
 		const formData = await request.formData();
-		const authError = await checkAdminForm(locals, formData);
-		if (authError) return fail(403, { success: false, message: authError });
+		const denied = await guardSensitive(event, formData, 'confirmForJury');
+		if (denied) return denied;
 
 		const category = validCategory(formData.get('category'));
 		const juryId = formData.get('jury_id');
@@ -383,8 +403,26 @@ export const actions: Actions = {
 			return fail(400, { success: false, message: 'Missing juror or category' });
 		}
 
+		// Same rules as a juror confirming for themselves
+		const state = await getResultsState();
+		if (state.publishedCategories.includes(category)) {
+			return fail(409, { success: false, message: 'Results of this category are published.' });
+		}
+		const progress = (await getRatingProgress())[category];
+		const juror = progress?.juries.find((j) => j.id === juryId);
+		if (!juror) {
+			return fail(400, { success: false, message: 'This juror is not assigned to the category.' });
+		}
+		if (juror.ratedTeams < progress.totalTeams) {
+			return fail(400, {
+				success: false,
+				message: `${juror.name} rated ${juror.ratedTeams} of ${progress.totalTeams} teams.`
+			});
+		}
+
 		try {
 			await setCategoryConfirmed(juryId, category, true);
+			await audit(event, 'confirmForJury', { category, juryId });
 			return { success: true, message: 'Ratings confirmed' };
 		} catch (e) {
 			console.error('Error confirming for juror:', e);
@@ -392,10 +430,11 @@ export const actions: Actions = {
 		}
 	},
 
-	setJuryCategories: async ({ locals, request }) => {
+	setJuryCategories: async (event) => {
+		const { locals, request } = event;
 		const formData = await request.formData();
-		const authError = await checkAdminForm(locals, formData);
-		if (authError) return fail(403, { success: false, message: authError });
+		const denied = await guardSensitive(event, formData, 'setJuryCategories');
+		if (denied) return denied;
 
 		const juryId = formData.get('jury_id');
 		if (typeof juryId !== 'string') {
@@ -422,6 +461,7 @@ export const actions: Actions = {
 				});
 			}
 			await pb.collection('users').update(juryId, { jury_categories: categories });
+			await audit(event, 'setJuryCategories', { juryId, before, after: categories });
 			invalidateRatings();
 			return { success: true, message: 'Juror categories saved' };
 		} catch (e) {
@@ -431,10 +471,11 @@ export const actions: Actions = {
 	},
 
 	// New jury accounts: organizers hand the generated password over to the juror
-	addJury: async ({ locals, request }) => {
+	addJury: async (event) => {
+		const { locals, request } = event;
 		const formData = await request.formData();
-		const authError = await checkAdminForm(locals, formData);
-		if (authError) return fail(403, { success: false, message: authError });
+		const denied = await guardSensitive(event, formData, 'addJury');
+		if (denied) return denied;
 
 		const name = String(formData.get('name') ?? '').trim();
 		const email = String(formData.get('email') ?? '')
@@ -466,6 +507,7 @@ export const actions: Actions = {
 				verified: true
 			});
 			invalidateRatings();
+			await audit(event, 'addJury', { name, email, categories });
 			return {
 				success: true,
 				message: `Juror ${name} added`,
@@ -481,10 +523,11 @@ export const actions: Actions = {
 		}
 	},
 
-	resetJuryPassword: async ({ locals, request }) => {
+	resetJuryPassword: async (event) => {
+		const { locals, request } = event;
 		const formData = await request.formData();
-		const authError = await checkAdminForm(locals, formData);
-		if (authError) return fail(403, { success: false, message: authError });
+		const denied = await guardSensitive(event, formData, 'resetJuryPassword');
+		if (denied) return denied;
 
 		const juryId = formData.get('jury_id');
 		if (typeof juryId !== 'string') return fail(400, { success: false, message: 'Missing juror' });
@@ -497,6 +540,7 @@ export const actions: Actions = {
 				return fail(400, { success: false, message: 'Only jury passwords can be reset here' });
 			}
 			await pb.collection('users').update(juryId, { password, passwordConfirm: password });
+			await audit(event, 'resetJuryPassword', { juryId, email: jury.email });
 			return {
 				success: true,
 				message: `New password for ${jury.name || jury.email}`,
@@ -508,10 +552,11 @@ export const actions: Actions = {
 		}
 	},
 
-	setTeamCategory: async ({ locals, request }) => {
+	setTeamCategory: async (event) => {
+		const { locals, request } = event;
 		const formData = await request.formData();
-		const authError = await checkAdminForm(locals, formData);
-		if (authError) return fail(403, { success: false, message: authError });
+		const denied = await guardSensitive(event, formData, 'setTeamCategory');
+		if (denied) return denied;
 
 		const teamId = formData.get('team_id');
 		const category = validCategory(formData.get('category'));
@@ -541,6 +586,13 @@ export const actions: Actions = {
 			});
 			await Promise.all(ratings.map((r) => pb.collection('ratings').delete(r.id)));
 			await pb.collection('teams').update(teamId, { category });
+			await audit(event, 'setTeamCategory', {
+				teamId,
+				team: team.name,
+				from: team.category,
+				to: category,
+				ratingsRemoved: ratings.length
+			});
 			invalidateSubmissions();
 
 			return {

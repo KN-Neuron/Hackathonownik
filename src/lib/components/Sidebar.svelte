@@ -105,6 +105,34 @@
 				<a class="nav-link" href="/ranking" class:active={$page.url.pathname === '/ranking'}>
 					<SidebarElement icon={IconNames.Ranking} text="Rankings" />
 				</a>
+				<a
+					class="nav-link"
+					href="/admin/ratings"
+					class:active={$page.url.pathname.startsWith('/admin/ratings')}
+				>
+					<SidebarElement icon={IconNames.Rate} text="All ratings" />
+				</a>
+				<a
+					class="nav-link"
+					href="/admin/people"
+					class:active={$page.url.pathname.startsWith('/admin/people')}
+				>
+					<SidebarElement icon={IconNames.Stats} text="People and teams" />
+				</a>
+				<a
+					class="nav-link"
+					href="/present"
+					class:active={$page.url.pathname.startsWith('/present')}
+				>
+					<SidebarElement icon={IconNames.Presentation} text="Presenter mode" />
+				</a>
+				<a
+					class="nav-link"
+					href="/admin/audit"
+					class:active={$page.url.pathname.startsWith('/admin/audit')}
+				>
+					<SidebarElement icon={IconNames.Info} text="Audit log" />
+				</a>
 			{:else if user?.role === 'jury'}
 				<a
 					class="nav-link"

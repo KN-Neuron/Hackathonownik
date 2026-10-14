@@ -3,19 +3,23 @@ import type { Actions, PageServerLoad } from './$types';
 import { appConfig } from '$lib/server/appConfig';
 import { getAdminClient } from '$lib/server/adminClient';
 import { generatePassword } from '$lib/server/passwords';
+import { guardSensitive, unlockStatus } from '$lib/server/adminGuard';
+import { audit } from '$lib/server/audit';
 import { planImport, type ImportPlan } from '$lib/server/participantImport';
 import { invalidateSubmissions } from '$lib/server/submissions';
 import { invalidateRatings } from '$lib/server/results';
 
 const MAX_FILE_BYTES = 1_000_000;
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async (event) => {
+	const { locals } = event;
 	try {
 		locals.security.isAdmin();
 	} catch {
 		throw error(403, 'Admin access required');
 	}
 	return {
+		unlock: unlockStatus(event),
 		categories: appConfig.event.categories.map((c) => ({ key: c.key, name: c.name })),
 		csrfToken: locals.csrfToken
 	};
@@ -67,8 +71,12 @@ export const actions: Actions = {
 	},
 
 	// Step 2: create the teams and accounts; passwords are shown once
-	apply: async ({ locals, request }) => {
-		const result = await planFromForm(locals, await request.formData());
+	apply: async (event) => {
+		const { locals, request } = event;
+		const formData = await request.formData();
+		const denied = await guardSensitive(event, formData, 'importParticipants');
+		if (denied) return denied;
+		const result = await planFromForm(locals, formData);
 		if ('error' in result) return fail(400, { step: 'preview' as const, message: result.error });
 		const { plan, teams } = result;
 		if (plan.errors.length > 0) {
@@ -136,6 +144,12 @@ export const actions: Actions = {
 
 		invalidateSubmissions();
 		invalidateRatings();
+		await audit(event, 'importParticipants', {
+			accounts: created.length,
+			teams: plan.newTeams.length,
+			failed: failures.length,
+			skipped: plan.skipped.length
+		});
 		created.sort((a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name));
 		return {
 			step: 'done' as const,

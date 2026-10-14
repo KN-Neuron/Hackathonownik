@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import HeaderText from '$lib/components/HeaderText.svelte';
+	import AdminUnlock from '$lib/components/AdminUnlock.svelte';
 	import { IconNames } from '$lib/utils/utils';
 
 	let { data, form } = $props();
@@ -37,6 +38,12 @@
 
 <div class="import-page">
 	<HeaderText icon={IconNames.Upload} text="Import teams and participants" />
+
+	<AdminUnlock configured={data.unlock.configured} unlockedUntil={data.unlock.unlockedUntil} />
+
+	{#if form?.message && form.step !== 'preview'}
+		<div class="alert alert-error"><span>{form.message}</span></div>
+	{/if}
 
 	{#if form?.step === 'done'}
 		<div class="panel done">
@@ -104,7 +111,9 @@
 				/>
 				<button class="btn btn-sm btn-primary" disabled={busy}>Check the file</button>
 			</form>
-			{#if form?.message}<p class="text-error mt-2">{form.message}</p>{/if}
+			{#if form?.message && form.step === 'preview'}<p class="text-error mt-2">
+					{form.message}
+				</p>{/if}
 		</div>
 
 		{#if form?.plan}

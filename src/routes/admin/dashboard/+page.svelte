@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import HeaderText from '$lib/components/HeaderText.svelte';
 	import CategoryTabs from '$lib/components/CategoryTabs.svelte';
+	import AdminUnlock from '$lib/components/AdminUnlock.svelte';
 	import { IconNames } from '$lib/utils/utils';
 	import type { EventCategory } from '$lib/types';
 
@@ -104,6 +105,8 @@
 
 <div class="dashboard-container">
 	<HeaderText {icon} {text} />
+
+	<AdminUnlock configured={data.unlock.configured} unlockedUntil={data.unlock.unlockedUntil} />
 
 	{#if form?.message}
 		<div class="alert mb-4 {form.success ? 'alert-success' : 'alert-error'}">
@@ -744,6 +747,18 @@
 			<a href="/ranking" class="panel shortcut">
 				<h3>View Rankings</h3>
 				<p>Live ranking of every category</p>
+			</a>
+			<a href="/admin/people" class="panel shortcut">
+				<h3>People and teams</h3>
+				<p>Every account and team, with history</p>
+			</a>
+			<a href="/admin/ratings?category={data.category}" class="panel shortcut">
+				<h3>All ratings</h3>
+				<p>Every juror's scores and comments</p>
+			</a>
+			<a href="/admin/audit" class="panel shortcut">
+				<h3>Audit log</h3>
+				<p>Who did what, denied attempts</p>
 			</a>
 			<a href="/admin/import" class="panel shortcut">
 				<h3>Import teams</h3>

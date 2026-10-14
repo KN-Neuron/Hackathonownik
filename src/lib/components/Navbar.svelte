@@ -26,6 +26,10 @@
 		if (user.admin || user.role === 'admin') {
 			links.push(
 				{ href: '/admin/dashboard', label: 'Admin Dashboard' },
+				{ href: '/admin/ratings', label: 'All ratings' },
+				{ href: '/admin/people', label: 'People and teams' },
+				{ href: '/present', label: 'Presenter mode' },
+				{ href: '/admin/audit', label: 'Audit log' },
 				{ href: '/presentations', label: 'View Presentations' },
 				{ href: '/ranking', label: 'Rankings' }
 			);
