@@ -53,7 +53,12 @@ async function ensure(name, { fields = [], rules = {}, type = 'base' }) {
 
 	const have = new Set(existing.fields.map((f) => f.name));
 	const missing = fields.filter((f) => !have.has(f.name));
-	await pb.collections.update(name, { fields: [...existing.fields, ...missing], ...apply });
+	// Settings we insist on for fields that already exist (protected files)
+	const protectedFiles = new Set(fields.filter((f) => f.protected).map((f) => f.name));
+	const current = existing.fields.map((f) =>
+		protectedFiles.has(f.name) ? { ...f, protected: true } : f
+	);
+	await pb.collections.update(name, { fields: [...current, ...missing], ...apply });
 	console.log(
 		`${missing.length ? `updated ${name} (+${missing.map((f) => f.name).join(', ')})` : `ok ${name}`}`
 	);
@@ -93,6 +98,8 @@ await ensure('presentations', {
 			type: 'file',
 			maxSelect: 1,
 			maxSize: 41943040,
+			// Served only with a file token, which only the app (superuser) can get
+			protected: true,
 			mimeTypes: ['application/pdf']
 		},
 		{
@@ -100,6 +107,8 @@ await ensure('presentations', {
 			type: 'file',
 			maxSelect: 1,
 			maxSize: 41943040,
+			// Served only with a file token, which only the app (superuser) can get
+			protected: true,
 			mimeTypes: ['application/pdf']
 		},
 		{ name: 'repo_link', type: 'text' },
