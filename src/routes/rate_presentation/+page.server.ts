@@ -24,6 +24,9 @@ import { getJuryNotes } from '$lib/server/juryNotes';
 import { setCategoryConfirmed } from '$lib/server/confirmations';
 import { getViews, type ViewItem } from '$lib/server/views';
 
+// Longer feedback is refused instead of failing in the database
+const MAX_COMMENT_LENGTH = 5000;
+
 export interface TeamWithPresentationUrl {
 	id: string;
 	name: string;
@@ -209,6 +212,13 @@ export const actions: Actions = {
 			return fail(HttpStatusCode.Forbidden, { error: 'This team is not in the final.' });
 		}
 
+		const comments = typeof form.comments === 'string' ? form.comments : '';
+		if (comments.length > MAX_COMMENT_LENGTH) {
+			return fail(HttpStatusCode.BadRequest, {
+				error: `Feedback is too long (at most ${MAX_COMMENT_LENGTH} characters).`
+			});
+		}
+
 		const parsed = parseScores(form, stageCriteria(category!, stage));
 		if (!parsed.ok) {
 			return fail(HttpStatusCode.BadRequest, { error: parsed.error });
@@ -222,7 +232,7 @@ export const actions: Actions = {
 		// Keep scores of the other stage (e.g. the final presentation score) untouched
 		const scores: Record<string, number> = { ...(existing?.scores ?? {}), ...parsed.scores };
 		const rating: Rating = {
-			comments: typeof form.comments === 'string' ? form.comments : '',
+			comments,
 			jury: user!.id,
 			team: teamId,
 			scores,

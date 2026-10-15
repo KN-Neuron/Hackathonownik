@@ -2,12 +2,14 @@
 	import { enhance } from '$app/forms';
 	import HeaderText from '$lib/components/HeaderText.svelte';
 	import CategoryTabs from '$lib/components/CategoryTabs.svelte';
+	import AdminUnlock from '$lib/components/AdminUnlock.svelte';
 	import { IconNames } from '$lib/utils/utils';
 	import type { EventCategory } from '$lib/types';
 
 	let { data, form } = $props();
 	let forcePublish = $state(false);
 	let forceFinal = $state(false);
+	let ratedSet = $derived(new Set<string>(data.rated));
 
 	// Presentation order being edited (reset when the category or the saved order changes)
 	type OrderItem = { teamId: string; teamName: string; finalist: boolean };
@@ -103,6 +105,8 @@
 
 <div class="dashboard-container">
 	<HeaderText {icon} {text} />
+
+	<AdminUnlock configured={data.unlock.configured} unlockedUntil={data.unlock.unlockedUntil} />
 
 	{#if form?.message}
 		<div class="alert mb-4 {form.success ? 'alert-success' : 'alert-error'}">
@@ -490,7 +494,7 @@
 				<p>
 					What each juror opened: <b>P</b> presentation, <b>V</b> video, <b>R</b> repository,
 					<b>F</b>
-					final presentation.
+					final presentation, followed by whether the juror already rated the team.
 					<a class="link ml-2" href="/present?category={data.category}">Open the presenter mode →</a
 					>
 				</p>
@@ -516,6 +520,12 @@
 										{#if data.stage === 'final'}
 											<span class:yes={items.includes('final_presentation')}>F</span>
 										{/if}
+										<span
+											class="rating-state"
+											class:rated={ratedSet.has(`${jury.id}:${team.teamId}`)}
+										>
+											{ratedSet.has(`${jury.id}:${team.teamId}`) ? '✓ rated' : 'not rated'}
+										</span>
 									</td>
 								{/each}
 							</tr>
@@ -729,7 +739,7 @@
 
 	<!-- Shortcuts -->
 	<section class="section">
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+		<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
 			<a href="/presentations" class="panel shortcut">
 				<h3>View Presentations</h3>
 				<p>Browse submissions by category</p>
@@ -737,6 +747,22 @@
 			<a href="/ranking" class="panel shortcut">
 				<h3>View Rankings</h3>
 				<p>Live ranking of every category</p>
+			</a>
+			<a href="/admin/people" class="panel shortcut">
+				<h3>People and teams</h3>
+				<p>Every account and team, with history</p>
+			</a>
+			<a href="/admin/ratings?category={data.category}" class="panel shortcut">
+				<h3>All ratings</h3>
+				<p>Every juror's scores and comments</p>
+			</a>
+			<a href="/admin/audit" class="panel shortcut">
+				<h3>Audit log</h3>
+				<p>Who did what, denied attempts</p>
+			</a>
+			<a href="/admin/import" class="panel shortcut">
+				<h3>Import teams</h3>
+				<p>Create teams and participant accounts from a CSV</p>
 			</a>
 			<a href="/admin/system-info" class="panel shortcut">
 				<h3>System Info</h3>
@@ -849,6 +875,17 @@
 		margin-right: 0.35rem;
 		font-weight: 700;
 		color: rgba(255, 255, 255, 0.2);
+	}
+
+	.views .rating-state {
+		margin-left: 0.25rem;
+		font-weight: 400;
+		font-size: 0.75rem;
+		color: #f87272;
+	}
+
+	.views .rating-state.rated {
+		color: #36c399;
 	}
 
 	.views span.yes {

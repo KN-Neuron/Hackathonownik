@@ -12,7 +12,10 @@
 	let text = 'Submit Your Project';
 
 	const deadline = new Date(data.eventConfig.deadline);
+	// Links (repository, video) and the first presentation (PDF) have their own deadlines
 	const closed = new Date() > deadline;
+	const presentationDeadline = new Date(data.eventConfig.presentation_deadline);
+	const presentationClosed = new Date() > presentationDeadline;
 	const formatDate = (d: string | Date) =>
 		new Date(typeof d === 'string' ? d.replace(' ', 'T') : d).toLocaleString([], {
 			weekday: 'short',
@@ -100,7 +103,9 @@
 		</div>
 	{:else}
 		<p class="team-line">
-			Team <b>{data.teamName}</b> · deadline <b>{formatDate(deadline)}</b>
+			Team <b>{data.teamName}</b> · presentation until <b>{formatDate(presentationDeadline)}</b>,
+			links until
+			<b>{formatDate(deadline)}</b>
 		</p>
 
 		<!-- Check-in -->
@@ -140,9 +145,19 @@
 			></progress>
 		</div>
 
-		{#if closed && finalClosed}
+		{#if closed && presentationClosed && finalClosed}
 			<div class="banner banner-warn">
-				The submission deadline has passed ({formatDate(deadline)}). Nothing can be changed anymore.
+				All deadlines have passed. Nothing can be changed anymore.
+			</div>
+		{:else if presentationClosed && !closed}
+			<div class="banner banner-warn">
+				The deadline for the first presentation has passed ({formatDate(presentationDeadline)}). The
+				repository and video links can be changed until {formatDate(deadline)}.
+			</div>
+		{:else if closed && !presentationClosed}
+			<div class="banner banner-warn">
+				The deadline for the links has passed ({formatDate(deadline)}). The first presentation can
+				be replaced until {formatDate(presentationDeadline)}.
 			</div>
 		{:else if closed}
 			<div class="banner banner-warn">
@@ -191,14 +206,14 @@
 						name="file"
 						accept="application/pdf,.pdf"
 						class="hidden"
-						disabled={closed || saving.presentation}
+						disabled={presentationClosed || saving.presentation}
 						onchange={() => uploadSelected()}
 					/>
 					<label
 						for="pdf-input"
 						class="dropzone"
 						class:dragging
-						class:disabled={closed}
+						class:disabled={presentationClosed}
 						ondragover={(e) => {
 							e.preventDefault();
 							dragging = true;

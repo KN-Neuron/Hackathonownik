@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { afterNavigate } from '$app/navigation';
 	import { Badge } from '$lib/components/ui';
+
+	// On phones the menu is collapsed behind a button, so the page content starts right away
+	let menuOpen = $state(false);
+	afterNavigate(() => (menuOpen = false));
 
 	let user = $derived($page.data.user);
 	let teamCategory = $derived($page.data.teamCategory);
@@ -26,6 +31,10 @@
 		if (user.admin || user.role === 'admin') {
 			links.push(
 				{ href: '/admin/dashboard', label: 'Admin Dashboard' },
+				{ href: '/admin/ratings', label: 'All ratings' },
+				{ href: '/admin/people', label: 'People and teams' },
+				{ href: '/present', label: 'Presenter mode' },
+				{ href: '/admin/audit', label: 'Audit log' },
 				{ href: '/presentations', label: 'View Presentations' },
 				{ href: '/ranking', label: 'Rankings' }
 			);
@@ -68,9 +77,18 @@
 	<div class="container">
 		<div class="brand">
 			<a href="/">{$page.data.eventConfig.name} {$page.data.eventConfig.year}</a>
+			<button
+				type="button"
+				class="menu-toggle"
+				aria-expanded={menuOpen}
+				aria-controls="main-menu"
+				onclick={() => (menuOpen = !menuOpen)}
+			>
+				{menuOpen ? 'Close' : 'Menu'}
+			</button>
 		</div>
 
-		<ul class="nav-links">
+		<ul class="nav-links" id="main-menu" class:open={menuOpen}>
 			{#each navLinks as link}
 				<li>
 					<a href={link.href} class:active={isActive(link.href)}>
@@ -81,7 +99,7 @@
 		</ul>
 
 		{#if user}
-			<div class="user-info">
+			<div class="user-info" class:open={menuOpen}>
 				<span class="user-name">{user.name || user.email}</span>
 				<div class="user-badges">
 					<Badge
@@ -220,16 +238,58 @@
 		letter-spacing: 0.3px;
 	}
 
+	.menu-toggle {
+		display: none;
+	}
+
 	@media (max-width: 768px) {
 		.container {
 			flex-direction: column;
-			gap: 1rem;
+			gap: 0.5rem;
 			align-items: stretch;
+		}
+
+		.brand {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1rem;
+		}
+
+		.menu-toggle {
+			display: inline-flex;
+			align-items: center;
+			min-height: 44px;
+			padding: 0 1rem;
+			border-radius: 0.5rem;
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			background: rgba(127, 123, 255, 0.15);
+			color: #f0f0f0;
+			font-weight: 600;
+		}
+
+		.nav-links,
+		.user-info {
+			display: none;
+		}
+
+		.nav-links.open {
+			display: flex;
+		}
+
+		.user-info.open {
+			display: flex;
 		}
 
 		.nav-links {
 			flex-direction: column;
 			gap: 0.25rem;
+		}
+
+		.nav-links a {
+			display: flex;
+			align-items: center;
+			min-height: 44px;
 		}
 
 		.user-info {

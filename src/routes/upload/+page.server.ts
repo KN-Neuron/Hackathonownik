@@ -92,9 +92,10 @@ export const actions: Actions = {
 	upload: async ({ request, locals }) => {
 		// 1. Deadlines: the final presentation may come later than everything else
 		const now = new Date();
-		const mainClosed = now > new Date(appConfig.event.deadline);
+		const linksClosed = now > new Date(appConfig.event.deadline);
+		const pdfClosed = now > new Date(appConfig.event.presentation_deadline);
 		const finalClosed = now > new Date(appConfig.event.final_presentation_deadline);
-		if (mainClosed && finalClosed) {
+		if (linksClosed && pdfClosed && finalClosed) {
 			return { success: false, message: 'The submission deadline has passed.' };
 		}
 
@@ -143,10 +144,13 @@ export const actions: Actions = {
 		// 5. Every item is optional on its own
 		const hasFile = uploaded instanceof File && uploaded.size > 0;
 		const hasFinalFile = uploadedFinal instanceof File && uploadedFinal.size > 0;
-		if (mainClosed && (hasFile || repoLink || videoLink)) {
+		if (pdfClosed && hasFile) {
+			return { success: false, message: 'The deadline for the first presentation has passed.' };
+		}
+		if (linksClosed && (repoLink || videoLink)) {
 			return {
 				success: false,
-				message: 'The deadline has passed; only the final presentation can still be uploaded.'
+				message: 'The deadline for the repository and video links has passed.'
 			};
 		}
 		if (finalClosed && hasFinalFile) {
