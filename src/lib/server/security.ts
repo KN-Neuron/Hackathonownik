@@ -579,28 +579,14 @@ export class Security {
 // CONTENT SECURITY POLICY
 // ============================================
 
-export const CSP_HEADERS = {
-	'Content-Security-Policy': [
-		"default-src 'self'",
-		"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net", // unsafe-eval dla Svelte dev
-		"style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
-		"img-src 'self' data: https:",
-		"font-src 'self' data: https:",
-		"connect-src 'self' https://hotb-pb.knneuron.pl/",
-		// Embedded demo videos on the jury view
-		"frame-src 'self' https://www.youtube-nocookie.com https://www.loom.com",
-		"frame-ancestors 'none'",
-		"base-uri 'self'",
-		"form-action 'self'"
-	].join('; ')
-};
+// The Content-Security-Policy is built by SvelteKit (kit.csp in svelte.config.js), which adds
+// nonces for its own inline scripts.
 
 // ============================================
 // SECURITY HEADERS
 // ============================================
 
 export const SECURITY_HEADERS = {
-	...CSP_HEADERS,
 	'X-Frame-Options': 'DENY',
 	'X-Content-Type-Options': 'nosniff',
 	'Referrer-Policy': 'strict-origin-when-cross-origin',

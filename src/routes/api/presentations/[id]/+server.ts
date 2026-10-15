@@ -57,10 +57,10 @@ export const GET: RequestHandler = async ({ params, locals, url }) => {
 			);
 		}
 
-		// Construct the file URL using the authenticated client
-		const fileUrl = `${pb.baseURL}/api/files/${presentation.collectionName}/${presentation.id}/${fileName}`;
-
-		// Fetch the file with the authenticated client
+		// The file fields are protected: PocketBase serves them only with a short-lived file token
+		// of the superuser, so the files can't be fetched from PocketBase without this app
+		const token = await pb.files.getToken();
+		const fileUrl = `${pb.baseURL}/api/files/${presentation.collectionName}/${presentation.id}/${encodeURIComponent(fileName)}?token=${encodeURIComponent(token)}`;
 		const response = await fetch(fileUrl);
 
 		if (!response.ok) {

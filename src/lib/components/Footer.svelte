@@ -63,6 +63,11 @@
 	}
 	a {
 		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		/* big enough to hit with a thumb */
+		min-width: 44px;
+		min-height: 44px;
 		color: rgba(255, 255, 255, 0.7);
 		transition: color 0.15s ease;
 	}
