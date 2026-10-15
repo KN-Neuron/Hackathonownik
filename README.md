@@ -8,7 +8,7 @@
 - **Simple submit page**: three cards (presentation PDF, repository link, demo video link), each saved on its own, with a progress bar. The PDF uploads as soon as it's chosen; any file name works and links without `https://` are accepted.
 - **Teammates share one submission**: everyone in the team can add different parts; the newest version of every item is what the jury sees. *My Submission* shows who added what and when, and the full change history.
 - **Check-in**: teams upload anything before `checkin_deadline`, so organizers know how many teams really compete.
-- **Final presentation**: a separate PDF for the stage, with its own, later deadline.
+- **Three deadlines**: the first presentation (PDF) closes at `presentation_deadline`, the repository and video links at `deadline`, and the separate final presentation for the stage at the later `final_presentation_deadline`.
 - **Results**: after a category is published teams see their place, the final ranking and the jury's feedback (anonymous), plus how to appeal.
 - A deadline countdown, team members list and a link to the organizers.
 
@@ -59,7 +59,8 @@ The core logic of the event is controlled by `app_config.yaml`. This allows you 
 event:
   name: "Heroes Of The Brain"
   year: "2026"
-  deadline: "2026-11-15T12:00:00+01:00"            # always with a UTC offset
+  presentation_deadline: "2026-11-15T10:00:00+01:00"  # first presentation (PDF); defaults to deadline
+  deadline: "2026-11-15T12:00:00+01:00"            # repository and video links; always with a UTC offset
   checkin_deadline: "2026-11-14T23:59:00+01:00"      # optional
   final_presentation_deadline: "2026-11-15T14:00:00+01:00"
   stage_presentation_minutes: 5
@@ -78,7 +79,7 @@ event:
 ```
 
 Key sections:
--   **`event`**: name, year, organizer and the deadlines (submission, check-in, final presentation).
+-   **`event`**: name, year, organizer and the deadlines (first presentation, links, check-in, final presentation).
 -   **`categories`**: competition tracks; each can override `rating_criteria` and `submission.required`, and is rated and published separately. A category key is stored in `teams.category` and in a juror's `jury_categories`.
 -   **`rating_criteria`**: scoring criteria. `stage: "final"` criteria are rated only in the final.
 -   **`submission.required`**: items a team must provide for a complete submission (`presentation`, `repo`, `video`).
@@ -170,6 +171,8 @@ The app keeps short-lived caches in memory and works as a single Node process. `
 
 6.  **Open the App:**
     Navigate to `http://localhost:5173` in your browser.
+
+Progress, decisions, findings and the pre-event checklist live in [docs/PROJECT-LOG.md](docs/PROJECT-LOG.md).
 
 ## 📜 Scripts
 
