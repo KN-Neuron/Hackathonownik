@@ -22,6 +22,7 @@ Single place so nobody gets lost. Newest entries at the bottom of each section. 
 3. Admin hardening (PR #19): second password for decisions, audit log, admin overview pages (all ratings, people and teams), server-side tie check, `scripts/pocketbase-setup.mjs`, `scripts/seed-demo.mjs`.
 4. End-to-end tests (`npm run test:e2e`, 191 tests, `tests/e2e/README.md`) and load test (`scripts/load-test.mjs`).
 5. Separate deadline for the first presentation.
+6. Security follow-ups: login limiter, session revocation on logout, authenticated cookie encryption, strict CSP, collapsible mobile menu, multi-process load test (195 e2e tests passing).
 
 ## Findings from testing, and what happened to them
 
@@ -36,16 +37,17 @@ Single place so nobody gets lost. Newest entries at the bottom of each section. 
 | 2 MB feedback comment gave a 500 | Fixed: 5000-character limit |
 | JSON writes with a foreign `Origin` were accepted | Fixed: refused in `hooks.server.ts` |
 | Dev server skips the cross-site form check | By design in SvelteKit; run e2e against a production build |
-| No login attempt limit | Open by decision; use strong passwords for admins |
-| A stolen session cookie keeps working after logout until it expires (stateless PocketBase tokens) | Open, accepted |
-| CSP allows `unsafe-inline` and `unsafe-eval` | Open |
-| Navigation menu takes ~40% of a phone screen; some links under 44 px | Open, comfort only |
-| Load test came from one IP and one process | Known limit; real event traffic is spread over many addresses |
+| No login attempt limit | Fixed: 10 wrong passwords lock an account for 10 minutes, 200 per address (the venue may share one). Needs `ADDRESS_HEADER` behind a proxy. |
+| A stolen session cookie keeps working after logout until it expires (stateless PocketBase tokens) | Fixed: each session has an id that logout revokes (in memory: a restart forgets it) |
+| Session cookie used AES-CBC without authentication | Fixed: AES-256-GCM, tampered cookies are rejected; everyone logs in again once after the deploy |
+| CSP allowed `unsafe-inline` and `unsafe-eval` for scripts | Fixed: SvelteKit nonce; styles still allow inline |
+| Navigation menu took ~40% of a phone screen; some links under 44 px | Fixed: collapsed behind a Menu button, 44 px targets |
+| Load test came from one IP and one process | Done again with two processes and 217 different addresses: 0 failed requests |
 
 ## Test results (last run)
 
-- Unit: 63 passing.
-- End-to-end: 191 passing on a production build (adapter-node 5.2) and a throw-away PocketBase.
+- Unit: 66 passing.
+- End-to-end: 195 passing on a production build (adapter-node 5.2) and a throw-away PocketBase.
 - Load (217 participants, 15 jurors, 62 teams): 0 failed requests, p95 about 0.15 s, ratings 0.5 s, about 270 MB.
 
 ## Before the event (checklist)
@@ -53,6 +55,7 @@ Single place so nobody gets lost. Newest entries at the bottom of each section. 
 - [ ] Confirm the three deadline hours in `app_config.yaml` (`presentation_deadline`, `deadline`, `final_presentation_deadline`) and `checkin_deadline`.
 - [ ] Set `ADMIN_ACTION_PASSWORD` (long, different from every login) and keep it with the organizers who decide.
 - [ ] Run `node scripts/pocketbase-setup.mjs` against production PocketBase.
+- [ ] Behind a proxy: `ADDRESS_HEADER=X-Forwarded-For XFF_DEPTH=1`.
 - [ ] Build without `NODE_ENV=development`; start with `ORIGIN=https://your.domain node build`.
 - [ ] Real phones: log in as a juror and rate a team; open the ranking.
 - [ ] Add jurors and assign categories; import teams from CSV; hand out generated passwords.

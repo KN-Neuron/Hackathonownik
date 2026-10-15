@@ -17,7 +17,11 @@ import { execSync } from 'node:child_process';
 import { unflatten } from 'devalue';
 import PocketBase from 'pocketbase';
 
-const APP_URL = process.env.APP_URL || 'http://localhost:4175';
+// Several app processes: APP_URL=http://localhost:4175,http://localhost:4176 (clients are spread over them).
+// With ADDRESS_HEADER=X-Forwarded-For on the app, every simulated person also gets an address of their own.
+const APP_URLS = (process.env.APP_URL || 'http://localhost:4175').split(',');
+const APP_URL = APP_URLS[0];
+let clientCount = 0;
 const PASSWORD = process.env.DEMO_PASSWORD;
 const ACTION_PASSWORD = process.env.ADMIN_ACTION_PASSWORD;
 const PB_URL = process.env.POCKETBASE_URL || 'http://127.0.0.1:8091';
@@ -36,16 +40,19 @@ const record = (name, ms, status) => {
 
 class Client {
 	cookies = new Map();
+	base = APP_URLS[clientCount % APP_URLS.length];
+	ip = `10.${Math.floor(clientCount / 65_536) % 256}.${Math.floor(clientCount / 256) % 256}.${clientCount++ % 256 || 1}`;
 	async request(name, path, init = {}) {
 		const started = performance.now();
 		let status = 'network-error';
 		try {
-			const res = await fetch(APP_URL + path, {
+			const res = await fetch(this.base + path, {
 				redirect: 'manual',
 				...init,
 				headers: {
 					cookie: [...this.cookies].map(([k, v]) => `${k}=${v}`).join('; '),
-					origin: APP_URL,
+					origin: this.base,
+					'x-forwarded-for': this.ip,
 					...init.headers
 				}
 			});

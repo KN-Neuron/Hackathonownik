@@ -6,6 +6,7 @@ import { Security, CSRFProtection, SECURITY_HEADERS, rateLimiters } from '$lib/s
 import { SecureCookieHandler } from '$lib/server/secure-cookie';
 import { getResultsState } from '$lib/server/results';
 import { POCKETBASE_URL } from '$lib/server/adminClient';
+import { isRevoked } from '$lib/server/sessions';
 
 // ============================================
 // ROUTE ACCESS CONTROL
@@ -84,7 +85,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// Try to load session using our secure cookie first
 	const secureSession = SecureCookieHandler.getSessionFromCookie(event);
-	if (secureSession) {
+	if (secureSession && isRevoked(secureSession.sid)) {
+		// Logged out before: a copy of that cookie must not log anyone in again
+		SecureCookieHandler.clearSessionCookie(event);
+	} else if (secureSession) {
 		// Load the session data into PocketBase
 		pb.authStore.save(secureSession.token, secureSession.model);
 	} else {
@@ -217,7 +221,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 			event,
 			{
 				token: pb.authStore.token,
-				model: pb.authStore.record
+				model: pb.authStore.record,
+				// Same session as before (a new login gets a fresh id)
+				sid: secureSession?.sid
 			},
 			60 * 60 * 24 * 7 // 7 days
 		);
@@ -243,13 +249,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// everything else stays unframeable
 	if (pathname.startsWith('/api/presentations/')) {
 		response.headers.set('X-Frame-Options', 'SAMEORIGIN');
-		const csp = response.headers.get('Content-Security-Policy');
-		if (csp) {
-			response.headers.set(
-				'Content-Security-Policy',
-				csp.replace("frame-ancestors 'none'", "frame-ancestors 'self'")
-			);
-		}
+		response.headers.set('Content-Security-Policy', "frame-ancestors 'self'");
 	}
 
 	response.headers.set('X-RateLimit-Limit', '1000');

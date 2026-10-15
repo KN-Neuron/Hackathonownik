@@ -134,6 +134,10 @@ npm ci && npm run build
 
 The project uses `@sveltejs/adapter-auto`, which picks the adapter of the hosting platform it builds on. For your own server install `@sveltejs/adapter-node`, switch `svelte.config.js` to it and start the app with `ORIGIN=https://your.domain node build`. (Tested with `@sveltejs/adapter-node@5.2` and the full end-to-end suite.)
 
+**Behind a reverse proxy** (nginx, Caddy, a hosting platform) start the app with `ADDRESS_HEADER=X-Forwarded-For XFF_DEPTH=1` (the proxy must set that header). Otherwise every visitor shares the proxy's address and the login limiter below would treat the whole venue as one person. Reaching the app without the header then fails with a 500, so do not expose it directly.
+
+**Login attempts:** an account is locked for 10 minutes after 10 wrong passwords (a correct one resets the counter), and an address after 200 wrong passwords in total. **Logging out** ends that session on the server, so a copied cookie stops working (kept in memory: a restart or another app process forgets it). Session cookies are encrypted and authenticated (AES-256-GCM). The Content-Security-Policy comes from SvelteKit with a nonce, so scripts run without `unsafe-inline` or `unsafe-eval`.
+
 **Do not put `NODE_ENV=development` in the `.env` of a production build.** Vite reads it at build time and the build then skips SvelteKit's cross-site form check. Leave `NODE_ENV` unset: `vite build` and the production server set it themselves.
 
 `POCKETBASE_URL`, `POCKETBASE_ADMIN_EMAIL`, `POCKETBASE_ADMIN_PASSWORD`, `COOKIE_ENCRYPTION_KEY` and `ADMIN_ACTION_PASSWORD` (a different, long password only organizers who decide things know) are required (see `.env.example`). Set the real deadlines and the schedule in `app_config.yaml`.

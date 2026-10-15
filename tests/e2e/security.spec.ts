@@ -425,6 +425,37 @@ describe('sessions and CSRF', () => {
 		}
 	});
 
+	it('a copied session cookie stops working when its owner logs out', async () => {
+		const owner = await new AppClient().login(w.email('bob'));
+		const copy = new AppClient();
+		owner.cookies.forEach((v, k) => copy.cookies.set(k, v));
+		expect((await copy.data('/my-submission')).status).toBe(200);
+
+		await owner.request('/logout');
+		expect((await copy.data('/my-submission')).status).not.toBe(200);
+		// Logging in again is a new session and works
+		const again = await new AppClient().login(w.email('bob'));
+		expect((await again.data('/my-submission')).status).toBe(200);
+	});
+
+	it('a changed session cookie is rejected, whatever part is edited', async () => {
+		const c = await new AppClient().login(w.email('alice'));
+		const [name, value] = [...c.cookies].find(([k]) => k === 'secure_auth_session')!;
+		const [iv, tag, data] = value.split('.');
+		const flip = (part: string) => (part[0] === 'A' ? 'B' : 'A') + part.slice(1);
+		for (const edited of [
+			`${flip(iv)}.${tag}.${data}`,
+			`${iv}.${flip(tag)}.${data}`,
+			`${iv}.${tag}.${flip(data)}`,
+			`${iv}.${tag}`,
+			value.toUpperCase()
+		]) {
+			const attacker = new AppClient();
+			attacker.cookies.set(name, edited);
+			expect((await attacker.data('/my-submission')).status, edited.slice(0, 20)).not.toBe(200);
+		}
+	});
+
 	it('a forged or tampered session cookie is not accepted', async () => {
 		const c = await new AppClient().login(w.email('alice'));
 		const tampered = [...c.cookies].map(([k, v]) => `${k}=${v.slice(0, -4)}AAAA`).join('; ');
@@ -448,6 +479,37 @@ describe('sessions and CSRF', () => {
 		});
 		expect(a.status).toBe(b.status);
 		expect(await a.text()).toBe(await b.text());
+	});
+});
+
+describe('login attempts', () => {
+	const login = (email: string, password: string, client = new AppClient()) =>
+		client.request('/login', {
+			method: 'POST',
+			body: new URLSearchParams({ email, password }),
+			headers: { 'x-sveltekit-action': 'true' }
+		});
+
+	it('locks an account after 10 wrong passwords, even for the right one, and only that account', async () => {
+		const victim = w.email('loner');
+		for (let i = 0; i < 10; i++) {
+			expect((await login(victim, `wrong-${i}`)).status).toBe(200);
+		}
+		const locked = await login(victim, PASSWORD);
+		const body = await locked.json();
+		expect(JSON.stringify(body)).toMatch(/Too many wrong passwords/);
+		expect(body.type).toBe('failure');
+		// Somebody else on the same address still gets in
+		const other = await login(w.email('gina'), PASSWORD);
+		expect((await other.json()).type).toBe('redirect');
+	});
+
+	it('a correct login resets the counter', async () => {
+		const email = w.email('carol');
+		for (let i = 0; i < 9; i++) await login(email, `wrong-${i}`);
+		expect((await (await login(email, PASSWORD)).json()).type).toBe('redirect');
+		for (let i = 0; i < 9; i++) await login(email, `wrong-${i}`);
+		expect((await (await login(email, PASSWORD)).json()).type).toBe('redirect');
 	});
 });
 
@@ -488,7 +550,11 @@ describe('information leaks', () => {
 
 	it('security headers are set', async () => {
 		const res = await w.anon().request('/login');
-		expect(res.headers.get('content-security-policy')).toBeTruthy();
+		const csp = res.headers.get('content-security-policy') ?? '';
+		expect(csp).toBeTruthy();
+		const scripts = csp.split(';').find((d) => d.trim().startsWith('script-src')) ?? '';
+		expect(scripts).not.toMatch(/unsafe-inline|unsafe-eval/);
+		expect(csp).toMatch(/frame-ancestors 'none'/);
 		expect(res.headers.get('x-content-type-options')).toBe('nosniff');
 		expect(
 			res.headers.get('x-frame-options') || res.headers.get('content-security-policy')
