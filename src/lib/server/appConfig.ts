@@ -13,7 +13,10 @@ export interface AppConfig {
 		name: string;
 		year: string | number;
 		organizer: string;
+		// Repository and video links
 		deadline: string;
+		// The first presentation (PDF) may have its own deadline (defaults to the deadline)
+		presentation_deadline: string;
 		// Optional: teams should upload anything before this time
 		checkin_deadline?: string;
 		// The final presentation may be uploaded until this time (defaults to the deadline)
@@ -65,8 +68,10 @@ appConfig.event.rating_criteria = (appConfig.event.rating_criteria ?? []).map((c
 	stage: c.stage === 'final' ? 'final' : 'preliminary'
 }));
 appConfig.event.finalists_per_category = Number(appConfig.event.finalists_per_category) || 5;
+appConfig.event.presentation_deadline ||= appConfig.event.deadline;
 appConfig.event.final_presentation_deadline ||= appConfig.event.deadline;
-appConfig.event.stage_presentation_minutes = Number(appConfig.event.stage_presentation_minutes) || 5;
+appConfig.event.stage_presentation_minutes =
+	Number(appConfig.event.stage_presentation_minutes) || 5;
 
 // Fill every category with the defaults it doesn't override
 appConfig.event.categories = (appConfig.event.categories ?? []).map((category) => ({

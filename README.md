@@ -1,31 +1,55 @@
-# JuryApp
+# Hackathonownik
 
-**JuryApp** is a modern, comprehensive web application designed to streamline the management of hackathons and competitions. It provides a seamless experience for participants to register and submit their work, while offering a robust interface for juries to evaluate and rate presentations efficiently.
+**Hackathonownik** (formerly JuryApp) runs a whole hackathon after the coding: teams submit their projects, jurors rate them in two rounds, organizers run the stage and publish the results. It is built for **Heroes Of The Brain 2026** (14–15 Nov, Wrocław University of Science and Technology; 5 categories, ~62 teams, ~250 people) and follows its [rules](https://heroesofthebrain.pwr.edu.pl/regulamin), but everything event-specific lives in `app_config.yaml`.
 
-> Currently configured for the **Heroes Of The Brain 2025** - one of the largest stationary neurotechnology hackathon in Europe.
+## 🚀 What it does
 
-## 🚀 Key Features
+### Participants
+- **Simple submit page**: three cards (presentation PDF, repository link, demo video link), each saved on its own, with a progress bar. The PDF uploads as soon as it's chosen; any file name works and links without `https://` are accepted.
+- **Teammates share one submission**: everyone in the team can add different parts; the newest version of every item is what the jury sees. *My Submission* shows who added what and when, and the full change history.
+- **Check-in**: teams upload anything before `checkin_deadline`, so organizers know how many teams really compete.
+- **Three deadlines**: the first presentation (PDF) closes at `presentation_deadline`, the repository and video links at `deadline`, and the separate final presentation for the stage at the later `final_presentation_deadline`.
+- **Results**: after a category is published teams see their place, the final ranking and the jury's feedback (anonymous), plus how to appeal.
+- A deadline countdown, team members list and a link to the organizers.
 
-*   **Dynamic Event Configuration:** Easily customizable event details, categories, schedule, and rating criteria via a centralized `app_config.yaml` file.
-*   **Team Management:**
-    *   Team registration and profile management.
-    *   File uploads (e.g., PDF presentations).
-    *   Submission status tracking.
-*   **Jury System:**
-    *   Dedicated jury accounts and login.
-    *   Intuitive rating interface with configurable criteria (e.g., Innovation, Usefulness).
-    *   Real-time progress tracking and rating confirmation workflow.
-*   **Real-time Ranking:** Automatic calculation of team rankings based on jury scores.
-*   **Admin Dashboard:** Overview of system status and event metrics.
-*   **Responsive Design:** optimized for desktop and mobile devices.
+### Jury
+- **Rating by category**: a juror sees, rates and takes notes on only the categories assigned to them, switching between them with tabs.
+- **Two rounds** (rules §8): the preliminary round is rated from the PDF and demo video, the final only for the finalists, including the stage presentation. Scores are whole numbers from 1 up to each criterion's maximum, 25 points in total.
+- **Presentation order** set by the organizers, numbered, with a **search** by team name or number ("7").
+- **"Now on stage"**: when the organizers put a team on stage, jurors see it live with the remaining time, and can switch on *Follow the stage* to show only the presenting team.
+- **Private notes** per team (autosaved, visible only to the juror) and **feedback for the team** (shown to the team after publishing).
+- A progress counter, filters (all / not rated / rated), a confirmation step ("my ratings are final"; changing a rating withdraws it) and a record of which materials the juror opened.
+- Embedded YouTube/Loom player for the demo video.
+
+### Organizers (Admin Dashboard)
+- **Per-category control**: progress of every juror, the submission table (what's missing, check-in, team size 3–4), the live ranking.
+- **Judging workflow**: pick the finalists (top 5 preselected, with a warning when a tie crosses the cut-off), start the final, record the jury vote that breaks a tie for first place, then publish the category. Publishing is blocked until every juror rated everything and confirmed (an explicit override exists).
+- **Presentation order** (move up/down, random draw, A–Z) and a **presenter mode** (`/present`): the team's slides full screen with a countdown timer in the corner, previous/next team, keyboard shortcuts.
+- **Jury review**: which juror opened which presentation, video, repository or final presentation, and whether they already rated the team.
+- **People**: add a juror (a password is generated and shown once), reset a password, assign jurors to categories, move a team to another category.
+- **Import teams and participants from a CSV** (`/admin/import`): columns `name`, `email`, `team`, `category` (Excel exports with Polish headers and `;` work). The file is checked first (bad e-mails, unknown categories, a team in two categories, duplicates, team sizes), then teams and accounts are created and a CSV with the generated passwords can be downloaded once.
+- **Printable jury protocol** per category (ranking, every juror's scores, signature lines).
+- **Sees everything**: *All ratings* (every juror's scores and comments, every stage), *People and teams* (accounts, team sizes, who submitted what) and the *Audit log*. Only the jurors' private notes stay private.
+- **Second password for decisions**: publishing or hiding results, starting the final, tie-breaks, presentation order, adding jurors, resetting passwords, assigning jurors, moving teams and importing participants need the *admin action password* (`ADMIN_ACTION_PASSWORD`) on top of the admin login. It unlocks for 15 minutes (box at the top of the dashboard, "Lock now" ends it), is checked on the server, and a stolen admin session can't use these actions without it. Wrong guesses are limited, and every action and every refused attempt is written to the audit log (`/admin/audit`). Without the variable set, sensitive actions stay locked.
+- Info page with the schedule and useful links.
+
+### Rankings and privacy
+- Rankings are **per category** (criteria differ), by the average of the jurors' scores; ties share a place.
+- **Nothing leaks early**: results are hidden until an organizer publishes the category; jurors see their category's ranking only once all of its jurors confirmed; participants never see juror names; the jury sees only its own categories.
+- Roles: participant, jury, admin. Access is checked by the app and enforced again in PocketBase (see the rules below).
+
+### Under the hood
+- English-only UI, responsive layout.
+- Handles ~300 simultaneous users (load-tested on the production build); short in-memory caches for the hot pages.
+- Uploaded PDFs are *protected* files in PocketBase: they are only served through the app, after its access checks.
 
 ## 🛠️ Tech Stack
 
-*   **Framework:** [SvelteKit](https://kit.svelte.dev/)
+*   **Framework:** [SvelteKit](https://kit.svelte.dev/) (Svelte 5)
 *   **Language:** [TypeScript](https://www.typescriptlang.org/)
 *   **Styling:** [Tailwind CSS](https://tailwindcss.com/) & [DaisyUI](https://daisyui.com/)
 *   **Backend & Auth:** [PocketBase](https://pocketbase.io/)
-*   **Testing:** [Vitest](https://vitest.dev/) & [Playwright](https://playwright.dev/)
+*   **Testing:** [Vitest](https://vitest.dev/)
 
 ## ⚙️ Configuration (`app_config.yaml`)
 
@@ -33,26 +57,34 @@ The core logic of the event is controlled by `app_config.yaml`. This allows you 
 
 ```yaml
 event:
-  name: "Event Name"
-  year: "2025"
-  # ...
+  name: "Heroes Of The Brain"
+  year: "2026"
+  presentation_deadline: "2026-11-15T10:00:00+01:00"  # first presentation (PDF); defaults to deadline
+  deadline: "2026-11-15T12:00:00+01:00"            # repository and video links; always with a UTC offset
+  checkin_deadline: "2026-11-14T23:59:00+01:00"      # optional
+  final_presentation_deadline: "2026-11-15T14:00:00+01:00"
+  stage_presentation_minutes: 5
+  finalists_per_category: 5
+  submission:
+    required: [presentation, repo, video]            # default for every category
   categories:
-    - key: "wellness"
-      name: "Wellness"
-      color: "#36c399"
-  rating_criteria:
-    - key: "innovation"
-      name: "Innovation"
-      maxScore: 5
+    - key: "fnirs"
+      name: "Breath, Brain and Body (fNIRS)"
+      color: "#f7a654"
+      submission: { required: [presentation, repo] } # overrides the default
+      # rating_criteria: [...]                       # optionally its own criteria
+  rating_criteria:                                   # default for every category
+    - { key: "implementation", name: "Implementation quality", maxScore: 10, stage: "preliminary" }
+    - { key: "finalPresentation", name: "Final presentation", maxScore: 5, stage: "final" }
 ```
 
 Key sections:
--   **`event`**: Basic info (name, organizer, deadlines).
--   **`submission.required`**: Items a team must provide for a complete submission (`presentation`, `repo`, `video`); a category can override it.
--   **`categories`**: Competition tracks; each one can override `rating_criteria` and `submission.required`, and is rated and published separately.
--   **`rating_criteria`**: Customize the scoring metrics and weights.
--   **`schedule`**: Define the event timeline displayed to users.
--   **`links`**: Add useful external links (Discord, Wiki, etc.).
+-   **`event`**: name, year, organizer and the deadlines (first presentation, links, check-in, final presentation).
+-   **`categories`**: competition tracks; each can override `rating_criteria` and `submission.required`, and is rated and published separately. A category key is stored in `teams.category` and in a juror's `jury_categories`.
+-   **`rating_criteria`**: scoring criteria. `stage: "final"` criteria are rated only in the final.
+-   **`submission.required`**: items a team must provide for a complete submission (`presentation`, `repo`, `video`).
+-   **`finalists_per_category`**, **`stage_presentation_minutes`**: judging and presenter-mode settings.
+-   **`schedule`** and **`links`**: shown on the info page.
 
 ## 📦 Installation & Setup
 
@@ -71,7 +103,7 @@ Participants and jurors can log in to PocketBase directly with their own credent
 - Judging follows the Heroes of the Brain rules (§8): in the **preliminary round** jurors rate every team from its PDF and demo video (implementation 1–10, innovation 1–5, usefulness 1–5); organizers then start the **final** with at most `finalists_per_category` teams, whose stage presentation is rated too (1–5, 25 points in total). A tie for first place is decided by a jury vote that the organizers record in the Admin Dashboard, and every category has a printable jury protocol for signatures.
 - Teams check in by uploading anything before `checkin_deadline`; the Admin Dashboard shows who did.
 - Teams upload a preliminary presentation, a repository link, a demo video and – for the final – a separate final presentation (until `final_presentation_deadline`).
-- **Presenter mode** (`/present`, admins): each team's slides full screen with a `stage_presentation_minutes` timer; the team on stage shows up live for its jurors ("Now on stage", with an option to follow it). The Admin Dashboard shows which juror opened which presentation and video.
+- **Presenter mode** (`/present`, admins): each team's slides full screen with a `stage_presentation_minutes` timer; the team on stage shows up live for its jurors ("Now on stage", with an option to follow it). The Admin Dashboard shows which juror opened which presentation, video and repository link.
 - Results stay hidden until an organizer publishes a category. Publishing requires every juror of the category to rate all of its teams and confirm; changing a rating withdraws the confirmation, and ratings are locked once the category is published. Jurors see their category's ranking once all of its jurors confirmed.
 - Teams submit the PDF, the repository link and the video link separately; every save stores only what changed and the app shows the newest version of each item.
 
@@ -81,19 +113,38 @@ Participants and jurors can log in to PocketBase directly with their own credent
 | --------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------ |
 | `users` (auth)  | `name`, `role` (text: participant / jury / admin), `team` (relation → `teams`), `jury_categories` (json), `confirmed_categories` (json) | `id = @request.auth.id \|\| @request.auth.role = "admin"`                                     | empty (organizers manage accounts)   |
 | `teams`         | `name` (text), `category` (text, a category key)                                                                        | `@request.auth.id != ""`                                                                   | empty                                |
-| `presentations` | `team` (relation → `teams`, required), `presentation` (file, PDF, **optional**), `repo_link`, `video_link` (text), `final_presentation` (file, PDF, optional), `submitted_by` (relation → `users`) | `team = @request.auth.team \|\| @request.auth.role = "admin"`                                 | empty                                |
+| `presentations` | `team` (relation → `teams`, required), `presentation` (file, PDF, **optional**, *protected*), `repo_link`, `video_link` (text), `final_presentation` (file, PDF, optional, *protected*), `submitted_by` (relation → `users`) | `team = @request.auth.team \|\| @request.auth.role = "admin"`                                 | empty                                |
 | `ratings`       | `jury` (relation → `users`), `team` (relation → `teams`), `scores` (json), `finalGrade` (number), `comments` (text)  | `@request.auth.role = "admin" \|\| (@request.auth.role = "jury" && jury = @request.auth.id)`   | Create/Update: `(@request.auth.role = "jury" \|\| @request.auth.role = "admin") && jury = @request.auth.id`; Delete: `@request.auth.role = "admin"` |
 | `event_state`   | `published_categories`, `published_at`, `stages`, `finalists`, `tie_winners`, `orders`, `on_stage` (all json)                                                                    | empty                                                                                      | empty                                |
 | `jury_notes`    | `jury` (relation → `users`), `team` (relation → `teams`), `content` (text)                                             | empty                                                                                      | empty                                |
 | `jury_views`    | `jury` (relation → `users`), `team` (relation → `teams`), `item` (text), `count` (number), `first_at`, `last_at` (text) | empty | empty |
+| `admin_audit`   | `admin` (relation → `users`), `admin_email`, `action` (text), `ok` (bool), `ip` (text), `details` (json), `created` | empty | empty |
+
+The quickest way to get all of this (collections, fields, protected files, rules) is `node scripts/pocketbase-setup.mjs` with `POCKETBASE_URL`, `POCKETBASE_ADMIN_EMAIL` and `POCKETBASE_ADMIN_PASSWORD` set. It can be run again at any time; an existing database gets the missing fields and the file protection added.
 
 Users must not be able to update their own record: they could change their role, team or jury categories.
 
 The `comments` field of a rating is the feedback for the team: the team sees it (without jury names) after its category is published.
 
+### Deploying for the event
+
+```bash
+npm ci && npm run build
+```
+
+The project uses `@sveltejs/adapter-auto`, which picks the adapter of the hosting platform it builds on. For your own server install `@sveltejs/adapter-node`, switch `svelte.config.js` to it and start the app with `ORIGIN=https://your.domain node build`. (Tested with `@sveltejs/adapter-node@5.2` and the full end-to-end suite.)
+
+**Behind a reverse proxy** (nginx, Caddy, a hosting platform) start the app with `ADDRESS_HEADER=X-Forwarded-For XFF_DEPTH=1` (the proxy must set that header). Otherwise every visitor shares the proxy's address and the login limiter below would treat the whole venue as one person. Reaching the app without the header then fails with a 500, so do not expose it directly.
+
+**Login attempts:** an account is locked for 10 minutes after 10 wrong passwords (a correct one resets the counter), and an address after 200 wrong passwords in total. **Logging out** ends that session on the server, so a copied cookie stops working (kept in memory: a restart or another app process forgets it). Session cookies are encrypted and authenticated (AES-256-GCM). The Content-Security-Policy comes from SvelteKit with a nonce, so scripts run without `unsafe-inline` or `unsafe-eval`.
+
+**Do not put `NODE_ENV=development` in the `.env` of a production build.** Vite reads it at build time and the build then skips SvelteKit's cross-site form check. Leave `NODE_ENV` unset: `vite build` and the production server set it themselves.
+
+`POCKETBASE_URL`, `POCKETBASE_ADMIN_EMAIL`, `POCKETBASE_ADMIN_PASSWORD`, `COOKIE_ENCRYPTION_KEY` and `ADMIN_ACTION_PASSWORD` (a different, long password only organizers who decide things know) are required (see `.env.example`). Set the real deadlines and the schedule in `app_config.yaml`.
+
 ### Running it for the event
 
-The app keeps short-lived caches in memory and works as a single Node process. In a load test with 300 simultaneous sessions it answered 95% of requests within 0.45 s; only hundreds of clicks in the same millisecond take a few seconds. For more headroom run several processes behind a load balancer (each has its own cache, data may then be up to 2 s old).
+The app keeps short-lived caches in memory and works as a single Node process. `scripts/load-test.mjs` replays the event day (217 participants, 15 jurors, 62 teams: logins, the upload rush, rating, publishing, everyone opening the ranking at once) against a production build: no failed request, 95% of requests within 0.15 s (ratings 0.5 s), about 270 MB of memory. For more headroom run several processes behind a load balancer (each has its own cache, data may then be up to 2 s old).
 
 ### Steps
 
@@ -115,13 +166,17 @@ The app keeps short-lived caches in memory and works as a single Node process. I
     POCKETBASE_URL=http://127.0.0.1:8090
     ```
 
-4.  **Start the Development Server:**
+4.  **Create the PocketBase collections** from the table above (and set their API rules), then add the first admin user (`role = admin`). After that everything happens in the app: jurors and their categories in the Admin Dashboard, teams and participants through the CSV import.
+
+5.  **Start the Development Server:**
     ```bash
     npm run dev
     ```
 
-5.  **Open the App:**
+6.  **Open the App:**
     Navigate to `http://localhost:5173` in your browser.
+
+Progress, decisions, findings and the pre-event checklist live in [docs/PROJECT-LOG.md](docs/PROJECT-LOG.md).
 
 ## 📜 Scripts
 
@@ -132,6 +187,10 @@ The app keeps short-lived caches in memory and works as a single Node process. I
 *   `npm run lint`: Run ESLint and Prettier checks.
 *   `npm run format`: Format code with Prettier.
 *   `npm run test`: Run unit tests with Vitest.
+*   `npm run test:e2e`: Run the end-to-end suite (roles, submissions, judging, the second password, attacks) against a running app and a throw-away PocketBase, see [tests/e2e/README.md](tests/e2e/README.md).
+*   `node scripts/pocketbase-setup.mjs`: Create or update the PocketBase collections, fields and rules.
+*   `DEMO_PASSWORD=… node scripts/seed-demo.mjs`: Fill a *test* PocketBase with an event-sized demo (never production).
+*   `node scripts/load-test.mjs`: Replay the event day against a seeded test stack and print latencies.
 
 ## Screenshots
 ![telegram-cloud-photo-size-4-5944844193983302928-y](https://github.com/user-attachments/assets/37384efa-37cd-49f6-ba67-e951b98691fe)
@@ -157,4 +216,4 @@ The app keeps short-lived caches in memory and works as a single Node process. I
 
 ## 📄 License
 
-[MIT](LICENSE)
+Hackathonownik Hybrid License, see [LICENSE](LICENSE).

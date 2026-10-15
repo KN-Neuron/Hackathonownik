@@ -30,7 +30,9 @@
 				</div>
 				<div>
 					<span class="text-base-content/70 block">Deadline</span>
-					<span class="text-xl font-semibold">{new Date(eventConfig.deadline).toLocaleString()}</span>
+					<span class="text-xl font-semibold"
+						>{new Date(eventConfig.deadline).toLocaleString()}</span
+					>
 				</div>
 			</div>
 		</div>
@@ -96,7 +98,9 @@
 						<tr>
 							<td class="font-bold">{link.title}</td>
 							<td class="text-base-content/70">{link.description}</td>
-							<td class="font-mono text-sm break-all"><a href={link.url} target="_blank" class="link link-primary">{link.url}</a></td>
+							<td class="font-mono text-sm break-all"
+								><a href={link.url} target="_blank" class="link link-primary">{link.url}</a></td
+							>
 							<td>{link.buttonText}</td>
 						</tr>
 					{/each}
@@ -104,10 +108,10 @@
 			</table>
 		</div>
 	</div>
-    
-    <div class="flex justify-start mt-4">
-        <a href="/admin/dashboard" class="btn btn-outline">Back to Dashboard</a>
-    </div>
+
+	<div class="flex justify-start mt-4">
+		<a href="/admin/dashboard" class="btn btn-outline">Back to Dashboard</a>
+	</div>
 </div>
 
 <style>

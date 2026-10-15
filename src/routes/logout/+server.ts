@@ -1,8 +1,12 @@
 import { redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { SecureCookieHandler } from '$lib/server/secure-cookie';
+import { revokeSession } from '$lib/server/sessions';
 
 export const GET: RequestHandler = async ({ locals, ...event }) => {
+	// Make the session worthless even if someone copied the cookie
+	revokeSession(SecureCookieHandler.getSessionFromCookie(event as any)?.sid);
+
 	// Clear auth
 	locals.pb.authStore.clear();
 	locals.user = null;

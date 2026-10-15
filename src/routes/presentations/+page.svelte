@@ -2,6 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
 	import PdfViewer from '$lib/components/pdf/PdfViewer.svelte';
+	import { reportView } from '$lib/utils/reportView';
 	import SubmissionChecklist from '$lib/components/SubmissionChecklist.svelte';
 	import CategoryTabs from '$lib/components/CategoryTabs.svelte';
 	import { matchesTeam } from '$lib/utils/teamSearch';
@@ -207,7 +208,10 @@
 												target="_blank"
 												rel="noopener noreferrer"
 												class="external-link repo-link"
-												on:click|stopPropagation
+												on:click={(e) => {
+													e.stopPropagation();
+													reportView(presentation.teamId, 'repo');
+												}}
 											>
 												<svg
 													width="16"
@@ -232,7 +236,10 @@
 												target="_blank"
 												rel="noopener noreferrer"
 												class="external-link video-link"
-												on:click|stopPropagation
+												on:click={(e) => {
+													e.stopPropagation();
+													reportView(presentation.teamId, 'video');
+												}}
 											>
 												<svg
 													width="16"

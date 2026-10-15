@@ -3,7 +3,7 @@ import { getAdminClient } from './adminClient';
 // Superuser-only collection: which juror opened which material of which team
 const VIEWS_COLLECTION = 'jury_views';
 
-export const VIEW_ITEMS = ['presentation', 'final_presentation', 'video'] as const;
+export const VIEW_ITEMS = ['presentation', 'final_presentation', 'video', 'repo'] as const;
 export type ViewItem = (typeof VIEW_ITEMS)[number];
 
 export interface JuryView {

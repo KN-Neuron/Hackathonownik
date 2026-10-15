@@ -13,7 +13,8 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
 		"test:unit": "vitest",
-		"test": "npm run test:unit -- --run"
+		"test": "npm run test:unit -- --run --project server --project client",
+		"test:e2e": "vitest run --project e2e --no-file-parallelism"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.3.2",
@@ -29,6 +30,7 @@
 		"@types/pdfjs-dist": "^2.10.378",
 		"@vitest/browser": "^3.2.4",
 		"daisyui": "^5.5.5",
+		"devalue": "^6.0.3",
 		"eslint": "^9.35.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.12.3",
