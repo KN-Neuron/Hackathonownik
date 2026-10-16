@@ -14,12 +14,12 @@ event:
 
   # Deadline for the repository and video links (ISO format). Always include the UTC offset, otherwise the
   # server's timezone is used: +01:00 is Polish winter time (CET), +02:00 summer time (CEST)
-  # TODO: confirm the exact hour work ends on Sunday with the organizers
+  # Working times follow the schedule below (work ends 12:00); organizers may still change them
   deadline: "2026-11-15T12:00:00+01:00"
 
   # The first presentation (PDF) has its own deadline; remove it to use `deadline` for it too.
   # TODO: confirm the hour with the organizers
-  presentation_deadline: "2026-11-15T10:00:00+01:00"
+  presentation_deadline: "2026-11-15T11:00:00+01:00"
 
   # Check-in: every team uploads anything (e.g. just the repository link) before this time,
   # so organizers know how many teams are really competing and teams try the system early.

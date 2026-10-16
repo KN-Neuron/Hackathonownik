@@ -132,7 +132,7 @@ The `comments` field of a rating is the feedback for the team: the team sees it 
 npm ci && npm run build
 ```
 
-The project uses `@sveltejs/adapter-auto`, which picks the adapter of the hosting platform it builds on. For your own server install `@sveltejs/adapter-node`, switch `svelte.config.js` to it and start the app with `ORIGIN=https://your.domain node build`. (Tested with `@sveltejs/adapter-node@5.2` and the full end-to-end suite.)
+The project uses `@sveltejs/adapter-node` (pinned to 5.2.12, newer versions need a newer SvelteKit). Run it with `ORIGIN=https://your.domain npm start` (that is `node build`); `PORT` defaults to 3000. The full end-to-end suite runs against exactly this build.
 
 **Behind a reverse proxy** (nginx, Caddy, a hosting platform) start the app with `ADDRESS_HEADER=X-Forwarded-For XFF_DEPTH=1` (the proxy must set that header). Otherwise every visitor shares the proxy's address and the login limiter below would treat the whole venue as one person. Reaching the app without the header then fails with a 500, so do not expose it directly.
 
