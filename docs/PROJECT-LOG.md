@@ -8,12 +8,12 @@ Single place so nobody gets lost. Newest entries at the bottom of each section. 
 | Decision | Why |
 | --- | --- |
 | Rating limiter stays off | The limit came from last year's constraints (organizer decision). Admin decisions are protected by the second password instead. |
-| Three deadlines: first presentation (PDF) `presentation_deadline`, links (repo, video) `deadline`, final presentation `final_presentation_deadline` | Organizers want the first presentation to close separately. Without `presentation_deadline` it falls back to `deadline`. **Hours in `app_config.yaml` are placeholders until confirmed.** |
+| Three deadlines: first presentation (PDF) `presentation_deadline`, links (repo, video) `deadline`, final presentation `final_presentation_deadline` | Organizers want the first presentation to close separately. Without `presentation_deadline` it falls back to `deadline`. Hours chosen from the schedule (work ends 12:00): PDF 11:00, links 12:00, final presentation 14:00 on Sunday; organizers can change them in `app_config.yaml`. |
 | Jurors see only their categories; results per category | Event format: 5 categories, 3 jurors each. |
 | Admin sees everything except jurors' private notes | Notes are the juror's own. Say if that should change. |
 | `/api/stage` (live "now on stage") is not behind the second password | It is used live on stage; it changes no results. |
 | Production PocketBase setup is the organizers' job | `scripts/pocketbase-setup.mjs` does it; see README. |
-| Phone checks on real devices later | Jurors mostly use phones; only emulated 375 px was checked. |
+| Phone checks | Jurors mostly use phones. Last year's event ran fine on phones; this year only an emulated 375 px screen was checked (no overflow, 44 px targets, collapsible menu). |
 
 ## Work done (chronological)
 
@@ -22,6 +22,7 @@ Single place so nobody gets lost. Newest entries at the bottom of each section. 
 3. Admin hardening (PR #19): second password for decisions, audit log, admin overview pages (all ratings, people and teams), server-side tie check, `scripts/pocketbase-setup.mjs`, `scripts/seed-demo.mjs`.
 4. End-to-end tests (`npm run test:e2e`, 191 tests, `tests/e2e/README.md`) and load test (`scripts/load-test.mjs`).
 5. Separate deadline for the first presentation.
+7. Deploy prep: `adapter-node` pinned to 5.2.12, `npm start`, deployment variables in `.env.example`, deadlines set from the schedule, merged `dev` re-tested (66 unit, 195 e2e).
 6. Security follow-ups: login limiter, session revocation on logout, authenticated cookie encryption, strict CSP, collapsible mobile menu, multi-process load test (195 e2e tests passing).
 
 ## Findings from testing, and what happened to them
@@ -52,11 +53,12 @@ Single place so nobody gets lost. Newest entries at the bottom of each section. 
 
 ## Before the event (checklist)
 
-- [ ] Confirm the three deadline hours in `app_config.yaml` (`presentation_deadline`, `deadline`, `final_presentation_deadline`) and `checkin_deadline`.
+- [x] Confirm the three deadline hours (set from the schedule, change if organizers want other times) in `app_config.yaml` (`presentation_deadline`, `deadline`, `final_presentation_deadline`) and `checkin_deadline`.
 - [ ] Set `ADMIN_ACTION_PASSWORD` (long, different from every login) and keep it with the organizers who decide.
 - [ ] Run `node scripts/pocketbase-setup.mjs` against production PocketBase.
+- [x] Deploy prep in the repo (adapter-node, `npm start`). The server itself is the organizers' job.
 - [ ] Behind a proxy: `ADDRESS_HEADER=X-Forwarded-For XFF_DEPTH=1`.
 - [ ] Build without `NODE_ENV=development`; start with `ORIGIN=https://your.domain node build`.
-- [ ] Real phones: log in as a juror and rate a team; open the ranking.
+- [ ] Quick check on one or two real phones (last year was fine): log in as a juror, rate a team, open the ranking.
 - [ ] Add jurors and assign categories; import teams from CSV; hand out generated passwords.
-- [ ] Rehearse: unlock, final, tie vote, publish, lock again.
+- [x] Rehearsal of unlock, final, tie vote, publish, lock is automated in `tests/e2e/judging.spec.ts`; do it once by hand on the real server with demo data (`scripts/seed-demo.mjs`, test database only).
