@@ -564,7 +564,7 @@
 		margin: 0;
 		font-size: 1rem;
 		font-weight: 600;
-		color: #f0f0f0;
+		color: #fff;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -588,7 +588,7 @@
 	.btn-icon {
 		background: none;
 		border: none;
-		color: #f0f0f0;
+		color: #fff;
 		cursor: pointer;
 		padding: 0.125rem;
 		border-radius: 4px;

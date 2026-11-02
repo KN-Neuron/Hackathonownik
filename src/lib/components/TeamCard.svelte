@@ -465,19 +465,18 @@
 <style>
 	.team-card {
 		display: flex;
-		background-color: #1e1f22; /* var(--card-bg) */
-		border-radius: 8px;
-		padding: 16px;
-		margin-bottom: 16px;
-		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); /* var(--card-shadow) */
-		border: 1px solid #2c2e33; /* var(--card-border) */
+		gap: 20px;
+		background-color: var(--surface);
+		border-radius: var(--radius-card);
+		padding: 20px;
+		margin-bottom: 12px;
+		border: 1px solid var(--line);
 		position: relative;
 	}
 
 	.order-number {
 		margin-right: 0.35rem;
-		color: rgba(255, 255, 255, 0.5);
-		font-variant-numeric: tabular-nums;
+		color: var(--text-muted);
 	}
 
 	.submission-status {
@@ -485,18 +484,13 @@
 	}
 
 	.opened {
-		margin: -0.25rem 0 0.5rem;
-		font-size: 0.75rem;
-		color: rgba(255, 255, 255, 0.5);
+		margin: 0 0 0.75rem;
+		font-size: 13px;
+		color: var(--text-muted);
 	}
 
 	.opened .yes {
-		color: #36c399;
-	}
-
-	.btn-final {
-		background: #f7a654;
-		color: #1a1206;
+		color: var(--success);
 	}
 
 	.jury-notes {
@@ -505,17 +499,19 @@
 
 	.jury-notes summary {
 		cursor: pointer;
-		font-size: 0.85rem;
+		display: flex;
+		align-items: center;
+		min-height: 44px;
+		font-size: 14px;
 		font-weight: 600;
-		color: rgba(255, 255, 255, 0.8);
-		margin-bottom: 0.4rem;
+		color: #c9cfdd;
 	}
 
 	.notes-status {
 		margin-left: 0.5rem;
-		font-weight: 400;
-		font-size: 0.75rem;
-		color: rgba(255, 255, 255, 0.5);
+		font-weight: 600;
+		font-size: 12px;
+		color: var(--success);
 	}
 
 	.video-frame {
@@ -531,20 +527,13 @@
 		width: 100%;
 		height: 100%;
 		border: 0;
-		border-radius: 0.5rem;
-	}
-
-	.btn-missing {
-		background: rgba(255, 255, 255, 0.08);
-		color: rgba(255, 255, 255, 0.5);
-		cursor: default;
+		border-radius: var(--radius-control);
 	}
 
 	.team-avatar {
-		width: 80px;
-		height: 80px;
-		border-radius: 8px;
-		margin-right: 20px;
+		width: 64px;
+		height: 64px;
+		border-radius: var(--radius-control);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -553,33 +542,34 @@
 
 	.team-info {
 		flex-grow: 1;
+		min-width: 0;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.team-header {
 		margin-bottom: 12px;
-		border-bottom: 1px solid #2c2e33; /* var(--border-dark) */
+		border-bottom: 1px solid var(--line);
 		padding-bottom: 8px;
 	}
 
 	.team-header h3 {
 		margin: 0 0 4px 0;
-		font-size: 18px;
-		color: #f0f0f0; /* var(--text-primary) */
-		font-weight: 600;
+		font-size: 20px;
+		color: #fff;
+		font-weight: 700;
 	}
 
 	.team-id {
 		font-size: 12px;
-		color: rgba(255, 255, 255, 0.5); /* var(--text-tertiary) */
-		font-family: monospace;
+		color: var(--text-faint);
+		font-family: ui-monospace, monospace;
 	}
 
 	.metrics {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		gap: 12px 20px;
+		gap: 12px 24px;
 		margin-bottom: 12px;
 	}
 
@@ -589,31 +579,31 @@
 	}
 
 	.metric-label {
-		width: 100px;
+		width: 120px;
 		font-size: 14px;
-		color: rgba(255, 255, 255, 0.6); /* var(--text-quaternary) */
+		color: var(--text-muted);
 	}
 
 	.metric-bar {
 		flex-grow: 1;
 		height: 8px;
-		background-color: #252d42; /* var(--base-300) */
-		border-radius: 4px;
+		background-color: var(--base-300);
+		border-radius: 999px;
 		overflow: hidden;
 		margin: 0 10px;
 	}
 
 	.metric-fill {
 		height: 100%;
-		border-radius: 4px;
-		transition: width 0.5s ease;
+		border-radius: 999px;
+		transition: width 0.3s ease;
 	}
 
 	.metric-value {
-		min-width: 45px;
+		min-width: 48px;
 		font-size: 13px;
 		font-weight: 600;
-		color: #f0f0f0; /* var(--text-primary) */
+		color: #fff;
 		text-align: right;
 		white-space: nowrap;
 	}
@@ -624,13 +614,15 @@
 		gap: 16px;
 		margin-top: auto;
 		padding-top: 12px;
-		border-top: 1px solid #2c2e33; /* var(--border-dark) */
+		border-top: 1px solid var(--line);
 	}
 
 	.grade-section {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		flex-wrap: wrap;
+		gap: 8px;
 	}
 
 	.grade {
@@ -638,108 +630,97 @@
 	}
 
 	.grade-label {
-		color: rgba(255, 255, 255, 0.6); /* var(--text-quaternary) */
+		color: var(--text-muted);
 		margin-right: 6px;
 	}
 
 	.grade-value {
-		color: #f0f0f0; /* var(--text-primary) */
-		font-weight: 600;
+		color: #fff;
+		font-weight: 700;
 	}
 
 	.rating-status {
 		display: flex;
-		flex-direction: column;
-		align-items: flex-end;
-		gap: 4px;
+		align-items: center;
+		gap: 12px;
 	}
 
 	.rating-badge {
-		padding: 4px 8px;
-		border-radius: 4px;
+		display: inline-flex;
+		align-items: center;
+		height: 24px;
+		padding: 0 10px;
+		border-radius: 999px;
 		font-size: 12px;
-		font-weight: 500;
+		font-weight: 600;
 	}
 
 	.rating-badge.rated {
-		background-color: #36c399; /* var(--success) */
-		color: #f0f0f0; /* var(--brand-light) */
+		background-color: rgba(54, 195, 153, 0.16);
+		color: var(--success);
 	}
 
 	.rating-badge.not-rated {
-		background-color: #ff6b6b; /* var(--error) */
-		color: #f0f0f0; /* var(--brand-light) */
+		background-color: rgba(247, 166, 84, 0.16);
+		color: var(--warning);
 	}
 
 	.rating-count {
-		font-size: 12px;
-		color: rgba(255, 255, 255, 0.6); /* var(--text-quaternary) */
+		font-size: 13px;
+		color: var(--text-muted);
 	}
 
 	.count {
-		font-weight: 600;
-		color: #f0f0f0; /* var(--text-primary) */
+		font-weight: 700;
+		color: #fff;
 	}
 
 	.function-buttons {
 		display: flex;
-		justify-content: space-between;
-		gap: 10px;
+		flex-wrap: wrap;
+		gap: 8px;
 	}
 
+	/* One button set: 44px, ghost for the materials, violet for the rating itself */
 	.btn {
-		padding: 8px 12px;
-		border-radius: 6px;
+		min-height: 44px;
+		padding: 0 16px;
+		border-radius: var(--radius-control);
 		font-size: 14px;
-		font-weight: 500;
+		font-weight: 600;
 		cursor: pointer;
-		transition: all 0.2s ease;
-		border: none;
-		flex: 1;
-		display: flex;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		background: transparent;
+		color: var(--text);
+		display: inline-flex;
 		justify-content: center;
 		align-items: center;
 		gap: 0.5rem;
+		text-decoration: none;
 	}
 
 	.btn:hover {
-		transform: translateY(-1px);
+		background: rgba(255, 255, 255, 0.06);
 	}
 
-	.btn-repo {
-		background-color: #6e5494; /* GitHub purple */
-		color: white;
+	.btn-missing {
+		color: var(--text-faint);
+		border-style: dashed;
+		cursor: default;
 	}
 
-	.btn-repo:hover {
-		background-color: #5c477e; /* Darker GitHub purple */
+	.btn-missing:hover {
+		background: transparent;
 	}
 
-	.btn-video {
-		background-color: #ff0000; /* YouTube red */
-		color: white;
+	.btn-final {
+		background: var(--warning);
+		border-color: var(--warning);
+		color: #1c1200;
 	}
 
-	.btn-video:hover {
-		background-color: #cc0000; /* Darker YouTube red */
-	}
-
-	.btn-download {
-		background-color: #6b7280; /* Gray */
-		color: white;
-	}
-
-	.btn-download:hover {
-		background-color: #565966; /* Darker Gray */
-	}
-
-	.btn-primary {
-		background-color: var(--btn-primary-bg);
-		color: white;
-	}
-
-	.btn-primary.already-rated {
-		background-color: var(--success);
+	.btn-final:hover {
+		background: #f9b878;
 	}
 
 	.btn:disabled {
@@ -747,32 +728,16 @@
 		cursor: not-allowed;
 	}
 
-	.loading {
-		display: inline-block;
-		width: 16px;
-		height: 16px;
-		border: 2px solid rgba(255, 255, 255, 0.2);
-		border-left-color: white;
-		border-radius: 50%;
-		animation: spin 1s linear infinite;
-	}
-
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	/* Mobile responsiveness */
 	@media (max-width: 768px) {
 		.team-card {
 			flex-direction: column;
+			gap: 12px;
+			padding: 16px;
 		}
 
 		.team-avatar {
-			width: 60px;
-			height: 60px;
-			margin-right: 12px;
+			width: 48px;
+			height: 48px;
 		}
 
 		.metrics {
@@ -780,51 +745,13 @@
 			gap: 8px;
 		}
 
-		.metric {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 4px;
-		}
-
 		.metric-label {
-			width: 100%;
-			text-align: left;
+			width: 100px;
 		}
 
-		.metric-bar {
-			width: 100%;
-			margin: 0;
-		}
-
-		.metric-value {
-			align-self: flex-end;
-		}
-
-		.team-footer {
-			flex-direction: column;
-		}
-
-		.grade-section {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 8px;
-		}
-
-		.rating-status {
-			align-items: flex-start;
-			width: 100%;
-		}
-
-		.function-buttons {
-			flex-direction: column;
-		}
-
-		.btn {
-			width: 100%;
-		}
-
-		.team-id {
-			font-size: 11px;
+		.function-buttons .btn,
+		.function-buttons :global(.btn) {
+			flex: 1 1 140px;
 		}
 	}
 </style>

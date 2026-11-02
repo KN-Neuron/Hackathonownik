@@ -49,6 +49,7 @@
 		"vitest-browser-svelte": "^0.1.0"
 	},
 	"dependencies": {
+		"@fontsource/onest": "^5.3.1",
 		"dotenv": "^17.2.3",
 		"js-yaml": "^4.1.1",
 		"jspdf": "^3.0.3",

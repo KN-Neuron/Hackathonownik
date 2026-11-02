@@ -44,17 +44,17 @@
 <div class="unlock" class:open={unlocked} role="region" aria-label="Sensitive actions">
 	{#if !configured}
 		<span>
-			🔒 <b>Sensitive actions are disabled</b>: set <code>ADMIN_ACTION_PASSWORD</code> in the server
+			<b>Sensitive actions are disabled</b>: set <code>ADMIN_ACTION_PASSWORD</code> in the server
 			environment.
 		</span>
 	{:else if unlocked}
-		<span>🔓 Sensitive actions unlocked for <b>{minutesLeft} min</b>.</span>
+		<span>Sensitive actions unlocked for <b>{minutesLeft} min</b>.</span>
 		<button class="btn btn-xs btn-outline" onclick={() => send('DELETE')} disabled={busy}
 			>Lock now</button
 		>
 	{:else}
 		<span>
-			🔒 <b>Sensitive actions are locked.</b> Publishing, people, teams and imports need the admin action
+			<b>Sensitive actions are locked.</b> Publishing, people, teams and imports need the admin action
 			password.
 		</span>
 		<form
@@ -86,7 +86,7 @@
 		gap: 0.5rem 1rem;
 		margin-bottom: 1rem;
 		padding: 0.6rem 1rem;
-		border-radius: 0.75rem;
+		border-radius: var(--radius-card);
 		background: rgba(247, 166, 84, 0.1);
 		border: 1px solid rgba(247, 166, 84, 0.5);
 	}

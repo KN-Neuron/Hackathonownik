@@ -96,8 +96,7 @@
 <style>
 	.page {
 		max-width: 1300px;
-		margin: 0 auto;
-		padding: 1rem;
+		margin: 0;
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
@@ -105,9 +104,9 @@
 
 	.team {
 		padding: 0.75rem 1rem;
-		border-radius: 0.75rem;
-		background: rgba(255, 255, 255, 0.04);
-		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: var(--radius-card);
+		background: var(--surface);
+		border: 1px solid var(--line);
 	}
 
 	h3 {
@@ -119,12 +118,12 @@
 		margin-left: 0.5rem;
 		font-size: 0.8rem;
 		font-weight: 400;
-		color: rgba(255, 255, 255, 0.6);
+		color: var(--text-muted);
 	}
 
 	.none,
 	.missing td {
-		color: rgba(255, 255, 255, 0.5);
+		color: var(--text-muted);
 		font-size: 0.85rem;
 	}
 

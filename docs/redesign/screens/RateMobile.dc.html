@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jury: rate (phone)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0f1322}
+.card{background:#151a2c;border:1px solid rgba(255,255,255,.08);border-radius:14px}
+.tab{flex:none;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:transparent;color:#c9cfdd;font:600 14px Onest,system-ui,sans-serif}
+.tab i{width:8px;height:8px;border-radius:50%;display:block}
+.tab.on{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.4)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:10px;border:1px solid transparent;font:600 14px Onest,system-ui,sans-serif;cursor:pointer;text-decoration:none}
+.btn-p{background:#8b87ff;color:#0f1322}
+.btn-g{background:transparent;color:#e8eaf2;border-color:rgba(255,255,255,.2)}
+.crit{display:flex;flex-direction:column;gap:4px;padding:12px 0;border-top:1px solid rgba(255,255,255,.06)}
+.crit input{width:100%;height:44px;accent-color:#8b87ff;margin:0}
+.ta{width:100%;min-height:84px;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:#0f1322;color:#fff;font:400 15px/1.5 Onest,system-ui,sans-serif}
+.ta::placeholder{color:#7d869b}
+a:focus-visible,button:focus-visible{outline:2px solid #4df2ff;outline-offset:2px}
+</style>
+</helmet>
+<div style="width:390px;min-height:1500px;font-family:Onest,system-ui,sans-serif;color:#e8eaf2;background:radial-gradient(circle at 80% 0%,#1b2140,#0f1322 45%);display:flex;flex-direction:column">
+  <header style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 16px;background:#0c1020;border-bottom:1px solid rgba(255,255,255,.07)">
+    <b style="font-size:15px;color:#fff;letter-spacing:-.01em">HotB <span style="background:linear-gradient(90deg,#7f7bff,#4df2ff);-webkit-background-clip:text;background-clip:text;color:transparent">2026</span></b>
+    <button class="btn btn-g" type="button" style="min-height:44px">Menu</button>
+  </header>
+  <main style="padding:16px;display:flex;flex-direction:column;gap:14px">
+    <h1 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em;color:#fff">Rate presentations</h1>
+    <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px" role="tablist" aria-label="Category">
+      <span class="tab on"><i style="background:#36c399"></i>Adaptive <small style="color:#9aa3b8">9/12</small></span>
+      <span class="tab"><i style="background:#4df2ff"></i>Hands-free <small style="color:#9aa3b8">4/11</small></span>
+    </div>
+    <div role="status" style="display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:12px;background:rgba(247,166,84,.12);border:1px solid rgba(247,166,84,.45);font-size:14px;color:#ffe2bf">
+      <span style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:50%;background:#ff6b6b;box-shadow:0 0 0 4px rgba(255,107,107,.25)"></span>Now on stage: <b style="color:#fff">#7 NeuroPilot</b></span>
+      <span style="font-variant-numeric:tabular-nums">02:41 left</span>
+      <label style="display:flex;align-items:center;gap:10px;min-height:44px"><input type="checkbox" style="width:22px;height:22px;accent-color:#f7a654"> Follow the stage</label>
+    </div>
+    <div class="card" style="padding:14px;display:flex;flex-direction:column;gap:10px">
+      <b style="color:#fff">You rated 9 of 12 teams</b>
+      <div style="height:8px;border-radius:999px;background:#252d42;overflow:hidden"><div style="width:75%;height:100%;background:#36c399"></div></div>
+      <div style="display:flex;gap:6px"><span class="btn" style="flex:1;background:rgba(127,123,255,.25);color:#fff;min-height:44px;padding:0">All</span><span class="btn btn-g" style="flex:1;padding:0">To do (3)</span><span class="btn btn-g" style="flex:1;padding:0">Done (9)</span></div>
+      <label for="s" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Find a team</label>
+      <input id="s" type="search" placeholder="Find a team: name or number" style="height:44px;padding:0 12px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:#0f1322;color:#fff;font:400 15px Onest,system-ui,sans-serif">
+    </div>
+
+    <article class="card" style="border-color:rgba(139,135,255,.55);padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0;font-size:18px;color:#fff"><span style="color:#9aa3b8">#3</span> AdaptiveMind</h3><span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(247,166,84,.16);color:#f7a654">Not rated</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><a class="btn btn-g" href="#">Repository</a><button class="btn btn-g" type="button">Demo video</button><button class="btn btn-g" type="button" style="grid-column:1/-1">View PDF</button></div>
+      <div class="crit"><div style="display:flex;justify-content:space-between"><label for="m1" style="font-weight:600;color:#fff;font-size:15px">Implementation</label><b style="color:#4df2ff">7 / 10</b></div><input id="m1" type="range" min="1" max="10" value="7"></div>
+      <div class="crit"><div style="display:flex;justify-content:space-between"><label for="m2" style="font-weight:600;color:#fff;font-size:15px">Innovation</label><b style="color:#4df2ff">4 / 5</b></div><input id="m2" type="range" min="1" max="5" value="4"></div>
+      <div class="crit"><div style="display:flex;justify-content:space-between"><label for="m3" style="font-weight:600;color:#fff;font-size:15px">Usefulness</label><b style="color:#4df2ff">3 / 5</b></div><input id="m3" type="range" min="1" max="5" value="3"></div>
+      <label for="mn" style="font-size:13px;font-weight:600;color:#c9cfdd">Private notes</label>
+      <textarea class="ta" id="mn" placeholder="Only you can see these."></textarea>
+      <label for="mf" style="font-size:13px;font-weight:600;color:#c9cfdd">Feedback for the team</label>
+      <textarea class="ta" id="mf" placeholder="What was good, what could be improved…"></textarea>
+      <button class="btn btn-p" type="button" style="min-height:48px">Save rating · 14 / 20</button>
+    </article>
+
+    <article class="card" style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px"><b style="color:#fff"><span style="color:#9aa3b8">#1</span> Synapse</b><span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(54,195,153,.16);color:#36c399">18 / 20</span></article>
+    <article class="card" style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px"><b style="color:#fff"><span style="color:#9aa3b8">#2</span> NeuroPilot</b><span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(54,195,153,.16);color:#36c399">16 / 20</span></article>
+    <article class="card" style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px"><b style="color:#fff"><span style="color:#9aa3b8">#4</span> Cortex Loop</b><span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(247,166,84,.16);color:#f7a654">Not rated</span></article>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1500}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

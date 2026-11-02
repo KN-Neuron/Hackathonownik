@@ -60,11 +60,8 @@
 	}
 
 	function getScoreColor(score, maxScore = 5) {
-		const percentage = (score / maxScore) * 100;
-		if (percentage >= 90) return 'text-success font-bold';
-		if (percentage >= 70) return 'text-success';
-		if (percentage >= 50) return 'text-warning';
-		return 'text-error';
+		// Numbers only: a score is never shown by color alone
+		return '';
 	}
 
 	function getStatusClass(status, percent) {
@@ -322,20 +319,18 @@
 
 <div class="flex flex-col gap-4">
 	<!-- Controls -->
-	<div class="flex flex-wrap gap-3 justify-between items-center bg-base-200 p-4 rounded-lg mb-2">
+	<div class="controls">
 		<div class="flex gap-2 items-center">
 			<span class="font-medium">Filter:</span>
-			<div class="join">
-				<button
-					class="join-item btn btn-sm {filterStatus === 'all' ? 'btn-active' : ''}"
-					on:click={() => (filterStatus = 'all')}>All Teams</button
+			<div class="seg" role="group" aria-label="Filter">
+				<button class:on={filterStatus === 'all'} on:click={() => (filterStatus = 'all')}
+					>All teams</button
+				>
+				<button class:on={filterStatus === 'final'} on:click={() => (filterStatus = 'final')}
+					>Final ratings</button
 				>
 				<button
-					class="join-item btn btn-sm {filterStatus === 'final' ? 'btn-active' : ''}"
-					on:click={() => (filterStatus = 'final')}>Final Ratings</button
-				>
-				<button
-					class="join-item btn btn-sm {filterStatus === 'provisional' ? 'btn-active' : ''}"
+					class:on={filterStatus === 'provisional'}
 					on:click={() => (filterStatus = 'provisional')}>Provisional</button
 				>
 			</div>
@@ -344,7 +339,7 @@
 		<div class="flex items-center gap-3">
 			{#if canExport}
 			<button
-				class="btn btn-sm btn-accent {isPdfExporting ? 'loading' : ''}"
+				class="btn btn-primary {isPdfExporting ? 'loading' : ''}"
 				on:click={exportToPdf}
 				disabled={isPdfExporting}
 			>
@@ -368,7 +363,7 @@
 			</button>
 
 			<button
-				class="btn btn-sm btn-outline"
+				class="btn btn-outline"
 				on:click={exportToMarkdown}
 			>
 				<svg
@@ -390,24 +385,18 @@
 			</button>
 			{/if}
 
-			<div class="stats shadow">
-				<div class="stat">
-					<div class="stat-title">Teams</div>
-					<div class="stat-value text-xl">{rankings.length}</div>
-				</div>
-				<div class="stat">
-					<div class="stat-title">Juries</div>
-					<div class="stat-value text-xl">{totalJuries}</div>
-				</div>
+			<div class="counts">
+				<span><b>{rankings.length}</b> teams</span>
+				<span><b>{totalJuries}</b> jurors</span>
 			</div>
 		</div>
 	</div>
 
 	<!-- Table -->
-	<div class="overflow-x-auto rounded-box border border-base-content/10 bg-base-100 shadow-lg">
-		<table class="table table-zebra">
+	<div class="table-card overflow-x-auto">
+		<table class="table">
 			<thead>
-				<tr class="bg-base-200">
+				<tr>
 					<th>Rank</th>
 					<th class="cursor-pointer" on:click={() => sort('team')}>
 						Team {sortField === 'team' ? (sortDirection === 'desc' ? '↓' : '↑') : ''}
@@ -426,7 +415,7 @@
 			</thead>
 			<tbody>
 				{#each sortedRankings as team, index}
-					<tr class="hover:bg-base-200 transition-colors">
+					<tr>
 						<td class="font-bold">{team.rank ?? index + 1}</td>
 						<td>
 							<div class="team-name-cell">
@@ -434,7 +423,7 @@
 								{#if categoryFilter === 'all' && team.category}
 									{@const cat = eventConfig.categories.find(c => c.key === team.category)}
 									{#if cat}
-										<span class="category-badge" style="background: color-mix(in srgb, {cat.color} 20%, transparent); color: {cat.color}; border: 1px solid color-mix(in srgb, {cat.color} 30%, transparent);">{cat.name}</span>
+										<span class="category-badge" style="background: color-mix(in srgb, {cat.color} 16%, transparent); color: {cat.color};">{cat.name}</span>
 									{/if}
 								{/if}
 							</div>
@@ -446,17 +435,11 @@
 							{team.finalGrade.toFixed(2)}
 						</td>
 						<td>
-							<div class="flex flex-col gap-1">
-								<div class="badge {getStatusClass(team.status, team.completionPercent)}">
+							<div class="status-cell">
+								<span class="pill {team.status === 'final' ? 'pill-success' : 'pill-warning'}">
 									{team.status === 'final' ? 'Final' : 'Provisional'}
-								</div>
-								<div class="w-full h-2 bg-base-300 rounded-full overflow-hidden">
-									<div
-										class="h-full {getStatusClass(team.status, team.completionPercent)}"
-										style="width: {team.completionPercent}%"
-									></div>
-								</div>
-								<span class="text-xs">{team.ratingCount}/{totalJuries} juries</span>
+								</span>
+								<span class="status-count">{team.ratingCount}/{totalJuries} jurors</span>
 							</div>
 						</td>
 						<td>
@@ -477,22 +460,11 @@
 	</div>
 
 	<!-- Legend -->
-	<div class="bg-base-200 p-4 rounded-lg mt-2">
-		<h3 class="font-semibold mb-2">Rating Status</h3>
-		<div class="flex flex-wrap gap-4">
-			<div class="flex items-center gap-2">
-				<div class="badge bg-success text-success-content">Final</div>
-				<span class="text-sm">Team rated by all juries</span>
-			</div>
-			<div class="flex items-center gap-2">
-				<div class="badge bg-warning text-warning-content">Partial</div>
-				<span class="text-sm">Team rated by most juries</span>
-			</div>
-			<div class="flex items-center gap-2">
-				<div class="badge bg-neutral text-neutral-content">Partial</div>
-				<span class="text-sm">Team rated by few juries</span>
-			</div>
-		</div>
+	<div class="legend">
+		<span class="pill pill-success">Final</span>
+		<span>rated by every juror of the category</span>
+		<span class="pill pill-warning">Provisional</span>
+		<span>still waiting for some jurors</span>
 	</div>
 </div>
 
@@ -535,7 +507,7 @@
 	.stats {
 		display: flex;
 		background-color: #2c2e33;
-		border-radius: 0.5rem;
+		border-radius: var(--radius-control);
 		overflow: hidden;
 	}
 
@@ -552,7 +524,7 @@
 	.stat-value {
 		font-size: 1.25rem;
 		font-weight: 600;
-		color: #f0f0f0;
+		color: #fff;
 	}
 
 	.table {
@@ -563,7 +535,7 @@
 	.table th,
 	.table td {
 		padding: 0.75rem 1rem;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+		border-bottom: 1px solid var(--line);
 	}
 
 	.table th {
@@ -650,13 +622,13 @@
 	}
 
 	.btn-accent {
-		background: linear-gradient(135deg, #7f7bff, #4df2ff);
+		background: var(--action);
 		color: #0f1322;
 		font-weight: 500;
 	}
 
 	.btn-accent:hover {
-		background: linear-gradient(135deg, #6a67d6, #3dcede);
+		background: var(--action);
 	}
 
 	/* Team name with category badge */
@@ -673,5 +645,84 @@
 		padding: 0.15rem 0.4rem;
 		border-radius: 0.25rem;
 		text-transform: capitalize;
+	}
+
+	.controls {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+		justify-content: space-between;
+		align-items: center;
+		padding: 16px;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: var(--radius-card);
+	}
+
+	.seg {
+		display: inline-flex;
+		border: 1px solid rgba(255, 255, 255, 0.16);
+		border-radius: var(--radius-control);
+		overflow: hidden;
+	}
+
+	.seg button {
+		min-height: 44px;
+		padding: 0 14px;
+		background: transparent;
+		border: 0;
+		border-left: 1px solid rgba(255, 255, 255, 0.12);
+		color: #c9cfdd;
+		font-weight: 600;
+		font-size: 13px;
+		cursor: pointer;
+	}
+
+	.seg button:first-child {
+		border-left: 0;
+	}
+
+	.seg button.on {
+		background: rgba(139, 135, 255, 0.25);
+		color: #fff;
+	}
+
+	.counts {
+		display: flex;
+		gap: 16px;
+		font-size: 14px;
+		color: var(--text-muted);
+	}
+
+	.counts b {
+		color: #fff;
+		font-size: 18px;
+	}
+
+	.table-card {
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: var(--radius-card);
+	}
+
+	.status-cell {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 4px;
+	}
+
+	.status-count {
+		font-size: 12px;
+		color: var(--text-muted);
+	}
+
+	.legend {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px 12px;
+		font-size: 13px;
+		color: var(--text-muted);
 	}
 </style>

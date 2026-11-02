@@ -35,7 +35,7 @@
 				{#if category}
 					<span
 						class="category-badge"
-						style="background: color-mix(in srgb, {category.color} 20%, transparent); color: {category.color}; border: 1px solid color-mix(in srgb, {category.color} 30%, transparent);"
+						style="background: color-mix(in srgb, {category.color} 16%, transparent); color: {category.color};"
 					>
 						{category.name}
 					</span>
@@ -61,7 +61,7 @@
 
 		{#if data.inFinal && !data.published}
 			<div class="final-banner">
-				<h3>🎉 Your team is in the final!</h3>
+				<h3>Your team is in the final!</h3>
 				<p>Prepare your presentation on stage – it is rated in the final as well.</p>
 			</div>
 		{/if}
@@ -70,7 +70,7 @@
 			<div class="feedback-section">
 				{#if data.place}
 					<p class="place">
-						{data.place === 1 ? '🏆 ' : ''}Your team placed <b>#{data.place}</b>
+						Your team placed <b>#{data.place}</b>
 						{data.inFinal ? 'in the final' : ''}.
 					</p>
 				{:else if data.published}
@@ -155,8 +155,7 @@
 <style>
 	.page-container {
 		max-width: 900px;
-		margin: 0 auto;
-		padding: 1.5rem;
+		margin: 0;
 		display: flex;
 		flex-direction: column;
 		gap: 1.5rem;
@@ -170,23 +169,27 @@
 	}
 
 	.team-name {
-		font-size: 1.5rem;
-		font-weight: 700;
-		color: #f0f0f0;
+		font-size: 24px;
+		font-weight: 800;
+		letter-spacing: -0.01em;
+		color: #fff;
 		margin: 0;
 	}
 
 	.category-badge {
-		padding: 0.25rem 0.75rem;
-		border-radius: 9999px;
-		font-size: 0.8rem;
+		display: inline-flex;
+		align-items: center;
+		height: 24px;
+		padding: 0 10px;
+		border-radius: 999px;
+		font-size: 12px;
 		font-weight: 600;
 	}
 
 	.last-updated {
 		margin-left: auto;
 		font-size: 0.85rem;
-		color: rgba(255, 255, 255, 0.6);
+		color: var(--text-muted);
 	}
 
 	.members {
@@ -201,7 +204,7 @@
 	.members-help {
 		display: block;
 		font-size: 0.8rem;
-		color: rgba(255, 255, 255, 0.6);
+		color: var(--text-muted);
 	}
 
 	.history-section h3 {
@@ -212,13 +215,13 @@
 
 	.history-help {
 		font-size: 0.8rem;
-		color: rgba(255, 255, 255, 0.6);
+		color: var(--text-muted);
 		margin: 0.5rem 0;
 	}
 
 	.final-banner {
 		padding: 1.25rem;
-		border-radius: 0.75rem;
+		border-radius: var(--radius-card);
 		background: rgba(247, 166, 84, 0.1);
 		border: 1px solid rgba(247, 166, 84, 0.45);
 	}
@@ -235,7 +238,7 @@
 
 	.feedback-section {
 		padding: 1.25rem;
-		border-radius: 0.75rem;
+		border-radius: var(--radius-card);
 		background: rgba(54, 195, 153, 0.08);
 		border: 1px solid rgba(54, 195, 153, 0.3);
 	}
@@ -255,7 +258,7 @@
 	.feedback-section li {
 		white-space: pre-line;
 		padding: 0.75rem;
-		border-radius: 0.5rem;
+		border-radius: var(--radius-control);
 		background: rgba(0, 0, 0, 0.2);
 	}
 

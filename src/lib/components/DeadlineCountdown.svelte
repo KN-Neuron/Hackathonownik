@@ -41,7 +41,7 @@
 	.deadline {
 		font-size: 0.8rem;
 		padding: 0.35rem 0.6rem;
-		border-radius: 0.5rem;
+		border-radius: var(--radius-control);
 		background: rgba(255, 255, 255, 0.06);
 		color: rgba(255, 255, 255, 0.8);
 		text-align: center;
@@ -49,10 +49,10 @@
 
 	.urgent {
 		background: rgba(248, 114, 114, 0.15);
-		color: #f87272;
+		color: #ff9a9a;
 	}
 
 	.closed {
-		color: rgba(255, 255, 255, 0.5);
+		color: var(--text-muted);
 	}
 </style>

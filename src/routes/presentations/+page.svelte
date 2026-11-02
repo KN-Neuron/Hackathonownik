@@ -169,7 +169,7 @@
 			{@const categoryPresentations = getPresentationsByCategory(category.key)}
 			{#if categoryPresentations.length > 0}
 				<div class="category-section">
-					<div class="category-header" style="border-color: {category.color}">
+					<div class="category-header">
 						<h2 style="color: {category.color}">{category.name}</h2>
 						<span class="category-count">{categoryPresentations.length} teams</span>
 					</div>
@@ -188,7 +188,7 @@
 										</h3>
 										<span
 											class="category-badge"
-											style="background: color-mix(in srgb, {category.color} 20%, transparent); color: {category.color}; border: 1px solid color-mix(in srgb, {category.color} 30%, transparent);"
+											style="background: color-mix(in srgb, {category.color} 16%, transparent); color: {category.color};"
 											>{category.name}</span
 										>
 									</div>
@@ -394,26 +394,20 @@
 
 <style>
 	.order-number {
-		color: rgba(255, 255, 255, 0.5);
+		color: var(--text-muted);
 		font-variant-numeric: tabular-nums;
 	}
 
 	.presentations-gallery {
-		padding: 2rem;
 		max-width: 1400px;
-		margin: 0 auto;
-		min-height: 100vh;
+		margin: 0;
 	}
 
 	.gallery-header {
-		margin-bottom: 2rem;
-		text-align: center;
+		margin-bottom: 1.5rem;
 	}
 
 	.gallery-header h1 {
-		font-size: 2rem;
-		font-weight: 700;
-		color: #7f7bff;
 		margin-bottom: 0.5rem;
 	}
 
@@ -428,21 +422,25 @@
 		gap: 1rem;
 		margin-bottom: 1.5rem;
 		padding-bottom: 0.75rem;
-		border-bottom: 2px solid;
+		border-bottom: 1px solid var(--line);
 	}
 
 	.category-header h2 {
-		font-size: 1.5rem;
-		font-weight: 600;
+		font-size: 20px;
+		font-weight: 700;
 		margin: 0;
 	}
 
 	.category-count {
 		font-size: 0.875rem;
-		color: rgba(255, 255, 255, 0.6);
-		padding: 0.25rem 0.75rem;
-		background: rgba(255, 255, 255, 0.1);
-		border-radius: 1rem;
+		color: var(--text-muted);
+		padding: 0 10px;
+		height: 24px;
+		display: inline-flex;
+		align-items: center;
+		font-weight: 600;
+		background: rgba(255, 255, 255, 0.08);
+		border-radius: 999px;
 	}
 
 	.card-header-row {
@@ -460,16 +458,16 @@
 	.category-badge {
 		font-size: 0.7rem;
 		font-weight: 600;
-		padding: 0.2rem 0.5rem;
-		border-radius: 0.25rem;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
+		padding: 0 10px;
+		height: 24px;
+		display: inline-flex;
+		align-items: center;
+		border-radius: 999px;
 		white-space: nowrap;
 	}
 
 	.presentation-card:hover {
-		border-color: color-mix(in srgb, var(--category-color) 40%, transparent);
-		box-shadow: 0 10px 25px color-mix(in srgb, var(--category-color) 15%, transparent);
+		border-color: rgba(255, 255, 255, 0.28);
 	}
 
 	.presentations-grid {
@@ -479,38 +477,35 @@
 	}
 
 	.presentation-card {
-		background: rgba(255, 255, 255, 0.05);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		border-radius: 0.75rem;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: var(--radius-card);
 		padding: 1.5rem;
 		cursor: pointer;
 		transition: all 0.3s ease;
-		backdrop-filter: blur(10px);
 	}
 
 	.presentation-card:hover {
-		transform: translateY(-5px);
-		background: rgba(127, 123, 255, 0.1);
-		border-color: rgba(127, 123, 255, 0.3);
-		box-shadow: 0 10px 25px rgba(127, 123, 255, 0.2);
+		background: rgba(139, 135, 255, 0.1);
+		border-color: rgba(139, 135, 255, 0.3);
 	}
 
 	.card-content h3 {
 		font-size: 1.25rem;
 		font-weight: 600;
-		color: #f0f0f0;
+		color: #fff;
 		margin-bottom: 0.5rem;
 	}
 
 	.team-id {
 		font-size: 0.875rem;
-		color: rgba(255, 255, 255, 0.6);
+		color: var(--text-muted);
 		margin-bottom: 0.25rem;
 	}
 
 	.created-date {
 		font-size: 0.8rem;
-		color: rgba(255, 255, 255, 0.5);
+		color: var(--text-muted);
 		margin-bottom: 1rem;
 	}
 
@@ -520,7 +515,7 @@
 	}
 
 	.view-btn {
-		background: linear-gradient(to right, #4df2ff, #7f7bff);
+		background: var(--action);
 		color: #0f1322;
 		border: none;
 		padding: 0.5rem 1rem;
@@ -559,7 +554,7 @@
 	}
 
 	.download-btn {
-		background: linear-gradient(to right, #8b89cc, #7c79e5);
+		background: var(--action);
 		color: #0f1322;
 		border: none;
 		padding: 0.5rem 1rem;
@@ -619,14 +614,14 @@
 
 	.missing-link {
 		background: rgba(255, 255, 255, 0.08);
-		color: rgba(255, 255, 255, 0.5);
+		color: var(--text-muted);
 		cursor: default;
 	}
 
 	.no-presentations {
 		text-align: center;
 		padding: 4rem 2rem;
-		color: rgba(255, 255, 255, 0.7);
+		color: var(--text-muted);
 	}
 
 	.no-presentations h2 {
@@ -666,13 +661,13 @@
 		align-items: center;
 		padding: 0.5rem 1rem;
 		background: rgba(0, 0, 0, 0.7);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+		border-bottom: 1px solid var(--line);
 	}
 
 	.presentation-header h2 {
 		font-size: 1.2rem;
 		font-weight: 600;
-		color: #f0f0f0;
+		color: #fff;
 		margin: 0;
 	}
 
@@ -684,7 +679,7 @@
 	.exit-fullscreen-btn {
 		background: transparent;
 		border: none;
-		color: #f0f0f0;
+		color: #fff;
 		cursor: pointer;
 		padding: 0.25rem;
 		border-radius: 0.25rem;
@@ -706,7 +701,7 @@
 	.download-fullscreen-btn {
 		background: transparent;
 		border: none;
-		color: #f0f0f0;
+		color: #fff;
 		cursor: pointer;
 		padding: 0.25rem;
 		border-radius: 0.25rem;

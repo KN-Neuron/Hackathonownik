@@ -60,7 +60,7 @@
 </script>
 
 <div class="jury-ratings-details">
-	<button class="btn btn-sm btn-secondary" on:click={() => (showModal = true)}>
+	<button class="btn btn-sm btn-outline" on:click={() => (showModal = true)}>
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
 			width="16"

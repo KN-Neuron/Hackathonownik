@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ranking</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0f1322}
+.app{display:flex;flex-wrap:wrap;min-height:1000px;font-family:Onest,system-ui,sans-serif;color:#e8eaf2;background:radial-gradient(circle at 75% 0%,#1b2140,#0f1322 40%)}
+.side{flex:1 1 260px;max-width:260px;padding:24px 16px;display:flex;flex-direction:column;gap:24px;background:#0c1020;border-right:1px solid rgba(255,255,255,.07)}
+.brand{font-weight:800;font-size:18px;letter-spacing:-.01em;line-height:1.2;color:#fff;text-decoration:none;padding:0 8px}
+.brand span{background:linear-gradient(90deg,#7f7bff,#4df2ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.who{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)}
+.chip{display:inline-flex;align-items:center;align-self:flex-start;height:24px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:600}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:10px;color:#9aa3b8;text-decoration:none;font-size:14px;font-weight:500}
+.nav a:hover{background:rgba(255,255,255,.05);color:#fff}
+.nav a.on{background:rgba(127,123,255,.16);color:#fff;box-shadow:inset 0 0 0 1px rgba(127,123,255,.35)}
+.nav svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sfoot{margin-top:auto;padding:0 8px;font-size:12px;color:#7d869b}
+.main{flex:999 1 560px;min-width:0;padding:40px 48px;display:flex;flex-direction:column;gap:24px}
+.card{background:#151a2c;border:1px solid rgba(255,255,255,.08);border-radius:14px}
+.tab{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:transparent;color:#c9cfdd;font:600 14px Onest,system-ui,sans-serif}
+.tab i{width:8px;height:8px;border-radius:50%;display:block}
+.tab.on{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.4)}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{text-align:left;padding:14px 20px;font-size:12px;color:#9aa3b8;font-weight:600;border-bottom:1px solid rgba(255,255,255,.08)}
+td{padding:16px 20px;border-top:1px solid rgba(255,255,255,.06);color:#d6dbe8;font-variant-numeric:tabular-nums}
+.pl{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;font-weight:800;font-size:14px;background:rgba(255,255,255,.08);color:#d6dbe8}
+.pl.g{background:#f7c64f;color:#241a00}.pl.s{background:#c9cfdd;color:#14182a}.pl.b{background:#d9915c;color:#2a1500}
+.bar{height:8px;border-radius:999px;background:#252d42;overflow:hidden;min-width:120px}
+.bar div{height:100%;border-radius:999px;background:#8b87ff}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 16px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#e8eaf2;font:600 14px Onest,system-ui,sans-serif;text-decoration:none}
+a:focus-visible,button:focus-visible{outline:2px solid #4df2ff;outline-offset:2px}
+</style>
+</helmet>
+<div class="app">
+  <aside class="side">
+    <a class="brand" href="Main.dc.html">Heroes Of The Brain <span>2026</span></a>
+    <div class="who">
+      <span style="font-weight:600;font-size:14px;color:#fff">Team Synapse</span>
+      <span class="chip" style="background:rgba(127,123,255,.18);color:#c3c1ff">Participant</span>
+      <span class="chip" style="background:rgba(54,195,153,.16);color:#36c399">Adaptive Systems</span>
+    </div>
+    <nav class="nav" aria-label="Main">
+      <a href="Main.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</a>
+      <a href="Info.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5M12 8h.01"/></svg>Info</a>
+      <a href="Upload.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Submit Project</a>
+      <a href="MySubmission.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>My Submission</a>
+      <a class="on" href="Ranking.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20V10M12 20V4M18 20v-7"/></svg>Rankings</a>
+    </nav>
+    <div class="sfoot">© 2026 KN Neuron</div>
+  </aside>
+  <main class="main">
+    <header style="display:flex;flex-direction:column;gap:8px">
+      <h1 style="margin:0;font-size:32px;font-weight:800;letter-spacing:-.02em;color:#fff">Ranking</h1>
+      <p style="margin:0;color:#9aa3b8;font-size:15px">Final ranking of the finalists, out of 25 points. Ties share a place.</p>
+    </header>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px">
+      <div style="display:flex;flex-wrap:wrap;gap:8px"><span class="tab on"><i style="background:#36c399"></i>Adaptive Systems</span><span class="tab"><i style="background:#4df2ff"></i>Hands-free Interaction</span></div>
+      <a class="btn" href="#">Export as Markdown</a>
+    </div>
+    <div class="card" style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Place</th><th>Team</th><th>Score</th><th style="min-width:160px">Share of 25</th><th>Ratings</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pl g">1</span></td><td style="color:#fff;font-weight:700">Synapse</td><td style="color:#fff;font-weight:700">22.67</td><td><div class="bar"><div style="width:90.7%"></div></div></td><td>3 of 3</td></tr>
+          <tr><td><span class="pl s">2</span></td><td style="color:#fff;font-weight:700">NeuroPilot</td><td style="color:#fff;font-weight:700">21.33</td><td><div class="bar"><div style="width:85.3%"></div></div></td><td>3 of 3</td></tr>
+          <tr><td><span class="pl b">3</span></td><td style="color:#fff;font-weight:700">Cortex Loop</td><td style="color:#fff;font-weight:700">19.00</td><td><div class="bar"><div style="width:76%"></div></div></td><td>3 of 3</td></tr>
+          <tr><td><span class="pl">4</span></td><td style="color:#fff;font-weight:700">AdaptiveMind</td><td style="color:#fff;font-weight:700">17.67</td><td><div class="bar"><div style="width:70.7%"></div></div></td><td>3 of 3</td></tr>
+          <tr><td><span class="pl">4</span></td><td style="color:#fff;font-weight:700">Alpha Wave</td><td style="color:#fff;font-weight:700">17.67</td><td><div class="bar"><div style="width:70.7%"></div></div></td><td>3 of 3</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin:0;font-size:14px;color:#9aa3b8">Did not reach the final: Brainstorm, Neuron Lab, Delta Force, Theta Crew, Gamma Rays, Mind Meld, Axon.</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
