@@ -176,6 +176,8 @@ The app keeps short-lived caches in memory and works as a single Node process. `
 6.  **Open the App:**
     Navigate to `http://localhost:5173` in your browser.
 
+Step-by-step deployment, smoke test, tests and troubleshooting: [docs/DEPLOYMENT-AND-TESTING.md](docs/DEPLOYMENT-AND-TESTING.md).
+
 Progress, decisions, findings and the pre-event checklist live in [docs/PROJECT-LOG.md](docs/PROJECT-LOG.md).
 
 ## 📜 Scripts
