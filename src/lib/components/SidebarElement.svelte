@@ -43,38 +43,34 @@
 	.menu-item {
 		display: flex;
 		align-items: center;
-		padding: 0.75rem 1rem;
-		border: 1px solid #e5e7eb;
-		border-radius: 0.5rem;
-		transition: all 0.2s ease;
-		cursor: pointer;
-		margin-bottom: 0.5rem;
-		color: #1f2937;
-	}
-
-	.menu-item:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+		gap: 12px;
+		min-height: 44px;
+		padding: 0 12px;
+		border-radius: var(--radius-control);
+		color: var(--text-muted);
+		font-size: 14px;
+		font-weight: 500;
+		list-style: none;
+		transition: background-color 0.15s ease;
 	}
 
 	.icon-container {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 1.75rem;
-		height: 1.75rem;
-		color: #4b5563;
+		width: 18px;
+		height: 18px;
+		flex: none;
+		color: currentColor;
 	}
 
 	.icon-container :global(svg) {
 		width: 100%;
 		height: 100%;
+		stroke-width: 1.8;
 	}
 
 	.item-text {
-		margin-left: 0.75rem;
-		font-weight: 500;
-		font-size: 1rem;
-		color: white;
+		color: inherit;
 	}
 </style>

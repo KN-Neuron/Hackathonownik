@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Info</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0f1322}
+.app{display:flex;flex-wrap:wrap;min-height:1300px;font-family:Onest,system-ui,sans-serif;color:#e8eaf2;background:radial-gradient(circle at 75% 0%,#1b2140,#0f1322 40%)}
+.side{flex:1 1 260px;max-width:260px;padding:24px 16px;display:flex;flex-direction:column;gap:24px;background:#0c1020;border-right:1px solid rgba(255,255,255,.07)}
+.brand{font-weight:800;font-size:18px;letter-spacing:-.01em;line-height:1.2;color:#fff;text-decoration:none;padding:0 8px}
+.brand span{background:linear-gradient(90deg,#7f7bff,#4df2ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.who{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)}
+.chip{display:inline-flex;align-items:center;align-self:flex-start;height:24px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:600}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:10px;color:#9aa3b8;text-decoration:none;font-size:14px;font-weight:500}
+.nav a:hover{background:rgba(255,255,255,.05);color:#fff}
+.nav a.on{background:rgba(127,123,255,.16);color:#fff;box-shadow:inset 0 0 0 1px rgba(127,123,255,.35)}
+.nav svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sfoot{margin-top:auto;padding:0 8px;font-size:12px;color:#7d869b}
+.main{flex:999 1 560px;min-width:0;padding:40px 48px;display:flex;flex-direction:column;gap:32px}
+.card{background:#151a2c;border:1px solid rgba(255,255,255,.08);border-radius:14px}
+.row{display:flex;gap:20px;padding:14px 24px;border-top:1px solid rgba(255,255,255,.06);font-size:15px}
+.row:first-child{border-top:0}
+.time{flex:0 0 72px;font-weight:600;color:#4df2ff;font-variant-numeric:tabular-nums}
+h2{margin:0;font-size:13px;font-weight:700;color:#9aa3b8}
+a:focus-visible,button:focus-visible{outline:2px solid #4df2ff;outline-offset:2px}
+.lk{display:flex;flex-direction:column;gap:6px;padding:20px;text-decoration:none;color:inherit}
+.lk:hover{border-color:rgba(127,123,255,.5)}
+</style>
+</helmet>
+<div class="app">
+  <aside class="side">
+    <a class="brand" href="Main.dc.html">Heroes Of The Brain <span>2026</span></a>
+    <div class="who">
+      <span style="font-weight:600;font-size:14px;color:#fff">Team Synapse</span>
+      <span class="chip" style="background:rgba(127,123,255,.18);color:#c3c1ff">Participant</span>
+      <span class="chip" style="background:rgba(54,195,153,.16);color:#36c399">Adaptive Systems</span>
+      <span style="font-size:12px;color:#9aa3b8">Deadline in <b style="color:#f7a654;font-variant-numeric:tabular-nums">1d 03:24:10</b></span>
+    </div>
+    <nav class="nav" aria-label="Main">
+      <a href="Main.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</a>
+      <a class="on" href="Info.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5M12 8h.01"/></svg>Info</a>
+      <a href="Upload.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Submit Project</a>
+      <a href="MySubmission.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>My Submission</a>
+      <a href="Ranking.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20V10M12 20V4M18 20v-7"/></svg>Rankings</a>
+    </nav>
+    <div class="sfoot">© 2026 KN Neuron</div>
+  </aside>
+  <main class="main">
+    <header style="display:flex;flex-direction:column;gap:8px">
+      <h1 style="margin:0;font-size:32px;font-weight:800;letter-spacing:-.02em;color:#fff">General information</h1>
+      <p style="margin:0;color:#9aa3b8;font-size:15px">Schedule, useful links and who to ask when something breaks.</p>
+    </header>
+    <section style="display:flex;flex-direction:column;gap:14px">
+      <h2>Schedule</h2>
+      <div class="card" style="overflow:hidden">
+        <div style="padding:16px 24px;background:rgba(127,123,255,.1);font-weight:700;color:#fff">Saturday, 14 November</div>
+        <div class="row"><span class="time">[time]</span><span>[Schedule item from app_config.yaml]</span></div>
+        <div class="row"><span class="time">[time]</span><span>[Schedule item from app_config.yaml]</span></div>
+        <div class="row"><span class="time">23:59</span><span>Check-in deadline: upload anything so we know you compete</span></div>
+        <div style="padding:16px 24px;background:rgba(127,123,255,.1);font-weight:700;color:#fff;border-top:1px solid rgba(255,255,255,.06)">Sunday, 15 November</div>
+        <div class="row"><span class="time">11:00</span><span>First presentation (PDF) closes</span></div>
+        <div class="row"><span class="time">12:00</span><span>Repository and video links close</span></div>
+        <div class="row"><span class="time">14:00</span><span>Final presentation closes</span></div>
+      </div>
+    </section>
+    <section style="display:flex;flex-direction:column;gap:14px">
+      <h2>Useful links</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:16px">
+        <a class="card lk" href="https://discord.gg/7vwC65hf"><b style="color:#fff;font-size:16px">Discord</b><span style="color:#9aa3b8;font-size:14px">Join our Discord server</span><span style="color:#4df2ff;font-size:14px;font-weight:600;margin-top:6px">Join Discord</span></a>
+        <a class="card lk" href="https://github.com/KN-Neuron/heroes-of-the-brain-starter-pack"><b style="color:#fff;font-size:16px">Starter Pack</b><span style="color:#9aa3b8;font-size:14px">Repository with sample code</span><span style="color:#4df2ff;font-size:14px;font-weight:600;margin-top:6px">Open Repository</span></a>
+        <a class="card lk" href="https://heroesofthebrain.pwr.edu.pl/regulamin"><b style="color:#fff;font-size:16px">Rules</b><span style="color:#9aa3b8;font-size:14px">Event rules and judging</span><span style="color:#4df2ff;font-size:14px;font-weight:600;margin-top:6px">Read the rules</span></a>
+      </div>
+    </section>
+    <section style="display:flex;flex-direction:column;gap:14px">
+      <h2>Contact</h2>
+      <div class="card" style="padding:24px;font-size:15px;line-height:1.6;color:#c9cfdd">In case of problems or questions, contact the organizers using the links above.</div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1300}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

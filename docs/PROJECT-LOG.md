@@ -23,6 +23,7 @@ Single place so nobody gets lost. Newest entries at the bottom of each section. 
 4. End-to-end tests (`npm run test:e2e`, 191 tests, `tests/e2e/README.md`) and load test (`scripts/load-test.mjs`).
 5. Separate deadline for the first presentation.
 7. Deploy prep: `adapter-node` pinned to 5.2.12, `npm start`, deployment variables in `.env.example`, deadlines set from the schedule, merged `dev` re-tested (66 unit, 195 e2e).
+8. Visual redesign from `docs/redesign` (tokens, Onest font, one sidebar/card/button/pill set, mobile menu, 44 px targets, no gradients or emoji). Logic untouched; 66 unit and 195 e2e tests pass.
 6. Security follow-ups: login limiter, session revocation on logout, authenticated cookie encryption, strict CSP, collapsible mobile menu, multi-process load test (195 e2e tests passing).
 
 ## Findings from testing, and what happened to them

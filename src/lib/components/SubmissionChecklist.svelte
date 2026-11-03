@@ -45,9 +45,9 @@
 			<h3>Your submission</h3>
 		{/if}
 		{#if missing.length === 0}
-			<span class="badge badge-success gap-1">✓ Complete</span>
+			<span class="pill pill-success">Complete</span>
 		{:else}
-			<span class="badge badge-warning gap-1">
+			<span class="pill pill-warning">
 				Incomplete – missing: {missing.map((item) => SUBMISSION_ITEM_LABELS[item]).join(', ')}
 			</span>
 		{/if}
@@ -103,9 +103,9 @@
 
 <style>
 	.checklist {
-		background: rgba(0, 0, 0, 0.2);
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 0.75rem;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: var(--radius-card);
 		padding: 1.25rem;
 	}
 
@@ -122,7 +122,7 @@
 		margin: 0;
 		font-size: 1rem;
 		font-weight: 600;
-		color: #f0f0f0;
+		color: #fff;
 	}
 
 	ul {
@@ -139,21 +139,12 @@
 		align-items: center;
 		gap: 0.75rem;
 		padding: 0.75rem;
-		border-radius: 0.5rem;
+		border-radius: var(--radius-control);
 		background: rgba(255, 255, 255, 0.03);
-		border-left: 3px solid transparent;
-	}
-
-	li.done {
-		border-left-color: #36c399;
 	}
 
 	li.optional {
 		opacity: 0.6;
-	}
-
-	li.missing {
-		border-left-color: #f87272;
 	}
 
 	.status-icon {
@@ -167,7 +158,7 @@
 	}
 
 	li.missing .status-icon {
-		color: #f87272;
+		color: #ff9a9a;
 	}
 
 	.item-body {
@@ -179,21 +170,20 @@
 
 	.item-label {
 		font-weight: 600;
-		color: #f0f0f0;
+		color: #fff;
 		font-size: 0.9rem;
 	}
 
 	.required-tag {
 		margin-left: 0.4rem;
-		font-size: 0.7rem;
-		font-weight: 500;
-		text-transform: uppercase;
-		color: #f87272;
+		font-size: 12px;
+		font-weight: 600;
+		color: #ff9a9a;
 	}
 
 	.item-value {
-		font-size: 0.85rem;
-		color: #4df2ff;
+		font-size: 13px;
+		color: var(--focus);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -201,11 +191,14 @@
 
 	.item-meta {
 		font-size: 0.75rem;
-		color: rgba(255, 255, 255, 0.55);
+		color: var(--text-muted);
 	}
 
+	/* Inside a team card: no second card around the list */
 	.compact {
-		padding: 0.5rem 0.75rem;
+		padding: 0;
+		background: none;
+		border: 0;
 	}
 
 	.compact .checklist-header {

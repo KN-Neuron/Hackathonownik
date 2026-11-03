@@ -110,7 +110,11 @@
 							</details>
 						</td>
 						<td class={team.validCategory ? '' : 'text-error'}>{team.category}</td>
-						<td class={team.members.length < 3 || team.members.length > 4 ? 'text-error' : ''}>
+						<td
+							class="members-cell {team.members.length < 3 || team.members.length > 4
+								? 'text-error'
+								: ''}"
+						>
 							{team.members.length}: {team.members.join(', ') || '–'}
 						</td>
 						{#each items as item (item)}
@@ -166,8 +170,7 @@
 <style>
 	.page {
 		max-width: 1300px;
-		margin: 0 auto;
-		padding: 1rem;
+		margin: 0;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
@@ -184,13 +187,14 @@
 		flex-wrap: wrap;
 		gap: 1.5rem;
 		padding: 0.75rem 1rem;
-		border-radius: 0.75rem;
-		background: rgba(255, 255, 255, 0.04);
+		border-radius: var(--radius-card);
+		background: var(--surface);
+		border: 1px solid var(--line);
 	}
 
 	.problems {
 		padding: 0.75rem 1rem;
-		border-radius: 0.75rem;
+		border-radius: var(--radius-card);
 		background: rgba(247, 166, 84, 0.1);
 		border: 1px solid rgba(247, 166, 84, 0.5);
 	}
@@ -198,6 +202,10 @@
 	.problems ul {
 		margin-top: 0.25rem;
 		font-size: 0.9rem;
+	}
+
+	.members-cell {
+		min-width: 260px;
 	}
 
 	summary {
@@ -208,6 +216,6 @@
 		margin: 0.25rem 0 0.25rem 1rem;
 		font-size: 0.8rem;
 		font-weight: 400;
-		color: rgba(255, 255, 255, 0.65);
+		color: var(--text-muted);
 	}
 </style>

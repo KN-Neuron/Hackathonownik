@@ -1,9 +1,9 @@
 /* Centralized Color System for JuryApp */
 :root {
   /* Primary Colors */
-  --primary: #7f7bff;          /* Main primary color */
-  --primary-focus: #4df2ff;    /* Primary focus/hover state */
-  --primary-content: #ffffff;  /* Content on primary background */
+  --primary: #8b87ff;          /* Main primary color */
+  --primary-focus: #a19eff;    /* Primary focus/hover state */
+  --primary-content: #0f1322;  /* Content on primary background */
   
   /* Secondary Colors */
   --secondary: #f000b8;
@@ -22,9 +22,9 @@
   
   /* Base Colors (Backgrounds) */
   --base-100: #0f1322;         /* Main background */
-  --base-200: #1a1f30;         /* Secondary background */
-  --base-300: #252d42;         /* Tertiary background */
-  --base-content: #e5e7eb;     /* Content on base backgrounds */
+  --base-200: #151a2c;         /* Secondary background */
+  --base-300: #1c2236;         /* Tertiary background */
+  --base-content: #e8eaf2;     /* Content on base backgrounds */
   
   /* Status Colors */
   --success: #36c399;          /* Success/good status */
@@ -33,10 +33,10 @@
   --info: #7f7bff;             /* Information status */
   
   /* Brand-Specific Colors */
-  --brand-purple: #7f7bff;     /* Main brand purple */
+  --brand-purple: #8b87ff;     /* Main brand purple */
   --brand-blue: #4df2ff;       /* Main brand blue/cyan */
   --brand-dark: #0f1322;       /* Main brand dark */
-  --brand-light: #f0f0f0;      /* Main brand light text */
+  --brand-light: #e8eaf2;      /* Main brand light text */
   
   /* Challenge Category Colors */
   --wellness-color: #36c399;   /* Wellness category */
@@ -54,17 +54,17 @@
   /* Rating/Score Colors */
   --score-excellent: #36c399;  /* 90%+ scores */
   --score-good: #f7a654;       /* 70-89% scores */
-  --score-average: #e85c90;    /* 50-69% scores */
+  --score-average: #f7a654;    /* 50-69% scores */
   --score-poor: #555555;       /* <50% scores */
   
   /* UI Element Colors */
-  --border-default: rgba(255, 255, 255, 0.1);
+  --border-default: rgba(255, 255, 255, 0.08);
   --border-light: rgba(255, 255, 255, 0.05);
   --border-medium: rgba(255, 255, 255, 0.3);
-  --border-dark: #2c2e33;
+  --border-dark: rgba(255, 255, 255, 0.08);
   
   /* Background Colors */
-  --bg-card: #1e1f22;
+  --bg-card: #151a2c;
   --bg-overlay: rgba(0, 0, 0, 0.5);
   --bg-overlay-dark: rgba(0, 0, 0, 0.7);
   --bg-overlay-darker: rgba(0, 0, 0, 0.8);
@@ -78,23 +78,23 @@
   --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
   
   /* Gradient Colors */
-  --gradient-primary: linear-gradient(to right, var(--brand-purple), var(--brand-blue));
-  --gradient-primary-reverse: linear-gradient(to right, var(--brand-blue), var(--brand-purple));
-  --gradient-wellness: linear-gradient(to right, var(--wellness-color), #2a9d7f);
-  --gradient-commerce: linear-gradient(to right, var(--commerce-color), #e58e2a);
-  --gradient-admin: linear-gradient(to right, var(--admin-color), #ee5a6f);
-  --gradient-jury: linear-gradient(to right, var(--jury-color), var(--brand-purple));
+  --gradient-primary: var(--brand-purple);
+  --gradient-primary-reverse: var(--brand-purple);
+  --gradient-wellness: var(--brand-purple);
+  --gradient-commerce: var(--brand-purple);
+  --gradient-admin: var(--brand-purple);
+  --gradient-jury: var(--brand-purple);
   
   /* Text Colors */
   --text-primary: var(--brand-light);
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --text-tertiary: rgba(255, 255, 255, 0.5);
-  --text-quaternary: rgba(255, 255, 255, 0.6);
-  --text-disabled: rgba(255, 255, 255, 0.4);
+  --text-secondary: #9aa3b8;
+  --text-tertiary: #7d869b;
+  --text-quaternary: #9aa3b8;
+  --text-disabled: #7d869b;
   
   /* Button Colors */
-  --btn-primary-bg: var(--brand-purple);
-  --btn-primary-hover: #6a66e6;
+  --btn-primary-bg: #8b87ff;
+  --btn-primary-hover: #a19eff;
   --btn-secondary-bg: #2c2e33;
   --btn-secondary-hover: #3a3d4a;
   --btn-success-bg: var(--success);
@@ -110,9 +110,9 @@
   --card-shadow: var(--shadow-md);
   
   /* Form Colors */
-  --form-bg: var(--base-200);
-  --form-border: var(--border-default);
-  --form-focus: var(--brand-purple);
+  --form-bg: #0f1322;
+  --form-border: rgba(255, 255, 255, 0.14);
+  --form-focus: #4df2ff;
   
   /* Animation Durations */
   --animation-fast: 0.2s;
@@ -120,6 +120,24 @@
   --animation-slow: 0.5s;
 }
 
+
+/* Redesign tokens */
+:root {
+  --sidebar-bg: #0c1020;
+  --surface: #151a2c;
+  --line: rgba(255, 255, 255, 0.08);
+  --text: #e8eaf2;
+  --text-muted: #9aa3b8;
+  --text-faint: #7d869b;
+  --action: #8b87ff;
+  --action-hover: #a19eff;
+  --action-content: #0f1322;
+  --focus: #4df2ff;
+  --radius-card: 14px;
+  --radius-control: 10px;
+  --font: 'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --page-bg: radial-gradient(circle at 75% 0%, #1b2140, #0f1322 45%);
+}
 
 /* Responsive breakpoints as CSS variables */
 :root {

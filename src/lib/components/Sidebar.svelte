@@ -29,14 +29,12 @@
 	);
 </script>
 
-<aside class:open class="bg-base-100">
+<aside class:open>
 	<div class="sidebar-header">
-		<a href="/"
-			><h2 class="text-2xl font-bold text-primary mb-6 text-center">
-				{$page.data.eventConfig.name}
-				{$page.data.eventConfig.year}
-			</h2></a
-		>
+		<a href="/" class="brand">
+			{$page.data.eventConfig.name}
+			<span>{$page.data.eventConfig.year}</span>
+		</a>
 		{#if isAuthenticated}
 			<div class="user-info-sidebar">
 				<span class="user-name-sidebar">{user.name || user.email}</span>
@@ -54,9 +52,9 @@
 				{#if isParticipant && teamCategory && category}
 					<span
 						class="team-challenge"
-						style="background: color-mix(in srgb, {category.color} 20%, transparent); color: {category.color}; border: 1px solid color-mix(in srgb, {category.color} 30%, transparent);"
+						style="background: color-mix(in srgb, {category.color} 16%, transparent); color: {category.color};"
 					>
-						{category.name} Challenge
+						{category.name}
 					</span>
 				{/if}
 				{#if isParticipant}
@@ -65,13 +63,13 @@
 				{#each juryCategories as juryCategory (juryCategory.key)}
 					<span
 						class="team-challenge"
-						style="background: color-mix(in srgb, {juryCategory.color} 20%, transparent); color: {juryCategory.color}; border: 1px solid color-mix(in srgb, {juryCategory.color} 30%, transparent);"
+						style="background: color-mix(in srgb, {juryCategory.color} 16%, transparent); color: {juryCategory.color};"
 					>
 						{juryCategory.name}
 					</span>
 				{/each}
 				{#if user.role === 'jury' && juryCategories.length === 0}
-					<span class="text-xs text-warning">No category assigned yet</span>
+					<span class="pill pill-warning">No category assigned yet</span>
 				{/if}
 			</div>
 		{/if}
@@ -185,7 +183,7 @@
 	</nav>
 
 	<div class="sidebar-footer">
-		<p class="text-sm text-gray-500">
+		<p>
 			© {$page.data.eventConfig.year}
 			{$page.data.eventConfig.organizer}
 		</p>
@@ -198,108 +196,104 @@
 		z-index: 70;
 		display: flex;
 		flex-direction: column;
-		box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-		padding: 2rem 1.5rem;
-		color: white;
+		gap: 24px;
+		padding: 24px 16px;
+		background: var(--sidebar-bg);
+		border-right: 1px solid var(--line);
+		color: var(--text);
 	}
 
 	.sidebar-header {
-		margin-bottom: 2rem;
-		padding-bottom: 1rem;
-		border-bottom: 1px solid #e5e7eb;
-		color: white;
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+	}
+
+	.brand {
+		display: block;
+		padding: 0 8px;
+		font-size: 18px;
+		font-weight: 800;
+		letter-spacing: -0.01em;
+		line-height: 1.2;
+		color: #fff;
+		text-decoration: none;
+	}
+
+	.brand span {
+		color: var(--action);
 	}
 
 	.user-info-sidebar {
 		display: flex;
 		flex-direction: column;
-		align-items: center;
-		gap: 0.5rem;
-		margin-top: 1rem;
-		padding: 0.75rem;
-		background: rgba(255, 255, 255, 0.05);
-		border-radius: 0.5rem;
+		align-items: flex-start;
+		gap: 8px;
+		padding: 12px;
+		background: rgba(255, 255, 255, 0.04);
+		border: 1px solid var(--line);
+		border-radius: 12px;
 	}
 
 	.user-name-sidebar {
-		color: rgba(255, 255, 255, 0.9);
-		font-size: 0.9rem;
-		font-weight: 500;
-		text-align: center;
+		color: #fff;
+		font-size: 14px;
+		font-weight: 600;
+		overflow-wrap: anywhere;
 	}
 
-	.user-role-sidebar {
-		padding: 0.25rem 0.75rem;
-		border-radius: 1rem;
-		font-size: 0.75rem;
+	.user-role-sidebar,
+	.team-challenge {
+		display: inline-flex;
+		align-items: center;
+		height: 24px;
+		padding: 0 10px;
+		border-radius: 999px;
+		font-size: 12px;
 		font-weight: 600;
-		background: rgba(255, 255, 255, 0.1);
-		color: rgba(255, 255, 255, 0.8);
-		text-align: center;
+		background: rgba(255, 255, 255, 0.08);
+		color: var(--text-muted);
 	}
 
 	.user-role-sidebar.admin {
-		background: linear-gradient(to right, #ff6b6b, #ee5a6f);
-		color: white;
+		background: rgba(255, 107, 107, 0.16);
+		color: #ff9a9a;
 	}
 
 	.user-role-sidebar.jury {
-		background: linear-gradient(to right, #4df2ff, #7f7bff);
-		color: #0f1322;
-	}
-
-	.team-challenge {
-		padding: 0.25rem 0.75rem;
-		border-radius: 0.375rem;
-		font-size: 0.7rem;
-		font-weight: 600;
-		text-align: center;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		margin-top: 0.25rem;
-	}
-
-	.team-challenge.wellness {
-		background: rgba(54, 195, 153, 0.2);
-		color: #36c399;
-		border: 1px solid rgba(54, 195, 153, 0.3);
-	}
-
-	.team-challenge.commerce {
-		background: rgba(247, 166, 84, 0.2);
-		color: #f7a654;
-		border: 1px solid rgba(247, 166, 84, 0.3);
+		background: rgba(77, 242, 255, 0.14);
+		color: var(--focus);
 	}
 
 	.sidebar-nav {
-		flex: 1;
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 2px;
 	}
 
 	.nav-link {
+		display: block;
 		text-decoration: none;
-		color: inherit;
-		border-radius: 0.5rem;
-		transition: all 0.2s ease;
+		color: var(--text-muted);
+		border-radius: var(--radius-control);
 	}
 
 	.nav-link:hover {
-		background-color: rgba(0, 0, 0, 0.05);
+		background-color: rgba(255, 255, 255, 0.05);
+		color: #fff;
 	}
 
-	.nav-link.active :global(li) {
-		background-color: rgba(59, 130, 246, 0.1);
-		border-color: #3b82f6;
-		color: #3b82f6;
+	.nav-link.active {
+		background: rgba(139, 135, 255, 0.16);
+		color: #fff;
+		box-shadow: inset 0 0 0 1px rgba(139, 135, 255, 0.35);
 	}
 
 	.sidebar-footer {
 		margin-top: auto;
-		padding-top: 1rem;
-		border-top: 1px solid #e5e7eb;
-		text-align: center;
+		padding: 0 8px;
+		font-size: 12px;
+		color: var(--text-faint);
 	}
 
 	@media (max-width: 767px) {
@@ -310,8 +304,8 @@
 			width: 100%;
 			max-width: 320px;
 			transition: left 0.3s ease-in-out;
-			padding: 2rem 1rem;
 			height: 100vh;
+			overflow-y: auto;
 		}
 
 		.open {

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Presenter mode</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#070a14}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#e8eaf2;font:600 14px Onest,system-ui,sans-serif;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:rgba(255,255,255,.07)}
+.btn-p{background:#8b87ff;color:#0f1322;border-color:transparent}
+.btn-p:hover{background:#a19eff}
+.btn-w{background:#f7a654;color:#1c1200;border-color:transparent}
+.btn-w:hover{background:#ffb868}
+kbd{font:600 11px Onest,system-ui,sans-serif;padding:1px 6px;border-radius:5px;background:rgba(255,255,255,.12);color:#c9cfdd}
+a:focus-visible,button:focus-visible{outline:2px solid #4df2ff;outline-offset:2px}
+</style>
+</helmet>
+<div style="min-height:820px;display:flex;flex-direction:column;font-family:Onest,system-ui,sans-serif;color:#e8eaf2;background:#070a14">
+  <header style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:12px 24px;background:#0c1020;border-bottom:1px solid rgba(255,255,255,.08)">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <a class="btn" href="Dashboard.dc.html" style="min-height:40px">Exit</a>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <b style="font-size:18px;color:#fff"><span style="color:#9aa3b8;margin-right:6px">#3</span>AdaptiveMind</b>
+        <span style="font-size:12px;color:#36c399;font-weight:600">Adaptive Systems · Final</span>
+      </div>
+      <span style="font-size:13px;color:#f7a654;font-weight:600">(not on stage yet)</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      <button class="btn" type="button">Final slides</button>
+      <button class="btn" type="button">Fullscreen <kbd>f</kbd></button>
+      <button class="btn" type="button">Clear stage</button>
+    </div>
+  </header>
+
+  <main style="flex:1;display:flex;align-items:center;justify-content:center;padding:28px 24px;position:relative">
+    <div style="width:min(100%,960px);aspect-ratio:16/9;border-radius:12px;background:linear-gradient(135deg,#171d36,#0e1224);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#7d869b;font-size:15px;box-shadow:0 30px 80px -20px rgba(0,0,0,.7);position:relative">
+      [Slide page renders here, full screen]
+      <div style="position:absolute;top:14px;right:14px;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:rgba(7,10,20,.85);border:1px solid rgba(247,166,84,.55)">
+        <span style="width:8px;height:8px;border-radius:50%;background:#f7a654"></span>
+        <b style="font-size:20px;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:.02em">05:00</b>
+      </div>
+      <div style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:13px;color:#9aa3b8;font-variant-numeric:tabular-nums">Slide 1 / 12</div>
+    </div>
+  </main>
+
+  <footer style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:14px 24px;background:#0c1020;border-top:1px solid rgba(255,255,255,.08)">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" type="button">← Previous team</button>
+      <button class="btn" type="button">Next team →</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-w" type="button">Show on stage</button>
+      <button class="btn btn-p" type="button">Start timer <kbd style="background:rgba(15,19,34,.2);color:#0f1322">space</kbd></button>
+      <button class="btn" type="button">Reset timer <kbd>s</kbd></button>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":820}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

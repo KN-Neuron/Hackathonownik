@@ -158,7 +158,7 @@
 		flex: 1;
 		display: grid;
 		place-items: center;
-		color: rgba(255, 255, 255, 0.6);
+		color: var(--text-muted);
 		font-size: 1.5rem;
 	}
 
@@ -167,7 +167,7 @@
 		top: 1rem;
 		right: 1.25rem;
 		padding: 0.4rem 0.9rem;
-		border-radius: 0.75rem;
+		border-radius: var(--radius-card);
 		background: rgba(0, 0, 0, 0.75);
 		color: #fff;
 		font-size: 2.5rem;
@@ -188,7 +188,7 @@
 	.timer.over {
 		color: #fff;
 		background: #d33;
-		border-color: #f87272;
+		border-color: #ff9a9a;
 	}
 
 	.bar {
@@ -198,7 +198,7 @@
 		gap: 0.5rem 1rem;
 		padding: 0.5rem 1rem;
 		background: #111;
-		border-top: 1px solid rgba(255, 255, 255, 0.1);
+		border-top: 1px solid var(--line);
 	}
 
 	.team {
@@ -208,7 +208,7 @@
 	}
 
 	.order {
-		color: rgba(255, 255, 255, 0.5);
+		color: var(--text-muted);
 	}
 
 	.hint {

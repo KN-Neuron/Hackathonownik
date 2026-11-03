@@ -45,13 +45,12 @@
 	.stage-note {
 		margin: 0.5rem 0;
 		font-size: 0.9rem;
-		color: rgba(255, 255, 255, 0.7);
+		color: var(--text-muted);
 	}
 
 	.page-content {
-		padding: 1.5rem;
 		max-width: 1400px;
-		margin: 0 auto;
+		margin: 0;
 	}
 
 	/* Category Tabs */
@@ -67,10 +66,10 @@
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.75rem 1.25rem;
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		border-radius: 0.5rem;
+		border: 1px solid var(--line);
+		border-radius: var(--radius-control);
 		background: rgba(255, 255, 255, 0.05);
-		color: rgba(255, 255, 255, 0.7);
+		color: var(--text-muted);
 		cursor: pointer;
 		transition: all 0.2s ease;
 		font-weight: 500;
@@ -82,8 +81,8 @@
 	}
 
 	.tab-btn.active {
-		background: rgba(127, 123, 255, 0.2);
-		border-color: rgba(127, 123, 255, 0.5);
+		background: rgba(139, 135, 255, 0.2);
+		border-color: rgba(139, 135, 255, 0.5);
 		color: #fff;
 	}
 

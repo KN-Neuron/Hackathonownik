@@ -29,9 +29,21 @@
 					<span class="text-xl font-semibold">{eventConfig.organizer}</span>
 				</div>
 				<div>
-					<span class="text-base-content/70 block">Deadline</span>
+					<span class="text-base-content/70 block">First presentation (PDF) until</span>
+					<span class="text-xl font-semibold"
+						>{new Date(eventConfig.presentation_deadline).toLocaleString()}</span
+					>
+				</div>
+				<div>
+					<span class="text-base-content/70 block">Repository and video links until</span>
 					<span class="text-xl font-semibold"
 						>{new Date(eventConfig.deadline).toLocaleString()}</span
+					>
+				</div>
+				<div>
+					<span class="text-base-content/70 block">Final presentation until</span>
+					<span class="text-xl font-semibold"
+						>{new Date(eventConfig.final_presentation_deadline).toLocaleString()}</span
 					>
 				</div>
 			</div>
@@ -116,9 +128,8 @@
 
 <style>
 	.system-info-container {
-		padding: 1.5rem;
 		max-width: 1200px;
-		margin: 0 auto;
+		margin: 0;
 		width: 100%;
 	}
 

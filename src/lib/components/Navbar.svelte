@@ -118,7 +118,7 @@
 					</Badge>
 					{#if isParticipant && teamCategory && category}
 						<Badge
-							style="background: color-mix(in srgb, {category.color} 20%, transparent); color: {category.color}; border: 1px solid color-mix(in srgb, {category.color} 30%, transparent);"
+							style="background: color-mix(in srgb, {category.color} 16%, transparent); color: {category.color};"
 							class="team-challenge"
 						>
 							{category.name}
@@ -126,7 +126,7 @@
 					{/if}
 					{#each juryCategories as juryCategory (juryCategory.key)}
 						<Badge
-							style="background: color-mix(in srgb, {juryCategory.color} 20%, transparent); color: {juryCategory.color}; border: 1px solid color-mix(in srgb, {juryCategory.color} 30%, transparent);"
+							style="background: color-mix(in srgb, {juryCategory.color} 16%, transparent); color: {juryCategory.color};"
 							class="team-challenge"
 						>
 							{juryCategory.name}
@@ -140,13 +140,12 @@
 
 <style>
 	.navbar {
-		background-color: rgba(20, 21, 24, 0.95);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* var(--border-default) */
+		background-color: var(--sidebar-bg);
+		border-bottom: 1px solid var(--line);
 		padding: 0.75rem 0;
 		position: sticky;
 		top: 0;
 		z-index: 1000;
-		backdrop-filter: blur(10px);
 	}
 
 	.container {
@@ -162,13 +161,13 @@
 	.brand a {
 		font-size: 1.25rem;
 		font-weight: 700;
-		color: #7f7bff; /* var(--brand-purple) */
+		color: #fff;
 		text-decoration: none;
 		transition: color 0.2s;
 	}
 
 	.brand a:hover {
-		color: #4df2ff; /* var(--brand-blue) */
+		color: var(--action-hover);
 	}
 
 	.nav-links {
@@ -187,7 +186,7 @@
 	.nav-links a {
 		display: block;
 		padding: 0.5rem 1rem;
-		color: rgba(255, 255, 255, 0.7); /* var(--text-secondary) */
+		color: var(--text-muted);
 		text-decoration: none;
 		border-radius: 0.5rem;
 		transition: all 0.2s;
@@ -196,13 +195,13 @@
 
 	.nav-links a:hover {
 		color: #f0f0f0; /* var(--text-primary) */
-		background-color: rgba(127, 123, 255, 0.1);
+		background-color: rgba(255, 255, 255, 0.05);
 	}
 
 	.nav-links a.active {
-		color: #f0f0f0; /* var(--text-primary) */
-		background: linear-gradient(to right, rgba(127, 123, 255, 0.2), rgba(77, 242, 255, 0.2));
-		border-bottom: 2px solid #7f7bff; /* var(--brand-purple) */
+		color: #fff;
+		background: rgba(139, 135, 255, 0.16);
+		box-shadow: inset 0 0 0 1px rgba(139, 135, 255, 0.35);
 	}
 
 	.user-info {
@@ -234,8 +233,6 @@
 		border-radius: 0.25rem;
 		font-size: 0.7rem;
 		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.3px;
 	}
 
 	.menu-toggle {
@@ -263,8 +260,8 @@
 			padding: 0 1rem;
 			border-radius: 0.5rem;
 			border: 1px solid rgba(255, 255, 255, 0.2);
-			background: rgba(127, 123, 255, 0.15);
-			color: #f0f0f0;
+			background: rgba(139, 135, 255, 0.16);
+			color: #fff;
 			font-weight: 600;
 		}
 
@@ -295,7 +292,7 @@
 		.user-info {
 			justify-content: center;
 			padding-top: 0.5rem;
-			border-top: 1px solid rgba(255, 255, 255, 0.1); /* var(--border-default) */
+			border-top: 1px solid var(--line);
 			flex-wrap: wrap;
 		}
 

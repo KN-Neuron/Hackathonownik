@@ -115,7 +115,7 @@
 				<span>Even just the repository link is enough. It tells us your team is competing.</span>
 			</div>
 		{:else if checkin === 'done'}
-			<div class="banner banner-ok">✓ Your team is checked in.</div>
+			<div class="banner banner-ok">Your team is checked in.</div>
 		{:else if checkin === 'missed'}
 			<div class="banner banner-warn">
 				Your team missed the check-in. You can still submit, but tell the organizers you are
@@ -126,7 +126,7 @@
 		<!-- Overall progress -->
 		<div class="progress-card" class:complete={allDone}>
 			{#if allDone}
-				<h2>🎉 All done! Your project is submitted.</h2>
+				<h2>All done. Your project is submitted.</h2>
 				<p>
 					You can still replace anything below until the deadline. The jury always sees the newest
 					version.
@@ -348,7 +348,7 @@
 						</h3>
 						{#if data.inFinal}
 							<p class="meta final-note">
-								🎉 Your team is in the final! Upload the slides you'll show on stage.
+								Your team is in the final! Upload the slides you'll show on stage.
 							</p>
 						{/if}
 						<p class="meta">
@@ -427,15 +427,15 @@
 <style>
 	.upload-page {
 		max-width: 760px;
-		margin: 0 auto;
-		padding: 1rem;
+		margin: 0;
+		padding: 0;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
 	}
 
 	.team-line {
-		color: rgba(255, 255, 255, 0.75);
+		color: var(--text-muted);
 		margin: -0.5rem 0 0;
 	}
 
@@ -444,13 +444,13 @@
 		flex-direction: column;
 		gap: 0.2rem;
 		padding: 0.9rem 1.1rem;
-		border-radius: 0.75rem;
+		border-radius: var(--radius-card);
 		border: 1px solid;
 	}
 
 	.banner-checkin {
-		background: rgba(127, 123, 255, 0.12);
-		border-color: rgba(127, 123, 255, 0.5);
+		background: rgba(139, 135, 255, 0.12);
+		border-color: rgba(139, 135, 255, 0.45);
 	}
 
 	.banner-ok {
@@ -467,9 +467,9 @@
 
 	.progress-card {
 		padding: 1.1rem 1.25rem;
-		border-radius: 0.75rem;
-		background: rgba(255, 255, 255, 0.04);
-		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: var(--radius-card);
+		background: var(--surface);
+		border: 1px solid var(--line);
 	}
 
 	.progress-card.complete {
@@ -478,12 +478,12 @@
 	}
 
 	.progress-card h2 {
-		font-size: 1.35rem;
+		font-size: 20px;
 		font-weight: 700;
 	}
 
 	.progress-card p {
-		color: rgba(255, 255, 255, 0.7);
+		color: var(--text-muted);
 		margin: 0.25rem 0 0.75rem;
 	}
 
@@ -495,15 +495,15 @@
 
 	.submit-step {
 		padding: 1.1rem 1.25rem;
-		border-radius: 0.75rem;
-		background: #1a1b1f;
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		border-left: 4px solid #f87272;
+		border-radius: var(--radius-card);
+		background: var(--surface);
+		border: 1px solid var(--line);
 		scroll-margin-top: 1rem;
 	}
 
+	/* A finished step is shown by its check mark and the green number, not by a colored edge */
 	.submit-step.done {
-		border-left-color: #36c399;
+		border-color: rgba(54, 195, 153, 0.35);
 	}
 
 	.submit-step-header {
@@ -536,24 +536,19 @@
 
 	.optional {
 		margin-left: 0.4rem;
-		font-size: 0.7rem;
-		font-weight: 500;
-		text-transform: uppercase;
-		color: rgba(255, 255, 255, 0.5);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--text-faint);
 	}
 
 	.meta {
-		font-size: 0.85rem;
-		color: rgba(255, 255, 255, 0.6);
+		font-size: 13px;
+		color: var(--text-muted);
 	}
 
 	.meta a {
-		color: #4df2ff;
+		color: var(--focus);
 		text-decoration: underline;
-	}
-
-	.final-step {
-		border-left-color: rgba(247, 166, 84, 0.6);
 	}
 
 	.final-step.highlight {
@@ -571,26 +566,28 @@
 		align-items: center;
 		gap: 0.2rem;
 		padding: 1.4rem;
-		border: 2px dashed rgba(127, 123, 255, 0.5);
-		border-radius: 0.75rem;
+		border: 2px dashed rgba(139, 135, 255, 0.5);
+		border-radius: var(--radius-card);
+		min-height: 88px;
+		justify-content: center;
 		cursor: pointer;
 		text-align: center;
 		transition: background 0.15s ease;
 	}
 
 	.dropzone b {
-		font-size: 1.05rem;
-		color: #7f7bff;
+		font-size: 16px;
+		color: var(--action);
 	}
 
 	.dropzone span {
-		font-size: 0.85rem;
-		color: rgba(255, 255, 255, 0.6);
+		font-size: 13px;
+		color: var(--text-muted);
 	}
 
 	.dropzone:hover,
 	.dropzone.dragging {
-		background: rgba(127, 123, 255, 0.1);
+		background: rgba(139, 135, 255, 0.1);
 	}
 
 	.dropzone.disabled {
@@ -615,12 +612,12 @@
 	}
 
 	.message.error {
-		color: #f87272;
+		color: #ff9a9a;
 	}
 
 	.footnote {
-		font-size: 0.85rem;
-		color: rgba(255, 255, 255, 0.6);
+		font-size: 13px;
+		color: var(--text-muted);
 	}
 
 	.footnote a {

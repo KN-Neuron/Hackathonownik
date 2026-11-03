@@ -61,9 +61,8 @@
 	}
 
 	.content-wrapper {
-		background-color: black;
 		flex: 1;
-		padding: 1rem;
+		padding: 16px;
 		overflow-y: auto;
 		width: 100%;
 		box-sizing: border-box;
@@ -73,9 +72,7 @@
 
 	.desktop-sidebar {
 		display: none;
-		width: 300px;
-		background-color: #1f2937;
-		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+		width: 260px;
 		flex-shrink: 0;
 	}
 
@@ -93,23 +90,10 @@
 
 	.sidebar-overlay {
 		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
+		inset: 0;
 		background-color: rgba(0, 0, 0, 0.5);
 		z-index: 55;
-		animation: fadeIn 0.3s ease;
 		cursor: pointer;
-	}
-
-	@keyframes fadeIn {
-		from {
-			opacity: 0;
-		}
-		to {
-			opacity: 1;
-		}
 	}
 
 	@media (min-width: 1024px) {
@@ -124,14 +108,13 @@
 		.mobile-only {
 			display: none;
 		}
+
+		.content-wrapper {
+			padding: 40px 48px;
+		}
 	}
 
-	/* Additional mobile responsiveness */
 	@media (max-width: 768px) {
-		.content-wrapper {
-			padding: 0.5rem;
-		}
-
 		.layout-container {
 			flex-direction: column;
 		}

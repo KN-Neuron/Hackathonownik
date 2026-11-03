@@ -2,7 +2,30 @@
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 @plugin 'daisyui';
+@import '@fontsource/onest/400.css';
+@import '@fontsource/onest/500.css';
+@import '@fontsource/onest/600.css';
+@import '@fontsource/onest/700.css';
+@import '@fontsource/onest/800.css';
 @import './theme.css';
+
+/* daisyUI theme: same names, redesign values */
+[data-theme='dark'] {
+	--color-base-100: #0f1322;
+	--color-base-200: #151a2c;
+	--color-base-300: #1c2236;
+	--color-base-content: #e8eaf2;
+	--color-primary: #8b87ff;
+	--color-primary-content: #0f1322;
+	--color-accent: #4df2ff;
+	--color-accent-content: #0f1322;
+	--color-success: #36c399;
+	--color-warning: #f7a654;
+	--color-error: #ff6b6b;
+	--radius-box: 14px;
+	--radius-field: 10px;
+	--radius-selector: 999px;
+}
 
 /* Global styles that apply to the entire application */
 html {
@@ -13,10 +36,72 @@ body {
 	box-sizing: border-box;
 	margin: 0;
 	padding: 0;
-	background-color: var(--base-100);
-	color: var(--base-content);
+	background: var(--page-bg) fixed, var(--base-100);
+	color: var(--text);
 	min-height: 100dvh;
-	font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+	font-family: var(--font);
+	font-size: 15px;
+	font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 2px;
+}
+
+h1 {
+	font-size: 32px;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	color: #fff;
+}
+
+h2 {
+	font-size: 20px;
+	font-weight: 700;
+	color: #fff;
+}
+
+a {
+	color: var(--focus);
+}
+
+/* One status pill set: 24px, tinted fill, always a word */
+.pill {
+	display: inline-flex;
+	align-items: center;
+	height: 24px;
+	padding: 0 10px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 600;
+	background: rgba(255, 255, 255, 0.08);
+	color: var(--text-muted);
+}
+.pill-success {
+	background: rgba(54, 195, 153, 0.16);
+	color: #36c399;
+}
+.pill-warning {
+	background: rgba(247, 166, 84, 0.16);
+	color: #f7a654;
+}
+.pill-error {
+	background: rgba(255, 107, 107, 0.16);
+	color: #ff9a9a;
+}
+
+/* Minimum touch target */
+.btn,
+input[type='range'] {
+	min-height: 44px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	* {
+		animation-duration: 0.01ms !important;
+		transition-duration: 0.01ms !important;
+	}
 }
 
 /* Common animations */
@@ -48,21 +133,20 @@ body {
 
 /* Common component styles */
 .card-standard {
-	background-color: #1a1f30; /* DaisyUI base-200 */
-	border-radius: var(--rounded-box);
-	box-shadow: var(--shadow);
-	border: 1px solid #252d42; /* DaisyUI base-300 */
+	background-color: var(--surface);
+	border-radius: var(--radius-card);
+	border: 1px solid var(--line);
 	padding: 1.5rem;
 }
 
 .btn-standard {
-	border-radius: var(--rounded-btn);
+	border-radius: var(--radius-control);
 }
 
 /* Metric bar styling */
 .metric-bar {
 	height: 0.5rem;
-	background-color: #252d42; /* DaisyUI base-300 */
+	background-color: var(--base-300);
 	border-radius: 9999px;
 	overflow: hidden;
 }
@@ -97,4 +181,129 @@ body {
 	.mobile-full-width {
 		width: 100%;
 	}
+}
+
+/* daisyUI controls in the redesign: 44px targets, flat pills, no hover lifts */
+.input,
+.select,
+.textarea {
+	min-height: 44px;
+	font-size: 15px;
+	background-color: var(--base-100);
+	border-color: rgba(255, 255, 255, 0.14);
+}
+
+.textarea {
+	line-height: 1.5;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+	outline: 2px solid var(--focus);
+	outline-offset: 2px;
+}
+
+.btn {
+	font-weight: 600;
+	box-shadow: none;
+	border-radius: var(--radius-control);
+}
+
+.btn-primary {
+	background-color: var(--action);
+	border-color: var(--action);
+	color: var(--action-content);
+}
+
+.btn-primary:hover {
+	background-color: var(--action-hover);
+	border-color: var(--action-hover);
+}
+
+.btn-outline,
+.btn-ghost {
+	background: transparent;
+	border-color: rgba(255, 255, 255, 0.2);
+	color: var(--text);
+}
+
+.btn-outline:hover,
+.btn-ghost:hover {
+	background: rgba(255, 255, 255, 0.06);
+	color: #fff;
+}
+
+.badge {
+	height: 24px;
+	padding: 0 10px;
+	border: 0;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 600;
+	background: rgba(255, 255, 255, 0.08);
+	color: var(--text-muted);
+}
+
+.badge-success {
+	background: rgba(54, 195, 153, 0.16);
+	color: var(--success);
+}
+
+.badge-warning {
+	background: rgba(247, 166, 84, 0.16);
+	color: var(--warning);
+}
+
+.badge-error {
+	background: rgba(255, 107, 107, 0.16);
+	color: #ff9a9a;
+}
+
+.badge-info,
+.badge-primary {
+	background: rgba(139, 135, 255, 0.16);
+	color: var(--action);
+}
+
+.alert {
+	border-radius: var(--radius-control);
+	border: 1px solid var(--line);
+	box-shadow: none;
+}
+
+.table th {
+	font-size: 13px;
+	font-weight: 600;
+	text-transform: none;
+	letter-spacing: 0;
+	color: var(--text-muted);
+}
+
+.table :where(tbody tr) {
+	border-color: var(--line);
+}
+
+a.link,
+.link {
+	color: var(--focus);
+}
+
+.checkbox,
+.toggle,
+input[type='checkbox'] {
+	accent-color: var(--action);
+}
+
+.checkbox {
+	--chkbg: var(--action);
+	--chkfg: var(--action-content);
+	border-color: rgba(255, 255, 255, 0.4);
+	background-color: transparent;
+	border-radius: 6px;
+}
+
+.checkbox:checked {
+	background-color: var(--action);
+	border-color: var(--action);
 }

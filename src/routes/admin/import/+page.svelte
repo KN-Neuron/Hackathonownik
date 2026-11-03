@@ -190,7 +190,7 @@
 <style>
 	.import-page {
 		max-width: 900px;
-		margin: 0 auto;
+		margin: 0;
 		padding: 1rem;
 		display: flex;
 		flex-direction: column;
@@ -198,9 +198,9 @@
 	}
 
 	.panel {
-		background: rgba(255, 255, 255, 0.04);
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 0.75rem;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: var(--radius-card);
 		padding: 1rem 1.25rem;
 	}
 
@@ -222,7 +222,7 @@
 	.example {
 		margin-top: 0.5rem;
 		padding: 0.5rem 0.75rem;
-		border-radius: 0.5rem;
+		border-radius: var(--radius-control);
 		background: rgba(0, 0, 0, 0.35);
 		font-size: 0.85rem;
 	}

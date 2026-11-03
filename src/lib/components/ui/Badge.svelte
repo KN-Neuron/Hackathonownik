@@ -19,64 +19,39 @@
 </span>
 
 <style>
+  /* Status pill: 24px, tinted fill, colored text, no border */
+  span {
+    min-height: 24px;
+    border: 0 !important;
+    line-height: 1;
+  }
   .badge-default {
-    background-color: #252d42; /* DaisyUI base-300 */
-    color: #e5e7eb; /* DaisyUI base-content */
-    border-color: #252d42; /* DaisyUI base-300 */
+    background-color: rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
   }
-
-  .badge-wellness {
-    background-color: rgba(54, 195, 153, 0.2);
-    color: var(--wellness-color);
-    border: 1px solid rgba(54, 195, 153, 0.3);
-  }
-
-  .badge-commerce {
-    background-color: rgba(247, 166, 84, 0.2);
-    color: var(--commerce-color);
-    border: 1px solid rgba(247, 166, 84, 0.3);
-  }
-
-  .badge-admin {
-    background-color: rgba(255, 107, 107, 0.2);
-    color: var(--admin-color);
-    border: 1px solid rgba(255, 107, 107, 0.3);
-  }
-
-  .badge-jury {
-    background-color: rgba(77, 242, 255, 0.2);
-    color: var(--jury-color);
-    border: 1px solid rgba(77, 242, 255, 0.3);
-  }
-
+  .badge-wellness,
   .badge-success {
-    background-color: rgba(54, 195, 153, 0.2);
+    background-color: rgba(54, 195, 153, 0.16);
     color: var(--success);
-    border: 1px solid rgba(54, 195, 153, 0.3);
   }
-
+  .badge-commerce,
   .badge-warning {
-    background-color: rgba(247, 166, 84, 0.2);
+    background-color: rgba(247, 166, 84, 0.16);
     color: var(--warning);
-    border: 1px solid rgba(247, 166, 84, 0.3);
   }
-
+  .badge-admin,
   .badge-error {
-    background-color: rgba(255, 107, 107, 0.2);
-    color: var(--error);
-    border: 1px solid rgba(255, 107, 107, 0.3);
+    background-color: rgba(255, 107, 107, 0.16);
+    color: #ff9a9a;
   }
-
-  .badge-sm {
-    padding: 0.125rem 0.5rem; /* px-2 py-0.5 */
-    font-size: 0.75rem; /* text-xs */
+  .badge-jury {
+    background-color: rgba(77, 242, 255, 0.14);
+    color: var(--focus);
   }
-  .badge-md {
-    padding: 0.25rem 0.75rem; /* px-3 py-1 */
-    font-size: 0.875rem; /* text-sm */
-  }
+  .badge-sm,
+  .badge-md,
   .badge-lg {
-    padding: 0.375rem 1rem; /* px-4 py-1.5 */
-    font-size: 1rem; /* text-base */
+    padding: 0.2rem 0.65rem;
+    font-size: 0.75rem;
   }
 </style>

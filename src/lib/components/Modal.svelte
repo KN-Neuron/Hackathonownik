@@ -85,7 +85,7 @@
 		border: none;
 		padding: 0;
 		background-color: #1e1f22;
-		color: #f0f0f0;
+		color: #fff;
 		box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
 		position: fixed;
 		top: 50%;
@@ -123,7 +123,6 @@
 
 	dialog::backdrop {
 		background: rgba(0, 0, 0, 0.7);
-		backdrop-filter: blur(3px);
 	}
 
 		dialog.full-screen::backdrop {
@@ -141,7 +140,7 @@
 	.modal-header {
 		padding: 1.25rem 1.5rem;
 		background-color: rgba(0, 0, 0, 0.15);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+		border-bottom: 1px solid var(--line);
 	}
 
 	.modal-body {
@@ -158,7 +157,7 @@
 		padding: 1rem 1.5rem;
 		display: flex;
 		justify-content: flex-end;
-		border-top: 1px solid rgba(255, 255, 255, 0.1);
+		border-top: 1px solid var(--line);
 		background-color: rgba(0, 0, 0, 0.15);
 	}
 
@@ -170,7 +169,7 @@
 	.close-btn {
 		padding: 0.5rem 1rem;
 		background-color: #2c2e33;
-		color: #f0f0f0;
+		color: #fff;
 		border: none;
 		border-radius: 4px;
 		cursor: pointer;

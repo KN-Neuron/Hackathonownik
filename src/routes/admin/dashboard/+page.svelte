@@ -774,9 +774,8 @@
 
 <style>
 	.dashboard-container {
-		padding: 1.5rem;
 		max-width: 1400px;
-		margin: 0 auto;
+		margin: 0;
 		width: 100%;
 	}
 
@@ -785,7 +784,7 @@
 	}
 
 	.section-header {
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+		border-bottom: 1px solid var(--line);
 		padding-bottom: 0.5rem;
 	}
 
@@ -796,13 +795,13 @@
 	}
 
 	.section-header p {
-		color: rgba(255, 255, 255, 0.7);
+		color: var(--text-muted);
 	}
 
 	.panel {
-		background: rgba(255, 255, 255, 0.04);
-		border: 1px solid rgba(255, 255, 255, 0.08);
-		border-radius: 0.75rem;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: var(--radius-card);
 		padding: 1rem;
 		margin-top: 1rem;
 	}
@@ -819,11 +818,11 @@
 		padding: 0.25rem 0.75rem;
 		border-radius: 9999px;
 		background: rgba(255, 255, 255, 0.05);
-		color: rgba(255, 255, 255, 0.55);
+		color: var(--text-muted);
 	}
 
 	.stage-steps li.active {
-		background: rgba(127, 123, 255, 0.25);
+		background: rgba(139, 135, 255, 0.25);
 		color: #fff;
 		font-weight: 600;
 	}
@@ -840,7 +839,7 @@
 	.tie-box {
 		margin-top: 1rem;
 		padding: 0.75rem 1rem;
-		border-radius: 0.5rem;
+		border-radius: var(--radius-control);
 		background: rgba(247, 166, 84, 0.1);
 		border: 1px solid rgba(247, 166, 84, 0.45);
 		display: flex;
@@ -867,7 +866,7 @@
 
 	.order-index {
 		width: 2.5rem;
-		color: rgba(255, 255, 255, 0.5);
+		color: var(--text-muted);
 		font-variant-numeric: tabular-nums;
 	}
 
@@ -881,7 +880,7 @@
 		margin-left: 0.25rem;
 		font-weight: 400;
 		font-size: 0.75rem;
-		color: #f87272;
+		color: #ff9a9a;
 	}
 
 	.views .rating-state.rated {
@@ -904,7 +903,7 @@
 	.credentials code {
 		font-size: 1rem;
 		padding: 0.5rem 0.75rem;
-		border-radius: 0.5rem;
+		border-radius: var(--radius-control);
 		background: rgba(0, 0, 0, 0.35);
 	}
 
@@ -928,7 +927,7 @@
 	}
 
 	.shortcut:hover {
-		border-color: rgba(127, 123, 255, 0.6);
+		border-color: rgba(139, 135, 255, 0.6);
 	}
 
 	.shortcut h3 {
@@ -937,6 +936,6 @@
 
 	.shortcut p {
 		font-size: 0.85rem;
-		color: rgba(255, 255, 255, 0.6);
+		color: var(--text-muted);
 	}
 </style>

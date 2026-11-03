@@ -52,106 +52,69 @@
 {/if}
 
 <style>
-  .btn-primary {
-    background-color: var(--brand-purple);
-    color: white;
-    border-color: var(--brand-purple);
+  /* One button set: 44px high, flat fills, dark text on the violet action */
+  .btn {
+    min-height: 44px;
+    border-radius: var(--radius-control);
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: none;
   }
 
-  .btn-primary:hover {
-    background-color: #6a66e6;
+  .btn-primary,
+  .btn-jury {
+    background-color: var(--action);
+    color: var(--action-content);
+    border-color: var(--action);
   }
 
+  .btn-primary:hover,
+  .btn-jury:hover {
+    background-color: var(--action-hover);
+    border-color: var(--action-hover);
+  }
+
+  /* Ghost-style secondary */
   .btn-secondary {
-    background-color: #252d42; /* DaisyUI base-300 */
-    color: #e5e7eb; /* DaisyUI base-content */
-    border-color: #252d42; /* DaisyUI base-300 */
+    background-color: transparent;
+    color: var(--text);
+    border-color: rgba(255, 255, 255, 0.2);
   }
 
   .btn-secondary:hover {
-    background-color: #3a3d4a;
+    background-color: rgba(255, 255, 255, 0.06);
   }
 
-  .btn-success {
+  .btn-success,
+  .btn-wellness {
     background-color: var(--success);
-    color: white;
+    color: #062a1f;
     border-color: var(--success);
   }
 
-  .btn-success:hover {
-    background-color: #2da57f;
-  }
-
-  .btn-warning {
+  .btn-warning,
+  .btn-commerce {
     background-color: var(--warning);
-    color: white;
+    color: #1c1200;
     border-color: var(--warning);
   }
 
-  .btn-warning:hover {
-    background-color: #e5954a;
-  }
-
-  .btn-error {
+  .btn-error,
+  .btn-admin {
     background-color: var(--error);
-    color: white;
+    color: #2a0808;
     border-color: var(--error);
   }
 
-  .btn-error:hover {
-    background-color: #e55a5a;
-  }
-
-  .btn-wellness {
-    background: linear-gradient(to right, var(--wellness-color), #2a9d7f);
-    color: white;
-    border-color: var(--wellness-color);
-  }
-
-  .btn-wellness:hover {
-    background: linear-gradient(to right, #2da57f, #2a8f6d);
-  }
-
-  .btn-commerce {
-    background: linear-gradient(to right, var(--commerce-color), #e58e2a);
-    color: white;
-    border-color: var(--commerce-color);
-  }
-
-  .btn-commerce:hover {
-    background: linear-gradient(to right, #e5954a, #d67e22);
-  }
-
-  .btn-admin {
-    background: linear-gradient(to right, var(--admin-color), #ee5a6f);
-    color: white;
-    border-color: var(--admin-color);
-  }
-
-  .btn-admin:hover {
-    background: linear-gradient(to right, #e55a6a, #d64e5f);
-  }
-
-  .btn-jury {
-    background: linear-gradient(to right, var(--jury-color), var(--brand-purple));
-    color: var(--jury-dark);
-    border-color: var(--jury-color);
-  }
-
-  .btn-jury:hover {
-    background: linear-gradient(to right, #3db9e0, #6a66e6);
-  }
-  
   .btn-sm {
-    padding: 0.375rem 0.75rem; /* px-3 py-1.5 */
-    font-size: 0.875rem; /* text-sm */
+    padding: 0 0.75rem;
   }
   .btn-md {
-    padding: 0.5rem 1rem; /* px-4 py-2 */
-    font-size: 1rem; /* text-base */
+    padding: 0 1.25rem;
   }
   .btn-lg {
-    padding: 0.75rem 1.5rem; /* px-6 py-3 */
-    font-size: 1.125rem; /* text-lg */
+    padding: 0 1.5rem;
+    font-size: 1rem;
+    min-height: 48px;
   }
 </style>

@@ -46,8 +46,7 @@
 <style>
 	.page {
 		max-width: 1300px;
-		margin: 0 auto;
-		padding: 1rem;
+		margin: 0;
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
@@ -57,6 +56,6 @@
 		max-width: 28rem;
 		overflow-wrap: anywhere;
 		font-size: 0.75rem;
-		color: rgba(255, 255, 255, 0.7);
+		color: var(--text-muted);
 	}
 </style>

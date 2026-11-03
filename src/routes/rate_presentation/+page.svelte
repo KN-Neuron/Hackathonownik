@@ -262,9 +262,9 @@
 		gap: 0.6rem;
 		margin-bottom: 1rem;
 		padding: 0.75rem 1rem;
-		border-radius: 0.75rem;
-		background: #2a1f12;
-		border: 1px solid rgba(247, 166, 84, 0.6);
+		border-radius: var(--radius-card);
+		background: #2a2113;
+		border: 1px solid rgba(247, 166, 84, 0.45);
 		color: #fff;
 	}
 
@@ -272,7 +272,7 @@
 		width: 0.65rem;
 		height: 0.65rem;
 		border-radius: 9999px;
-		background: #f87272;
+		background: #ff9a9a;
 		animation: pulse 1.2s ease-in-out infinite;
 	}
 
@@ -283,7 +283,7 @@
 	}
 
 	.overtime {
-		color: #f87272;
+		color: #ff9a9a;
 		font-weight: 700;
 	}
 
@@ -298,9 +298,9 @@
 		align-items: baseline;
 		margin-bottom: 1rem;
 		padding: 0.75rem 1rem;
-		border-radius: 0.75rem;
-		background: rgba(127, 123, 255, 0.1);
-		border: 1px solid rgba(127, 123, 255, 0.4);
+		border-radius: var(--radius-card);
+		background: rgba(139, 135, 255, 0.1);
+		border: 1px solid rgba(139, 135, 255, 0.4);
 	}
 
 	.stage-banner.final {
@@ -311,9 +311,9 @@
 	.jury-progress {
 		margin-bottom: 1rem;
 		padding: 1rem;
-		border-radius: 0.75rem;
-		background: rgba(255, 255, 255, 0.04);
-		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: var(--radius-card);
+		background: var(--surface);
+		border: 1px solid var(--line);
 	}
 
 	.modal-overlay {
@@ -330,26 +330,25 @@
 	}
 
 	.modal-content {
-		background: #1e1f22;
+		background: var(--surface);
 		color: white;
 		padding: 1.5rem;
-		border-radius: 8px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+		border-radius: var(--radius-card);
 		text-align: center;
 		min-width: 300px;
-		border: 1px solid #2c2e33;
+		border: 1px solid var(--line);
 	}
 
 	.modal-content h3 {
 		margin-top: 0;
 		margin-bottom: 1rem;
 		font-size: 1.25rem;
-		color: #f0f0f0;
+		color: #fff;
 	}
 
 	.modal-content p {
 		margin-bottom: 1.5rem;
-		color: #aaa;
+		color: var(--text-muted);
 	}
 
 	.modal-buttons {
@@ -359,30 +358,31 @@
 	}
 
 	.btn {
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		border: none;
+		min-height: 44px;
+		padding: 0 1rem;
+		border-radius: var(--radius-control);
+		border: 1px solid transparent;
 		cursor: pointer;
-		font-weight: 500;
-		transition: all 0.2s ease;
+		font-weight: 600;
 	}
 
 	.btn-primary {
-		background-color: #3b82f6;
-		color: white;
+		background-color: var(--action);
+		color: var(--action-content);
 	}
 
 	.btn-primary:hover {
-		background-color: #2563eb;
+		background-color: var(--action-hover);
 	}
 
 	.btn-secondary {
-		background-color: #6b7280;
-		color: white;
+		background-color: transparent;
+		border-color: rgba(255, 255, 255, 0.2);
+		color: var(--text);
 	}
 
 	.btn-secondary:hover {
-		background-color: #565966;
+		background-color: rgba(255, 255, 255, 0.06);
 	}
 
 	.confirmation-top-section {
@@ -390,21 +390,21 @@
 		top: 0;
 		z-index: 100;
 		padding: 1rem;
-		background-color: #1e1f22;
-		border-bottom: 1px solid #2c2e33;
+		background-color: var(--sidebar-bg);
+		border-bottom: 1px solid var(--line);
 	}
 
 	.confirmation-top-section.confirmed {
-		background-color: #1a2d1f;
+		background-color: #10231d;
 	}
 
 	.confirmation-banner {
 		max-width: 800px;
 		margin: 0 auto;
 		padding: 0.75rem;
-		background-color: #36623d;
-		border-radius: 0.5rem;
-		border: 1px solid #36c399;
+		background-color: rgba(54, 195, 153, 0.1);
+		border-radius: var(--radius-control);
+		border: 1px solid rgba(54, 195, 153, 0.4);
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -413,8 +413,8 @@
 	}
 
 	.confirmation-banner.confirmed {
-		background-color: #2d5a27;
-		border-color: #4ade80;
+		background-color: rgba(54, 195, 153, 0.14);
+		border-color: rgba(54, 195, 153, 0.5);
 	}
 
 	.confirmation-banner h3 {
@@ -439,17 +439,17 @@
 	}
 
 	.btn-confirm {
-		background-color: #36c399;
-		color: white;
-		padding: 0.5rem 1.5rem;
-		border-radius: 6px;
+		background-color: var(--success);
+		color: #062a1f;
+		min-height: 44px;
+		padding: 0 1.5rem;
+		border-radius: var(--radius-control);
 		border: none;
 		cursor: pointer;
-		font-weight: 500;
-		transition: all 0.2s ease;
+		font-weight: 600;
 	}
 
 	.btn-confirm:hover {
-		background-color: #2d9e7c;
+		background-color: #4cd1ab;
 	}
 </style>

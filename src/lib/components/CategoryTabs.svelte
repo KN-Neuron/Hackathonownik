@@ -63,27 +63,29 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.45rem;
-		padding: 0.45rem 0.85rem;
-		border-radius: 9999px;
-		font-size: 0.85rem;
+		min-height: 40px;
+		padding: 0 16px;
+		border-radius: 999px;
+		font-size: 14px;
 		font-weight: 600;
 		text-decoration: none;
-		color: rgba(255, 255, 255, 0.75);
-		background: rgba(255, 255, 255, 0.05);
-		border: 1px solid rgba(255, 255, 255, 0.1);
+		color: #c9cfdd;
+		background: transparent;
+		border: 1px solid rgba(255, 255, 255, 0.14);
 		transition: all 0.15s ease;
 	}
 
 	.tab:hover {
 		color: #fff;
-		border-color: var(--category-color);
+		border-color: rgba(255, 255, 255, 0.4);
 	}
 
+	/* The category color marks the dot only, the active tab is neutral */
 	.tab.active,
 	.single-category {
-		color: var(--category-color);
-		background: color-mix(in srgb, var(--category-color) 15%, transparent);
-		border-color: color-mix(in srgb, var(--category-color) 50%, transparent);
+		color: #fff;
+		background: rgba(255, 255, 255, 0.1);
+		border-color: rgba(255, 255, 255, 0.4);
 	}
 
 	.single-category {
@@ -98,11 +100,8 @@
 	}
 
 	.badge-text {
-		font-size: 0.7rem;
-		font-weight: 500;
-		padding: 0.05rem 0.45rem;
-		border-radius: 9999px;
-		background: rgba(0, 0, 0, 0.3);
-		color: rgba(255, 255, 255, 0.8);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--text-muted);
 	}
 </style>

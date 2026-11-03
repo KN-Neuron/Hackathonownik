@@ -43,9 +43,9 @@
 		justify-content: center;
 		align-items: center;
 		column-gap: 0.25rem;
-		background-color: black;
-		color: white;
-		border-top: 1px solid rgba(255, 255, 255, 0.1);
+		background-color: var(--sidebar-bg);
+		color: var(--text-faint);
+		border-top: 1px solid var(--line);
 	}
 	p {
 		padding: 10px;
@@ -68,7 +68,7 @@
 		/* big enough to hit with a thumb */
 		min-width: 44px;
 		min-height: 44px;
-		color: rgba(255, 255, 255, 0.7);
+		color: var(--text-muted);
 		transition: color 0.15s ease;
 	}
 	a:hover {
