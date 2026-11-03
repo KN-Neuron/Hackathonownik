@@ -46,40 +46,31 @@
 </div>
 
 <style>
-  .input-default {
-    background-color: #1a1f30; /* DaisyUI bg-base-200 */
-    border-color: #252d42; /* DaisyUI border-base-300 */
-    color: #e5e7eb; /* DaisyUI text-base-content */
+  .label-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #c9cfdd;
   }
-
+  .input {
+    min-height: 48px;
+    border-radius: var(--radius-control);
+    font-size: 15px;
+    background-color: var(--base-100);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+  .input:focus {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-color: var(--focus);
+  }
   .input-success {
-    background-color: #1a1f30; /* DaisyUI bg-base-200 */
-    border-color: #36c399; /* DaisyUI border-success */
-    color: #e5e7eb; /* DaisyUI text-base-content */
+    border-color: var(--success);
   }
-
   .input-warning {
-    background-color: #1a1f30; /* DaisyUI bg-base-200 */
-    border-color: #f7a654; /* DaisyUI border-warning */
-    color: #e5e7eb; /* DaisyUI text-base-content */
+    border-color: var(--warning);
   }
-
   .input-error {
-    background-color: #1a1f30; /* DaisyUI bg-base-200 */
-    border-color: #ff6b6b; /* DaisyUI border-error */
-    color: #e5e7eb; /* DaisyUI text-base-content */
-  }
-
-  .input-sm {
-    padding: 0.25rem 0.5rem; /* px-2 py-1 */
-    font-size: 0.875rem; /* text-sm */
-  }
-  .input-md {
-    padding: 0.5rem 0.75rem; /* px-3 py-2 */
-    font-size: 1rem; /* text-base */
-  }
-  .input-lg {
-    padding: 0.75rem 1rem; /* px-4 py-3 */
-    font-size: 1.125rem; /* text-lg */
+    border-color: var(--error);
   }
 </style>

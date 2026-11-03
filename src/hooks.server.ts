@@ -4,71 +4,18 @@ import { type Handle, redirect } from '@sveltejs/kit';
 import type { TypedPocketBase } from '$lib/types';
 import { Security, CSRFProtection, SECURITY_HEADERS, rateLimiters } from '$lib/server/security';
 import { SecureCookieHandler } from '$lib/server/secure-cookie';
+import { getResultsState } from '$lib/server/results';
+import { POCKETBASE_URL } from '$lib/server/adminClient';
+import { isRevoked } from '$lib/server/sessions';
 
 // ============================================
 // ROUTE ACCESS CONTROL
 // ============================================
 
-async function areAllTeamsRated(pb: TypedPocketBase): Promise<boolean> {
-	let presentations;
-	try {
-		presentations = await pb.collection('presentations').getFullList();
-	} catch (e) {
-		throw new Error('Failed to fetch presentations list', { cause: e });
-	}
-
-	if (presentations.length === 0) return false;
-
-	let ratings;
-	try {
-		ratings = await pb.collection('ratings').getFullList();
-	} catch (e) {
-		throw new Error('Failed to fetch ratings list', { cause: e });
-	}
-
-	if (ratings.length === 0) return false;
-
-	// Get unique team IDs from presentations (to handle multiple presentations for same team)
-	const uniqueTeamIds = new Set();
-	const presentationToTeamMap = new Map();
-
-	for (const pres of presentations) {
-		if (pres.team && !uniqueTeamIds.has(pres.team)) {
-			uniqueTeamIds.add(pres.team);
-			presentationToTeamMap.set(pres.id, pres.team);
-		}
-	}
-
-	// Get unique team IDs that have been rated
-	const ratedTeamIds = new Set(ratings.map((r: any) => r.team));
-
-	return Array.from(uniqueTeamIds).every((teamId) => ratedTeamIds.has(teamId));
-}
-
-async function areAllJuriesConfirmed(pb: TypedPocketBase): Promise<boolean> {
-	try {
-		// Get all jury members
-		const juries = await pb.collection('users').getFullList({
-			filter: 'role = "jury" || role = "admin"'
-		});
-
-		if (juries.length === 0) return false;
-
-		// Check if all juries have confirmed their ratings
-		const confirmedJuries = juries.filter((jury: any) => jury.confirmedRating === true);
-
-		return confirmedJuries.length === juries.length;
-	} catch (e) {
-		throw new Error('Failed to check jury confirmations', { cause: e });
-	}
-}
-
-async function checkRouteAccess(
-	pathname: string,
-	user: any,
-	pb: TypedPocketBase
-): Promise<boolean> {
-	const publicRoutes = ['/login', '/'];
+async function checkRouteAccess(pathname: string, user: any): Promise<boolean> {
+	// The info page (schedule, links) is for everyone, logged in or not
+	// Logging out must work for every role
+	const publicRoutes = ['/login', '/', '/info', '/logout'];
 	if (publicRoutes.includes(pathname)) {
 		return true;
 	}
@@ -91,16 +38,13 @@ async function checkRouteAccess(
 		}
 
 		if (pathname === '/presentations' || pathname.startsWith('/presentations/')) {
-			// Participants can see presentations after all teams are rated
-			const allRated = await areAllTeamsRated(pb);
-			return allRated;
+			// The gallery is for jury and admins
+			return false;
 		}
 
 		if (pathname === '/ranking' || pathname.startsWith('/ranking/')) {
-			// Participants can see rankings after all teams are rated AND all juries have confirmed
-			const allRated = await areAllTeamsRated(pb);
-			const allConfirmed = await areAllJuriesConfirmed(pb);
-			return allRated && allConfirmed;
+			// Participants can see rankings once an organizer published at least one category
+			return (await getResultsState()).publishedCategories.length > 0;
 		}
 
 		return false;
@@ -123,11 +67,28 @@ async function checkRouteAccess(
 // ============================================
 
 export const handle: Handle = async ({ event, resolve }) => {
-	const pb = new PocketBase('https://hotb-pb.knneuron.pl/') as TypedPocketBase;
+	// SvelteKit only checks the origin of form posts; JSON endpoints must come from this site too.
+	// Browsers always send Origin on cross-site writes, so a foreign one is never legitimate.
+	if (!['GET', 'HEAD', 'OPTIONS'].includes(event.request.method)) {
+		const origin = event.request.headers.get('origin');
+		if (origin && origin !== event.url.origin) {
+			return new Response(JSON.stringify({ error: 'Cross-origin request refused' }), {
+				status: 403,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		}
+	}
+
+	const pb = new PocketBase(POCKETBASE_URL) as TypedPocketBase;
+	// Loads of the same request run in parallel; the SDK would otherwise cancel duplicate queries
+	pb.autoCancellation(false);
 
 	// Try to load session using our secure cookie first
 	const secureSession = SecureCookieHandler.getSessionFromCookie(event);
-	if (secureSession) {
+	if (secureSession && isRevoked(secureSession.sid)) {
+		// Logged out before: a copy of that cookie must not log anyone in again
+		SecureCookieHandler.clearSessionCookie(event);
+	} else if (secureSession) {
 		// Load the session data into PocketBase
 		pb.authStore.save(secureSession.token, secureSession.model);
 	} else {
@@ -135,17 +96,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 		pb.authStore.loadFromCookie(event.request.headers.get('cookie') || '');
 	}
 
-	// Verify the connection is still valid (optional health check)
-	try {
-		if (pb.authStore.isValid) {
-			// Attempt a lightweight request to verify session is still valid
-			// This could help catch expired sessions earlier
-			// Commenting out to avoid extra API calls, but keeping as reference
-			// await pb.collection('users').authRefresh();
+	const isAsset = event.url.pathname.startsWith('/_app') || event.url.pathname.includes('.');
+
+	// The cookie keeps the user record from login time; reload it so role and jury category
+	// changes made by organizers apply immediately, and deleted accounts lose access
+	if (pb.authStore.isValid && !isAsset) {
+		try {
+			const fresh = await pb.collection('users').getOne(pb.authStore.record!.id);
+			pb.authStore.save(pb.authStore.token, fresh);
+		} catch (e) {
+			console.warn('Session user could not be loaded, clearing auth:', e);
+			pb.authStore.clear();
 		}
-	} catch (e) {
-		console.warn('Session validation failed, clearing auth:', e);
-		pb.authStore.clear();
 	}
 
 	event.locals.pb = pb;
@@ -155,13 +117,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// Skip access control for static files and API routes
 	const skipAccessControl =
-		pathname.startsWith('/_app') ||
-		pathname.startsWith('/api/') ||
-		pathname.includes('.') ||
-		pathname.startsWith('/paraglide-demo');
+		pathname.startsWith('/_app') || pathname.startsWith('/api/') || pathname.includes('.');
 
 	if (!skipAccessControl) {
-		const hasAccess = await checkRouteAccess(pathname, event.locals.user, pb);
+		const hasAccess = await checkRouteAccess(pathname, event.locals.user);
 
 		if (!hasAccess) {
 			if (!event.locals.user) {
@@ -262,7 +221,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 			event,
 			{
 				token: pb.authStore.token,
-				model: pb.authStore.record
+				model: pb.authStore.record,
+				// Same session as before (a new login gets a fresh id)
+				sid: secureSession?.sid
 			},
 			60 * 60 * 24 * 7 // 7 days
 		);
@@ -283,6 +244,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 	Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
 		response.headers.set(key, value);
 	});
+
+	// Presentation PDFs are shown in a frame on our own pages (jury view, presenter mode);
+	// everything else stays unframeable
+	if (pathname.startsWith('/api/presentations/')) {
+		response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+		response.headers.set('Content-Security-Policy', "frame-ancestors 'self'");
+	}
 
 	response.headers.set('X-RateLimit-Limit', '1000');
 	response.headers.set('X-RateLimit-Remaining', generalLimit.remaining.toString());

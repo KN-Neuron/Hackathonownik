@@ -2,7 +2,7 @@
 	import TeamCard from './TeamCard.svelte';
 	import { page } from '$app/stores';
 
-	let { teams } = $props();
+	let { teams, locked = false } = $props();
 	const eventConfig = $page.data.eventConfig;
 
 	// Group teams by category
@@ -26,13 +26,13 @@
 		{@const categoryTeams = getTeamsByCategory(category.key)}
 		{#if categoryTeams.length > 0}
 			<div class="category-section">
-				<div class="category-header" style="border-color: {category.color}">
+				<div class="category-header">
 					<h3 style="color: {category.color}">{category.name}</h3>
 					<span class="category-count">{categoryTeams.length} teams</span>
 				</div>
 				<div class="teams-container">
-					{#each categoryTeams as team}
-						<TeamCard {team} />
+					{#each categoryTeams as team (team.id)}
+						<TeamCard {team} {locked} />
 					{/each}
 				</div>
 			</div>
@@ -47,8 +47,8 @@
 				<span class="category-count">{uncategorizedTeams.length} teams</span>
 			</div>
 			<div class="teams-container">
-				{#each uncategorizedTeams as team}
-					<TeamCard {team} />
+				{#each uncategorizedTeams as team (team.id)}
+					<TeamCard {team} {locked} />
 				{/each}
 			</div>
 		</div>
@@ -67,18 +67,14 @@
 	}
 
 	h2 {
-		color: #f0f0f0;
-		font-size: 24px;
-		font-weight: 600;
+		color: #fff;
+		font-size: 20px;
+		font-weight: 700;
 		margin: 0 0 16px 0;
-		letter-spacing: 0.5px;
 	}
 
 	.header-line {
-		height: 3px;
-		width: 60px;
-		background: linear-gradient(90deg, #543bad 0%, #36c399 100%);
-		border-radius: 2px;
+		display: none;
 	}
 
 	/* Category sections */
@@ -92,7 +88,7 @@
 		gap: 1rem;
 		margin-bottom: 1rem;
 		padding-bottom: 0.5rem;
-		border-bottom: 2px solid;
+		border-bottom: 1px solid var(--line);
 	}
 
 	.category-header h3 {
@@ -103,10 +99,14 @@
 
 	.category-count {
 		font-size: 0.875rem;
-		color: rgba(255, 255, 255, 0.6);
-		padding: 0.25rem 0.75rem;
-		background: rgba(255, 255, 255, 0.1);
-		border-radius: 1rem;
+		color: var(--text-muted);
+		padding: 0 10px;
+		height: 24px;
+		display: inline-flex;
+		align-items: center;
+		font-weight: 600;
+		background: rgba(255, 255, 255, 0.08);
+		border-radius: 999px;
 	}
 
 	.teams-container {

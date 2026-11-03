@@ -1,6 +1,32 @@
 import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
-import { appConfig } from '$lib/server/appConfig';
+import { getTeamSubmission } from '$lib/server/submissions';
+import { getResultsState, getTeamFeedback, stageOf } from '$lib/server/results';
+import { getCategoryRanking } from '$lib/server/ranking';
+import { getAdminClient } from '$lib/server/adminClient';
+import { appConfig, requiredFor } from '$lib/server/appConfig';
+
+// Where to send participants who need help from the organizers (Discord link if configured)
+function organizerContactUrl(): string {
+	const discord = appConfig.event.links?.find((link) => /discord/i.test(link.title + link.url));
+	return discord?.url ?? '/info';
+}
+
+async function getTeam(teamId: string): Promise<{ name: string; category: string | null }> {
+	const pb = await getAdminClient();
+	const team = await pb.collection('teams').getOne(teamId, { fields: 'name,category' });
+	return { name: team.name, category: team.category || null };
+}
+
+async function getTeamMembers(teamId: string): Promise<string[]> {
+	const pb = await getAdminClient();
+	const members = await pb.collection('users').getFullList({
+		filter: pb.filter('team = {:team}', { team: teamId }),
+		fields: 'name,email',
+		sort: 'name'
+	});
+	return members.map((m) => m.name || m.email);
+}
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) {
@@ -11,61 +37,62 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw redirect(303, '/presentations');
 	}
 
+	const contactUrl = organizerContactUrl();
 	const teamId = locals.user.team;
 	if (!teamId) {
 		return {
 			submission: null,
-			user: locals.user,
-			error: 'You are not associated with any team.'
+			members: [],
+			contactUrl,
+			required: [],
+			error: 'You are not assigned to a team yet, so you cannot submit a project.'
 		};
 	}
 
 	try {
-		const teamPresentations = await locals.pb.collection('presentations').getFullList({
-			filter: `team = "${teamId}"`,
-			sort: '-created',
-			expand: 'team'
-		});
-
-		if (teamPresentations.length === 0) {
-			return {
-				submission: null,
-				user: locals.user,
-				error: 'No submissions found for your team.'
-			};
-		}
-
-		const latestPresentation = teamPresentations[0];
-
-		const formattedSubmission = {
-			id: latestPresentation.id,
-			teamName: latestPresentation.expand?.team?.name || 'Your Team',
-			teamId: teamId,
-			category: latestPresentation.expand?.team?.category || appConfig.event.categories[0]?.key || 'wellness',
-			created: latestPresentation.created,
-			updated: latestPresentation.updated,
-			repo_link: latestPresentation.repo_link || null,
-			video_link: latestPresentation.video_link || null,
-			presentationUrl: `/api/presentations/${latestPresentation.id}`,
-			allPresentations: teamPresentations.map((p) => ({
-				id: p.id,
-				created: p.created,
-				updated: p.updated
-			}))
-		};
-
+		const [submission, state, members, team] = await Promise.all([
+			getTeamSubmission(teamId),
+			getResultsState(),
+			getTeamMembers(teamId).catch((e) => {
+				console.error('Error fetching team members:', e);
+				return [] as string[];
+			}),
+			getTeam(teamId)
+		]);
+		const category = team.category;
+		const published = Boolean(category && state.publishedCategories.includes(category));
+		const inFinal = Boolean(
+			category &&
+				stageOf(state, category) === 'final' &&
+				state.finalists[category]?.includes(teamId)
+		);
+		// Place in the published ranking
+		const place = published
+			? ((await getCategoryRanking(category!)).rankings.find((r) => r.teamId === teamId)?.rank ??
+				null)
+			: null;
 		return {
-			submission: formattedSubmission,
-			user: locals.user,
+			submission,
+			members,
+			contactUrl,
+			teamName: team.name,
+			teamCategory: category,
+			required: requiredFor(category),
+			// Feedback from the jury reaches the team only after results are published
+			feedback: published ? await getTeamFeedback(teamId) : null,
+			inFinal,
+			published,
+			place,
 			error: null
 		};
 	} catch (err) {
 		console.error('Error fetching team submission:', err);
 		return {
 			submission: null,
-			user: locals.user,
+			members: [],
+			contactUrl,
+			required: [],
 			error: 'An error occurred while fetching your submission.'
 		};
 	}
 };
-

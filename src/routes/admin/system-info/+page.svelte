@@ -29,8 +29,22 @@
 					<span class="text-xl font-semibold">{eventConfig.organizer}</span>
 				</div>
 				<div>
-					<span class="text-base-content/70 block">Deadline</span>
-					<span class="text-xl font-semibold">{new Date(eventConfig.deadline).toLocaleString()}</span>
+					<span class="text-base-content/70 block">First presentation (PDF) until</span>
+					<span class="text-xl font-semibold"
+						>{new Date(eventConfig.presentation_deadline).toLocaleString()}</span
+					>
+				</div>
+				<div>
+					<span class="text-base-content/70 block">Repository and video links until</span>
+					<span class="text-xl font-semibold"
+						>{new Date(eventConfig.deadline).toLocaleString()}</span
+					>
+				</div>
+				<div>
+					<span class="text-base-content/70 block">Final presentation until</span>
+					<span class="text-xl font-semibold"
+						>{new Date(eventConfig.final_presentation_deadline).toLocaleString()}</span
+					>
 				</div>
 			</div>
 		</div>
@@ -96,7 +110,9 @@
 						<tr>
 							<td class="font-bold">{link.title}</td>
 							<td class="text-base-content/70">{link.description}</td>
-							<td class="font-mono text-sm break-all"><a href={link.url} target="_blank" class="link link-primary">{link.url}</a></td>
+							<td class="font-mono text-sm break-all"
+								><a href={link.url} target="_blank" class="link link-primary">{link.url}</a></td
+							>
 							<td>{link.buttonText}</td>
 						</tr>
 					{/each}
@@ -104,17 +120,16 @@
 			</table>
 		</div>
 	</div>
-    
-    <div class="flex justify-start mt-4">
-        <a href="/admin/dashboard" class="btn btn-outline">Back to Dashboard</a>
-    </div>
+
+	<div class="flex justify-start mt-4">
+		<a href="/admin/dashboard" class="btn btn-outline">Back to Dashboard</a>
+	</div>
 </div>
 
 <style>
 	.system-info-container {
-		padding: 1.5rem;
 		max-width: 1200px;
-		margin: 0 auto;
+		margin: 0;
 		width: 100%;
 	}
 

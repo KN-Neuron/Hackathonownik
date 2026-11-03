@@ -1,8 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { error } from '@sveltejs/kit';
+import { error, isHttpError } from '@sveltejs/kit';
+import { getResultsState } from '$lib/server/results';
+import { getAdminClient } from '$lib/server/adminClient';
+import { canJudgeCategory, isAdmin } from '$lib/server/access';
+import { recordView } from '$lib/server/views';
 
-export const GET: RequestHandler = async ({ params, locals }) => {
+export const GET: RequestHandler = async ({ params, locals, url }) => {
 	// Check if user is authenticated
 	if (!locals.user) {
 		throw error(401, 'Unauthorized');
@@ -15,55 +19,50 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	}
 
 	try {
-		const presentation = await locals.pb.collection('presentations').getOne(presentationId, {
+		// Read as superuser, then decide access here (PocketBase rules would hide other teams'
+		// records even when the app allows them)
+		const pb = await getAdminClient();
+		const presentation = await pb.collection('presentations').getOne(presentationId, {
 			expand: 'team'
 		});
+		const category = presentation.expand?.team?.category ?? null;
 
-		// Access Control Logic
-		// 1. Admins and Juries always have access
-		const isJuryOrAdmin = locals.user.role === 'jury' || locals.user.role === 'admin' || locals.user.admin;
-		
-		// 2. Team members have access to their OWN presentations
-		const isOwnTeamPresentation = locals.user.team === presentation.team;
+		// Admins: all; jurors: their categories; team members: their own team;
+		// other participants: once the team's category is published
+		const allowed =
+			isAdmin(locals.user) ||
+			canJudgeCategory(locals.user, category) ||
+			locals.user.team === presentation.team ||
+			(category !== null && (await getResultsState()).publishedCategories.includes(category));
 
-		if (!isJuryOrAdmin && !isOwnTeamPresentation) {
-			// 3. For other participants, access is only allowed if ALL teams are rated
-			try {
-				const allPresentations = await locals.pb.collection('presentations').getFullList();
-				// Use Set for unique team IDs, as multiple presentations can exist per team
-				const allTeamIds = new Set(allPresentations.map(p => p.team));
-				
-				const ratings = await locals.pb.collection('ratings').getFullList();
-				const ratedTeamIds = new Set(ratings.map((r) => r.team));
-
-				// Check if every team has at least one rating
-				const allTeamsRated = Array.from(allTeamIds).every(teamId => ratedTeamIds.has(teamId));
-
-				if (!allTeamsRated) {
-					throw error(403, 'Presentations not yet publicly available');
-				}
-			} catch (err) {
-				// If checking fails or throws 403, propagate the error
-				if (err instanceof Error && 'status' in err && (err as any).status === 403) {
-					throw err;
-				}
-				console.error('Error checking global access:', err);
-				throw error(403, 'Access not authorized');
-			}
+		if (!allowed) {
+			// Same answer as a missing record, so ids of other teams can't be probed
+			throw error(404, 'Presentation file not found');
 		}
 
 		// Get the file name from the presentation record
-		const fileName = presentation.presentation;
+		// ?file=final: the presentation for the final (stage) instead of the preliminary one
+		const isFinal = url.searchParams.get('file') === 'final';
+		const fileName = isFinal ? presentation.final_presentation : presentation.presentation;
 		if (!fileName) {
 			throw error(404, 'Presentation file not found');
 		}
 
-		// Construct the file URL using the authenticated client
-		const fileUrl = `${locals.pb.baseUrl}/api/files/${presentation.collectionName}/${presentation.id}/${fileName}`;
-		
-		// Fetch the file with the authenticated client
+		// Jurors opening a team's material is shown to the organizers
+		if (locals.user.role === 'jury') {
+			void recordView(
+				locals.user.id,
+				presentation.team,
+				isFinal ? 'final_presentation' : 'presentation'
+			);
+		}
+
+		// The file fields are protected: PocketBase serves them only with a short-lived file token
+		// of the superuser, so the files can't be fetched from PocketBase without this app
+		const token = await pb.files.getToken();
+		const fileUrl = `${pb.baseURL}/api/files/${presentation.collectionName}/${presentation.id}/${encodeURIComponent(fileName)}?token=${encodeURIComponent(token)}`;
 		const response = await fetch(fileUrl);
-		
+
 		if (!response.ok) {
 			throw error(response.status, 'Could not retrieve presentation file');
 		}
@@ -75,10 +74,12 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		return new Response(buffer, {
 			headers: {
 				'Content-Type': contentType,
-				'Content-Disposition': `inline; filename="${fileName}"`,
+				'Content-Disposition': `inline; filename="${fileName}"`
 			}
 		});
 	} catch (err) {
+		// Access errors thrown above pass through unchanged
+		if (isHttpError(err)) throw err;
 		console.error('Error retrieving presentation file:', err);
 		if (err instanceof Error && 'status' in err) {
 			throw error((err as any).status, (err as any).message);

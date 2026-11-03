@@ -2,6 +2,11 @@
 	import { onMount, tick } from 'svelte';
 	import { browser } from '$app/environment';
 	import PdfViewer from '$lib/components/pdf/PdfViewer.svelte';
+	import { reportView } from '$lib/utils/reportView';
+	import SubmissionChecklist from '$lib/components/SubmissionChecklist.svelte';
+	import CategoryTabs from '$lib/components/CategoryTabs.svelte';
+	import { matchesTeam } from '$lib/utils/teamSearch';
+	import type { TeamSubmission } from '$lib/types';
 
 	let { data } = $props<{
 		data: {
@@ -10,12 +15,15 @@
 				teamName: string;
 				teamId: string;
 				category: string;
-				created: string;
 				updated: string;
-				presentationUrl: string;
+				order: number;
+				presentationUrl: string | null;
 				repo_link: string | null;
 				video_link: string | null;
+				submission: TeamSubmission;
 			}[];
+			categories: string[];
+			category: string | null;
 			user: any;
 			eventConfig: any;
 		};
@@ -24,7 +32,12 @@
 	let selectedPresentationFiles = $state<File[]>([]);
 	let showPresentationModal = $state(false);
 	let currentTeamName = $state('');
-	let presentations = $state(data.presentations);
+	let search = $state('');
+	let presentations = $derived(
+		data.presentations.filter((p: { teamName: string; order: number }) =>
+			matchesTeam(search, p.teamName, p.order)
+		)
+	);
 	let isLoading = $state(false);
 	let loadingPresentationId = $state<string | null>(null);
 	let currentPage = $state(1);
@@ -108,7 +121,9 @@
 			const link = document.createElement('a');
 			link.href = presentation.presentationUrl;
 			// Try to get the filename from the URL, fallback to a default name
-			const filename = presentation.presentationUrl.split('/').pop() || `presentation-${presentation.teamName}.pdf`;
+			const filename =
+				presentation.presentationUrl.split('/').pop() ||
+				`presentation-${presentation.teamName}.pdf`;
 			link.download = filename;
 			document.body.appendChild(link);
 			link.click();
@@ -139,12 +154,22 @@
 		<p>View all submitted presentations</p>
 	</div>
 
+	<CategoryTabs keys={data.categories} selected={data.category} />
+
+	<input
+		type="search"
+		class="input input-bordered w-full max-w-md mb-4"
+		placeholder="Find a team: name or number, e.g. 7"
+		bind:value={search}
+		aria-label="Find a team"
+	/>
+
 	{#if presentations.length > 0}
 		{#each data.eventConfig.categories as category}
 			{@const categoryPresentations = getPresentationsByCategory(category.key)}
 			{#if categoryPresentations.length > 0}
 				<div class="category-section">
-					<div class="category-header" style="border-color: {category.color}">
+					<div class="category-header">
 						<h2 style="color: {category.color}">{category.name}</h2>
 						<span class="category-count">{categoryPresentations.length} teams</span>
 					</div>
@@ -157,63 +182,86 @@
 							>
 								<div class="card-content">
 									<div class="card-header-row">
-										<h3>{presentation.teamName}</h3>
+										<h3>
+											<span class="order-number">#{presentation.order}</span>
+											{presentation.teamName}
+										</h3>
 										<span
 											class="category-badge"
-											style="background: color-mix(in srgb, {category.color} 20%, transparent); color: {category.color}; border: 1px solid color-mix(in srgb, {category.color} 30%, transparent);"
+											style="background: color-mix(in srgb, {category.color} 16%, transparent); color: {category.color};"
 											>{category.name}</span
 										>
 									</div>
 									<p class="team-id">Team ID: {presentation.teamId}</p>
 									<p class="created-date">
-										Submitted: {new Date(presentation.created).toLocaleDateString()}
+										Last update: {new Date(presentation.updated).toLocaleString()}
 									</p>
+									<SubmissionChecklist
+										submission={presentation.submission}
+										required={category.submission.required}
+										mode="jury"
+									/>
 									<div class="links-container">
-										<a
-											href={presentation.repo_link}
-											target="_blank"
-											rel="noopener noreferrer"
-											class="external-link repo-link"
-											on:click|stopPropagation
-										>
-											<svg
-												width="16"
-												height="16"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
+										{#if presentation.repo_link}
+											<a
+												href={presentation.repo_link}
+												target="_blank"
+												rel="noopener noreferrer"
+												class="external-link repo-link"
+												on:click={(e) => {
+													e.stopPropagation();
+													reportView(presentation.teamId, 'repo');
+												}}
 											>
-												<path
-													d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
-												></path>
-											</svg>
-											Repository
-										</a>
-										<a
-											href={presentation.video_link}
-											target="_blank"
-											rel="noopener noreferrer"
-											class="external-link video-link"
-											on:click|stopPropagation
-										>
-											<svg
-												width="16"
-												height="16"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
+												<svg
+													width="16"
+													height="16"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="2"
+												>
+													<path
+														d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+													></path>
+												</svg>
+												Repository
+											</a>
+										{:else}
+											<span class="external-link missing-link">No repository</span>
+										{/if}
+										{#if presentation.video_link}
+											<a
+												href={presentation.video_link}
+												target="_blank"
+												rel="noopener noreferrer"
+												class="external-link video-link"
+												on:click={(e) => {
+													e.stopPropagation();
+													reportView(presentation.teamId, 'video');
+												}}
 											>
-												<polygon points="5 3 19 12 5 21 5 3"></polygon>
-											</svg>
-											Video Demo
-										</a>
+												<svg
+													width="16"
+													height="16"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="2"
+												>
+													<polygon points="5 3 19 12 5 21 5 3"></polygon>
+												</svg>
+												Video Demo
+											</a>
+										{:else}
+											<span class="external-link missing-link">No video</span>
+										{/if}
 									</div>
 									<div class="card-actions">
 										<button
 											class="view-btn"
-											disabled={loadingPresentationId === presentation.id}
+											disabled={!presentation.presentationUrl ||
+												loadingPresentationId === presentation.id}
 										>
 											{#if loadingPresentationId === presentation.id}
 												<span class="loading-spinner"></span>
@@ -230,7 +278,7 @@
 													<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
 													<circle cx="12" cy="12" r="3"></circle>
 												</svg>
-												View
+												{presentation.presentationUrl ? 'View' : 'No PDF'}
 											{/if}
 										</button>
 										{#if presentation.presentationUrl}
@@ -284,7 +332,7 @@
 						class="download-fullscreen-btn"
 						on:click|stopPropagation={() => {
 							// Find current presentation to download
-							const currentPresentation = presentations.find(p => p.teamName === currentTeamName);
+							const currentPresentation = presentations.find((p) => p.teamName === currentTeamName);
 							if (currentPresentation) {
 								downloadPresentation(currentPresentation);
 							}
@@ -345,22 +393,21 @@
 {/if}
 
 <style>
+	.order-number {
+		color: var(--text-muted);
+		font-variant-numeric: tabular-nums;
+	}
+
 	.presentations-gallery {
-		padding: 2rem;
 		max-width: 1400px;
-		margin: 0 auto;
-		min-height: 100vh;
+		margin: 0;
 	}
 
 	.gallery-header {
-		margin-bottom: 2rem;
-		text-align: center;
+		margin-bottom: 1.5rem;
 	}
 
 	.gallery-header h1 {
-		font-size: 2rem;
-		font-weight: 700;
-		color: #7f7bff;
 		margin-bottom: 0.5rem;
 	}
 
@@ -375,21 +422,25 @@
 		gap: 1rem;
 		margin-bottom: 1.5rem;
 		padding-bottom: 0.75rem;
-		border-bottom: 2px solid;
+		border-bottom: 1px solid var(--line);
 	}
 
 	.category-header h2 {
-		font-size: 1.5rem;
-		font-weight: 600;
+		font-size: 20px;
+		font-weight: 700;
 		margin: 0;
 	}
 
 	.category-count {
 		font-size: 0.875rem;
-		color: rgba(255, 255, 255, 0.6);
-		padding: 0.25rem 0.75rem;
-		background: rgba(255, 255, 255, 0.1);
-		border-radius: 1rem;
+		color: var(--text-muted);
+		padding: 0 10px;
+		height: 24px;
+		display: inline-flex;
+		align-items: center;
+		font-weight: 600;
+		background: rgba(255, 255, 255, 0.08);
+		border-radius: 999px;
 	}
 
 	.card-header-row {
@@ -407,16 +458,16 @@
 	.category-badge {
 		font-size: 0.7rem;
 		font-weight: 600;
-		padding: 0.2rem 0.5rem;
-		border-radius: 0.25rem;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
+		padding: 0 10px;
+		height: 24px;
+		display: inline-flex;
+		align-items: center;
+		border-radius: 999px;
 		white-space: nowrap;
 	}
 
 	.presentation-card:hover {
-		border-color: color-mix(in srgb, var(--category-color) 40%, transparent);
-		box-shadow: 0 10px 25px color-mix(in srgb, var(--category-color) 15%, transparent);
+		border-color: rgba(255, 255, 255, 0.28);
 	}
 
 	.presentations-grid {
@@ -426,38 +477,35 @@
 	}
 
 	.presentation-card {
-		background: rgba(255, 255, 255, 0.05);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		border-radius: 0.75rem;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		border-radius: var(--radius-card);
 		padding: 1.5rem;
 		cursor: pointer;
 		transition: all 0.3s ease;
-		backdrop-filter: blur(10px);
 	}
 
 	.presentation-card:hover {
-		transform: translateY(-5px);
-		background: rgba(127, 123, 255, 0.1);
-		border-color: rgba(127, 123, 255, 0.3);
-		box-shadow: 0 10px 25px rgba(127, 123, 255, 0.2);
+		background: rgba(139, 135, 255, 0.1);
+		border-color: rgba(139, 135, 255, 0.3);
 	}
 
 	.card-content h3 {
 		font-size: 1.25rem;
 		font-weight: 600;
-		color: #f0f0f0;
+		color: #fff;
 		margin-bottom: 0.5rem;
 	}
 
 	.team-id {
 		font-size: 0.875rem;
-		color: rgba(255, 255, 255, 0.6);
+		color: var(--text-muted);
 		margin-bottom: 0.25rem;
 	}
 
 	.created-date {
 		font-size: 0.8rem;
-		color: rgba(255, 255, 255, 0.5);
+		color: var(--text-muted);
 		margin-bottom: 1rem;
 	}
 
@@ -467,7 +515,7 @@
 	}
 
 	.view-btn {
-		background: linear-gradient(to right, #4df2ff, #7f7bff);
+		background: var(--action);
 		color: #0f1322;
 		border: none;
 		padding: 0.5rem 1rem;
@@ -506,7 +554,7 @@
 	}
 
 	.download-btn {
-		background: linear-gradient(to right, #8b89cc, #7c79e5);
+		background: var(--action);
 		color: #0f1322;
 		border: none;
 		padding: 0.5rem 1rem;
@@ -564,10 +612,16 @@
 		text-decoration: none;
 	}
 
+	.missing-link {
+		background: rgba(255, 255, 255, 0.08);
+		color: var(--text-muted);
+		cursor: default;
+	}
+
 	.no-presentations {
 		text-align: center;
 		padding: 4rem 2rem;
-		color: rgba(255, 255, 255, 0.7);
+		color: var(--text-muted);
 	}
 
 	.no-presentations h2 {
@@ -607,13 +661,13 @@
 		align-items: center;
 		padding: 0.5rem 1rem;
 		background: rgba(0, 0, 0, 0.7);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+		border-bottom: 1px solid var(--line);
 	}
 
 	.presentation-header h2 {
 		font-size: 1.2rem;
 		font-weight: 600;
-		color: #f0f0f0;
+		color: #fff;
 		margin: 0;
 	}
 
@@ -625,7 +679,7 @@
 	.exit-fullscreen-btn {
 		background: transparent;
 		border: none;
-		color: #f0f0f0;
+		color: #fff;
 		cursor: pointer;
 		padding: 0.25rem;
 		border-radius: 0.25rem;
@@ -647,7 +701,7 @@
 	.download-fullscreen-btn {
 		background: transparent;
 		border: none;
-		color: #f0f0f0;
+		color: #fff;
 		cursor: pointer;
 		padding: 0.25rem;
 		border-radius: 0.25rem;
@@ -774,4 +828,3 @@
 		}
 	}
 </style>
-

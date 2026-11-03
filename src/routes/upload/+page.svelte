@@ -1,373 +1,632 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import HeaderText from '$lib/components/HeaderText.svelte';
 	import { IconNames } from '$lib/utils/utils';
-	import PdfUpload from '$lib/components/pdf/PdfUpload.svelte';
-	import Modal from '$lib/components/Modal.svelte';
-	import PdfViewer from '$lib/components/pdf/PdfViewer.svelte';
+	import { checkinStatus } from '$lib/utils/checkin';
+	import type { SubmissionItem } from '$lib/types';
 
 	let { data } = $props();
 
 	let icon = IconNames.Upload;
-	let text = 'Upload Presentation';
+	let text = 'Submit Your Project';
 
-	let selectedFiles = $state([]);
-	let repoLink = $state('');
-	let videoLink = $state('');
-	let showPresentationModal = $state(false);
-	let fullscreenMode = $state(false);
-	let showDeadlineMessage = $state(false);
-
-	// Check if submission is after deadline
 	const deadline = new Date(data.eventConfig.deadline);
-	const now = new Date();
-	if (now > deadline) {
-		showDeadlineMessage = true;
+	// Links (repository, video) and the first presentation (PDF) have their own deadlines
+	const closed = new Date() > deadline;
+	const presentationDeadline = new Date(data.eventConfig.presentation_deadline);
+	const presentationClosed = new Date() > presentationDeadline;
+	const formatDate = (d: string | Date) =>
+		new Date(typeof d === 'string' ? d.replace(' ', 'T') : d).toLocaleString([], {
+			weekday: 'short',
+			day: 'numeric',
+			month: 'short',
+			hour: '2-digit',
+			minute: '2-digit'
+		});
+
+	let submission = $derived(data.submission);
+	let required = $derived((data.required ?? []) as SubmissionItem[]);
+	let doneCount = $derived(required.filter((item) => submission?.[item]).length);
+	let allDone = $derived(required.length > 0 && doneCount === required.length);
+	let checkin = $derived(
+		checkinStatus(data.eventConfig.checkin_deadline, submission?.firstSubmittedAt)
+	);
+
+	// Per-card state: saving spinner and the server's answer
+	let saving = $state<Record<string, boolean>>({});
+	let messages = $state<Record<string, { ok: boolean; text: string }>>({});
+	let repoLink = $state(data.submission?.repo?.url ?? '');
+	let videoLink = $state(data.submission?.video?.url ?? '');
+	let dragging = $state(false);
+	let fileInput: HTMLInputElement | undefined = $state();
+	let pdfForm: HTMLFormElement | undefined = $state();
+
+	function submitter(item: SubmissionItem): SubmitFunction {
+		return () => {
+			saving[item] = true;
+			delete messages[item];
+			return async ({ result, update }) => {
+				saving[item] = false;
+				const payload = result.type === 'success' ? result.data : null;
+				const ok = Boolean(payload?.success);
+				messages[item] = {
+					ok,
+					text: ok ? 'Saved ✓' : (payload?.message as string) || 'Saving failed. Please try again.'
+				};
+				await update({ reset: false });
+				// Show the link as stored (e.g. with https:// added)
+				if (ok && item === 'repo') repoLink = data.submission?.repo?.url ?? repoLink;
+				if (ok && item === 'video') videoLink = data.submission?.video?.url ?? videoLink;
+			};
+		};
 	}
 
-	function handleFiles(e: CustomEvent) {
-		selectedFiles = e.detail.files;
-		if (selectedFiles.length > 0) {
-			showPresentationModal = true;
-		}
+	// Choosing a file is enough: it uploads right away
+	function uploadSelected(input = fileInput, form = pdfForm) {
+		if (input?.files?.length) form?.requestSubmit();
 	}
 
-	function toggleFullscreen() {
-		fullscreenMode = !fullscreenMode;
+	function onDrop(event: DragEvent, input = fileInput, form = pdfForm) {
+		event.preventDefault();
+		dragging = false;
+		finalDragging = false;
+		const file = event.dataTransfer?.files?.[0];
+		if (!file || !input) return;
+		const transfer = new DataTransfer();
+		transfer.items.add(file);
+		input.files = transfer.files;
+		uploadSelected(input, form);
 	}
+
+	// The final presentation has its own, later deadline
+	const finalDeadline = new Date(data.eventConfig.final_presentation_deadline);
+	const finalClosed = new Date() > finalDeadline;
+	let finalFileInput: HTMLInputElement | undefined = $state();
+	let finalForm: HTMLFormElement | undefined = $state();
+	let finalDragging = $state(false);
+
+	const labels: Record<SubmissionItem, string> = {
+		presentation: 'Presentation (PDF)',
+		repo: 'Code repository link',
+		video: 'Demo video link',
+		final_presentation: 'Final presentation (PDF)'
+	};
 </script>
 
 <div class="upload-page">
 	<HeaderText {icon} {text} />
 
-	{#if showDeadlineMessage}
-		<div class="deadline-notice">
-			<h3>Submission Deadline Passed</h3>
-			<p>The deadline for submitting presentations was on {deadline.toLocaleString()}.</p>
-			<p>No new presentations can be submitted at this time.</p>
+	{#if !data.hasTeam}
+		<div class="alert alert-warning">
+			You are not assigned to a team yet, so you can't submit. Ask the organizers on Discord.
 		</div>
 	{:else}
-		<div class="intro-section">
-			<p>
-				<b class="camelCase"
-					>File name should be your team name in camelCase. For example "Neuron Team" =>
-					neuronTeam.pdf</b
-				>
-				<br />
-				Upload your team's presentation in PDF format. Maximum file size is 40MB. After uploading, your
-				presentation will be available for jury members to review and rate.
-			</p>
-			<p class="deadline-info">Deadline: {deadline.toLocaleString()}</p>
+		<p class="team-line">
+			Team <b>{data.teamName}</b> · presentation until <b>{formatDate(presentationDeadline)}</b>,
+			links until
+			<b>{formatDate(deadline)}</b>
+		</p>
+
+		<!-- Check-in -->
+		{#if checkin === 'open'}
+			<div class="banner banner-checkin">
+				<b>Check-in: add anything before {formatDate(data.eventConfig.checkin_deadline!)}</b>
+				<span>Even just the repository link is enough. It tells us your team is competing.</span>
+			</div>
+		{:else if checkin === 'done'}
+			<div class="banner banner-ok">Your team is checked in.</div>
+		{:else if checkin === 'missed'}
+			<div class="banner banner-warn">
+				Your team missed the check-in. You can still submit, but tell the organizers you are
+				competing.
+			</div>
+		{/if}
+
+		<!-- Overall progress -->
+		<div class="progress-card" class:complete={allDone}>
+			{#if allDone}
+				<h2>All done. Your project is submitted.</h2>
+				<p>
+					You can still replace anything below until the deadline. The jury always sees the newest
+					version.
+				</p>
+			{:else}
+				<h2>{doneCount} of {required.length} done</h2>
+				<p>
+					Add the {required.length - doneCount === 1 ? 'missing item' : 'missing items'} below. Each
+					one is saved on its own; teammates can add different parts.
+				</p>
+			{/if}
+			<progress
+				class="progress w-full {allDone ? 'progress-success' : 'progress-primary'}"
+				value={doneCount}
+				max={required.length || 1}
+			></progress>
 		</div>
 
-		<div class="upload-container">
-			<div class="upload-card">
-				<h2 class="section-title">
-					<span class="section-indicator"></span>
-					PDF Upload & Preview
-				</h2>
+		{#if closed && presentationClosed && finalClosed}
+			<div class="banner banner-warn">
+				All deadlines have passed. Nothing can be changed anymore.
+			</div>
+		{:else if presentationClosed && !closed}
+			<div class="banner banner-warn">
+				The deadline for the first presentation has passed ({formatDate(presentationDeadline)}). The
+				repository and video links can be changed until {formatDate(deadline)}.
+			</div>
+		{:else if closed && !presentationClosed}
+			<div class="banner banner-warn">
+				The deadline for the links has passed ({formatDate(deadline)}). The first presentation can
+				be replaced until {formatDate(presentationDeadline)}.
+			</div>
+		{:else if closed}
+			<div class="banner banner-warn">
+				The deadline has passed ({formatDate(deadline)}). You can still upload the final
+				presentation until {formatDate(finalDeadline)}.
+			</div>
+		{/if}
 
-				<form method="post" action="?/upload" class="upload-form" enctype="multipart/form-data">
-					<input type="hidden" name="csrf_token" value={data.csrfToken} />
-
-					<div class="upload-area">
-						<PdfUpload
-							multiple={false}
-							uploadUrl="?/upload"
-							csrfToken={data.csrfToken}
-							{repoLink}
-							{videoLink}
-							on:files={handleFiles}
-						/>
-
-						{#if selectedFiles.length > 0}
-							<button
-								type="button"
-								class="preview-button"
-								onclick={() => (showPresentationModal = true)}
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="20"
-									height="20"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
+		<div class="submit-steps">
+			<!-- 1. PDF -->
+			<section class="submit-step" class:done={submission?.presentation} id="presentation_file">
+				<div class="submit-step-header">
+					<span class="submit-step-number">{submission?.presentation ? '✓' : '1'}</span>
+					<div>
+						<h3>
+							{labels.presentation}
+							{#if !required.includes('presentation')}<span class="optional">optional</span>{/if}
+						</h3>
+						{#if submission?.presentation}
+							<p class="meta">
+								<a href={submission.presentation.url} target="_blank" rel="noopener noreferrer"
+									>Open current file</a
 								>
-									<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-									<circle cx="12" cy="12" r="3"></circle>
-								</svg>
-								Preview Selected PDF
-							</button>
+								· added by {submission.presentation.submittedBy ?? 'a teammate'}, {formatDate(
+									submission.presentation.at
+								)}
+							</p>
+						{:else}
+							<p class="meta">Export your slides as PDF (max 40 MB). Any file name is fine.</p>
 						{/if}
 					</div>
-
-					<div class="repo-link-section">
-						<label for="repo_link" class="repo-label">Repository Link</label>
-						<input
-							type="url"
-							id="repo_link"
-							name="repo_link"
-							placeholder="https://github.com/username/repository"
-							bind:value={repoLink}
-							class="repo-input"
-							required
-						/>
-						<p class="repo-help">
-							Provide a link to your project's source code repository (e.g., GitHub, GitLab)
-						</p>
-					</div>
-
-					<div class="repo-link-section">
-						<label for="video_link" class="repo-label">Video Link</label>
-						<input
-							type="url"
-							id="video_link"
-							name="video_link"
-							placeholder="https://youtube.com/watch?v=..."
-							bind:value={videoLink}
-							class="repo-input"
-							required
-						/>
-						<p class="repo-help">
-							Provide a link to your project's demo video (e.g., YouTube, Loom)
-						</p>
-					</div>
-				</form>
-
-				<div class="guidelines">
-					<h3>Upload Guidelines:</h3>
-					<ul>
-						<li>Only PDF files are accepted</li>
-						<li>Maximum file size: 40MB</li>
-						<li>Ensure your presentation is complete and final before uploading</li>
-						<li>
-							Jury will see only the latest uploaded presentation. Maximum 5 presentations per team
-							are allowed.
-						</li>
-						<li>Repository link is required for jury review</li>
-						<li>Video link is required to showcase your project demo</li>
-					</ul>
 				</div>
-			</div>
+
+				<form
+					bind:this={pdfForm}
+					method="POST"
+					action="?/upload"
+					enctype="multipart/form-data"
+					use:enhance={submitter('presentation')}
+				>
+					<input type="hidden" name="csrf_token" value={data.csrfToken} />
+					<input
+						bind:this={fileInput}
+						id="pdf-input"
+						type="file"
+						name="file"
+						accept="application/pdf,.pdf"
+						class="hidden"
+						disabled={presentationClosed || saving.presentation}
+						onchange={() => uploadSelected()}
+					/>
+					<label
+						for="pdf-input"
+						class="dropzone"
+						class:dragging
+						class:disabled={presentationClosed}
+						ondragover={(e) => {
+							e.preventDefault();
+							dragging = true;
+						}}
+						ondragleave={() => (dragging = false)}
+						ondrop={(e) => onDrop(e)}
+					>
+						{#if saving.presentation}
+							<span class="loading loading-spinner"></span> Uploading…
+						{:else}
+							<b>{submission?.presentation ? 'Replace the PDF' : 'Choose your PDF'}</b>
+							<span>or drop it here – it uploads right away</span>
+						{/if}
+					</label>
+				</form>
+				{#if messages.presentation}
+					<p class="message" class:error={!messages.presentation.ok}>
+						{messages.presentation.text}
+					</p>
+				{/if}
+			</section>
+
+			<!-- 2. Repository -->
+			<section class="submit-step" class:done={submission?.repo} id="repo_link">
+				<div class="submit-step-header">
+					<span class="submit-step-number">{submission?.repo ? '✓' : '2'}</span>
+					<div>
+						<h3>
+							{labels.repo}
+							{#if !required.includes('repo')}<span class="optional">optional</span>{/if}
+						</h3>
+						<p class="meta">
+							{#if submission?.repo}
+								Added by {submission.repo.submittedBy ?? 'a teammate'}, {formatDate(
+									submission.repo.at
+								)}
+							{:else}
+								GitHub or GitLab. Make sure the repository is public.
+							{/if}
+						</p>
+					</div>
+				</div>
+				<form method="POST" action="?/upload" class="link-form" use:enhance={submitter('repo')}>
+					<input type="hidden" name="csrf_token" value={data.csrfToken} />
+					<input
+						type="text"
+						inputmode="url"
+						name="repo_link"
+						class="input input-bordered"
+						placeholder="github.com/your-team/project"
+						bind:value={repoLink}
+						disabled={closed}
+						required
+					/>
+					<button
+						class="btn btn-primary"
+						disabled={closed ||
+							saving.repo ||
+							!repoLink.trim() ||
+							repoLink === submission?.repo?.url}
+					>
+						{#if saving.repo}<span class="loading loading-spinner loading-sm"></span>{/if}
+						{submission?.repo ? 'Update' : 'Save'}
+					</button>
+				</form>
+				{#if messages.repo}
+					<p class="message" class:error={!messages.repo.ok}>{messages.repo.text}</p>
+				{/if}
+			</section>
+
+			<!-- 3. Video -->
+			<section class="submit-step" class:done={submission?.video} id="video_link">
+				<div class="submit-step-header">
+					<span class="submit-step-number">{submission?.video ? '✓' : '3'}</span>
+					<div>
+						<h3>
+							{labels.video}
+							{#if !required.includes('video')}<span class="optional">optional</span>{/if}
+						</h3>
+						<p class="meta">
+							{#if submission?.video}
+								Added by {submission.video.submittedBy ?? 'a teammate'}, {formatDate(
+									submission.video.at
+								)}
+							{:else}
+								YouTube (unlisted is fine) or Loom. Anyone with the link must be able to watch it.
+							{/if}
+						</p>
+					</div>
+				</div>
+				<form method="POST" action="?/upload" class="link-form" use:enhance={submitter('video')}>
+					<input type="hidden" name="csrf_token" value={data.csrfToken} />
+					<input
+						type="text"
+						inputmode="url"
+						name="video_link"
+						class="input input-bordered"
+						placeholder="youtu.be/…"
+						bind:value={videoLink}
+						disabled={closed}
+						required
+					/>
+					<button
+						class="btn btn-primary"
+						disabled={closed ||
+							saving.video ||
+							!videoLink.trim() ||
+							videoLink === submission?.video?.url}
+					>
+						{#if saving.video}<span class="loading loading-spinner loading-sm"></span>{/if}
+						{submission?.video ? 'Update' : 'Save'}
+					</button>
+				</form>
+				{#if messages.video}
+					<p class="message" class:error={!messages.video.ok}>{messages.video.text}</p>
+				{/if}
+			</section>
+
+			<!-- 4. Final presentation: only for finalists, later deadline (rules §8) -->
+			<section
+				class="submit-step final-step"
+				class:done={submission?.final_presentation}
+				class:highlight={data.inFinal && !submission?.final_presentation}
+				id="final_presentation_file"
+			>
+				<div class="submit-step-header">
+					<span class="submit-step-number">{submission?.final_presentation ? '✓' : '★'}</span>
+					<div>
+						<h3>
+							{labels.final_presentation}
+							<span class="optional">for the final</span>
+						</h3>
+						{#if data.inFinal}
+							<p class="meta final-note">
+								Your team is in the final! Upload the slides you'll show on stage.
+							</p>
+						{/if}
+						<p class="meta">
+							{#if submission?.final_presentation}
+								<a
+									href={submission.final_presentation.url}
+									target="_blank"
+									rel="noopener noreferrer">Open current file</a
+								>
+								· added by {submission.final_presentation.submittedBy ?? 'a teammate'}, {formatDate(
+									submission.final_presentation.at
+								)}
+							{:else}
+								Needed only if your team reaches the final. Upload it by
+								{formatDate(finalDeadline)} – it can differ from the first presentation.
+							{/if}
+						</p>
+					</div>
+				</div>
+				<form
+					bind:this={finalForm}
+					method="POST"
+					action="?/upload"
+					enctype="multipart/form-data"
+					use:enhance={submitter('final_presentation')}
+				>
+					<input type="hidden" name="csrf_token" value={data.csrfToken} />
+					<input
+						bind:this={finalFileInput}
+						id="final-pdf-input"
+						type="file"
+						name="final_file"
+						accept="application/pdf,.pdf"
+						class="hidden"
+						disabled={finalClosed || saving.final_presentation}
+						onchange={() => uploadSelected(finalFileInput, finalForm)}
+					/>
+					<label
+						for="final-pdf-input"
+						class="dropzone"
+						class:dragging={finalDragging}
+						class:disabled={finalClosed}
+						ondragover={(e) => {
+							e.preventDefault();
+							finalDragging = true;
+						}}
+						ondragleave={() => (finalDragging = false)}
+						ondrop={(e) => onDrop(e, finalFileInput, finalForm)}
+					>
+						{#if saving.final_presentation}
+							<span class="loading loading-spinner"></span> Uploading…
+						{:else}
+							<b>
+								{submission?.final_presentation
+									? 'Replace the final presentation'
+									: 'Choose the final presentation'}
+							</b>
+							<span>or drop it here – it uploads right away</span>
+						{/if}
+					</label>
+				</form>
+				{#if messages.final_presentation}
+					<p class="message" class:error={!messages.final_presentation.ok}>
+						{messages.final_presentation.text}
+					</p>
+				{/if}
+			</section>
 		</div>
+
+		<p class="footnote">
+			Every change is listed with its author on <a href="/my-submission">My Submission</a>.
+		</p>
 	{/if}
 </div>
 
-<Modal bind:show={showPresentationModal} fullHeight={true} fullScreen={fullscreenMode}>
-	{#snippet header()}
-		<div class="flex justify-between items-center w-full">
-			<h2>PDF Preview</h2>
-			<button class="btn btn-sm" onclick={toggleFullscreen}>
-				{fullscreenMode ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-			</button>
-		</div>
-	{/snippet}
-
-	<PdfViewer files={selectedFiles} />
-</Modal>
-
 <style>
 	.upload-page {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 1rem;
-	}
-
-	.intro-section {
-		margin-bottom: 1.5rem;
-		max-width: 800px;
-		color: #f0f0f0;
-		opacity: 0.8;
-		line-height: 1.5;
-	}
-
-	.intro-section .deadline-info {
-		color: #ff6b6b;
-		font-weight: 500;
-		margin-top: 0.5rem;
-		font-size: 0.9rem;
-	}
-
-	.deadline-notice {
-		background-color: rgba(255, 107, 107, 0.1);
-		border: 1px solid rgba(255, 107, 107, 0.3);
-		border-radius: 0.75rem;
-		padding: 1.5rem;
-		margin: 1rem 0;
-		text-align: center;
-	}
-
-	.deadline-notice h3 {
-		color: #ff6b6b;
-		margin: 0 0 0.5rem 0;
-	}
-
-	.deadline-notice p {
-		margin: 0.25rem 0;
-		color: #f0f0f0;
-	}
-
-	.upload-container {
-		margin: 1.5rem 0 3rem;
-	}
-
-	.upload-card {
-		background-color: rgba(30, 31, 34, 0.8);
-		border-radius: 12px;
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		overflow: hidden;
-		padding: 2rem;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-	}
-
-	@media (max-width: 640px) {
-		.upload-card {
-			padding: 1.25rem;
-			border-radius: 8px;
-		}
-	}
-
-	.section-title {
-		font-size: 1.25rem;
-		color: #7f7bff;
-		margin-bottom: 1.75rem;
-		font-weight: 600;
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.camelCase {
-		font-size: 2em;
-	}
-	.section-indicator {
-		display: block;
-		width: 4px;
-		height: 1.25rem;
-		background: linear-gradient(to bottom, #7f7bff, #4df2ff);
-		border-radius: 2px;
-	}
-
-	.upload-area {
-		max-width: 600px;
-		margin: 0 auto 1.5rem;
+		max-width: 760px;
+		margin: 0;
+		padding: 0;
 		display: flex;
 		flex-direction: column;
-		align-items: center;
 		gap: 1rem;
 	}
 
-	.preview-button {
+	.team-line {
+		color: var(--text-muted);
+		margin: -0.5rem 0 0;
+	}
+
+	.banner {
 		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 8px;
-		background: linear-gradient(to right, #4df2ff, #7f7bff);
+		flex-direction: column;
+		gap: 0.2rem;
+		padding: 0.9rem 1.1rem;
+		border-radius: var(--radius-card);
+		border: 1px solid;
+	}
+
+	.banner-checkin {
+		background: rgba(139, 135, 255, 0.12);
+		border-color: rgba(139, 135, 255, 0.45);
+	}
+
+	.banner-ok {
+		background: rgba(54, 195, 153, 0.1);
+		border-color: rgba(54, 195, 153, 0.4);
+		color: #36c399;
+	}
+
+	.banner-warn {
+		background: rgba(247, 166, 84, 0.1);
+		border-color: rgba(247, 166, 84, 0.45);
+		color: #f7a654;
+	}
+
+	.progress-card {
+		padding: 1.1rem 1.25rem;
+		border-radius: var(--radius-card);
+		background: var(--surface);
+		border: 1px solid var(--line);
+	}
+
+	.progress-card.complete {
+		background: rgba(54, 195, 153, 0.08);
+		border-color: rgba(54, 195, 153, 0.4);
+	}
+
+	.progress-card h2 {
+		font-size: 20px;
+		font-weight: 700;
+	}
+
+	.progress-card p {
+		color: var(--text-muted);
+		margin: 0.25rem 0 0.75rem;
+	}
+
+	.submit-steps {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.submit-step {
+		padding: 1.1rem 1.25rem;
+		border-radius: var(--radius-card);
+		background: var(--surface);
+		border: 1px solid var(--line);
+		scroll-margin-top: 1rem;
+	}
+
+	/* A finished step is shown by its check mark and the green number, not by a colored edge */
+	.submit-step.done {
+		border-color: rgba(54, 195, 153, 0.35);
+	}
+
+	.submit-step-header {
+		display: flex;
+		gap: 0.85rem;
+		align-items: flex-start;
+		margin-bottom: 0.85rem;
+	}
+
+	.submit-step-number {
+		flex: none;
+		width: 2rem;
+		height: 2rem;
+		border-radius: 9999px;
+		display: grid;
+		place-items: center;
+		font-weight: 700;
+		background: rgba(255, 255, 255, 0.08);
+	}
+
+	.submit-step.done .submit-step-number {
+		background: #36c399;
 		color: #0f1322;
+	}
+
+	.submit-step h3 {
+		font-size: 1.1rem;
+		font-weight: 700;
+	}
+
+	.optional {
+		margin-left: 0.4rem;
+		font-size: 12px;
 		font-weight: 600;
-		padding: 0.6rem 1.25rem;
-		border-radius: 0.5rem;
-		border: none;
+		color: var(--text-faint);
+	}
+
+	.meta {
+		font-size: 13px;
+		color: var(--text-muted);
+	}
+
+	.meta a {
+		color: var(--focus);
+		text-decoration: underline;
+	}
+
+	.final-step.highlight {
+		border-color: rgba(247, 166, 84, 0.7);
+		background: rgba(247, 166, 84, 0.06);
+	}
+
+	.final-note {
+		color: #f7a654;
+	}
+
+	.dropzone {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.2rem;
+		padding: 1.4rem;
+		border: 2px dashed rgba(139, 135, 255, 0.5);
+		border-radius: var(--radius-card);
+		min-height: 88px;
+		justify-content: center;
 		cursor: pointer;
-		transition: all 0.15s ease;
-		box-shadow: 0 2px 10px rgba(127, 123, 255, 0.3);
-		width: fit-content;
-		margin-top: 0.75rem;
+		text-align: center;
+		transition: background 0.15s ease;
 	}
 
-	.preview-button:hover {
-		transform: translateY(-1px);
-		box-shadow: 0 4px 15px rgba(127, 123, 255, 0.4);
+	.dropzone b {
+		font-size: 16px;
+		color: var(--action);
 	}
 
-	.preview-button:active {
-		transform: translateY(0);
+	.dropzone span {
+		font-size: 13px;
+		color: var(--text-muted);
 	}
 
-	.repo-link-section {
-		margin: 1.5rem 0;
-		padding: 1.5rem;
-		background: rgba(0, 0, 0, 0.2);
-		border-radius: 0.75rem;
-		border: 1px solid rgba(255, 255, 255, 0.05);
+	.dropzone:hover,
+	.dropzone.dragging {
+		background: rgba(139, 135, 255, 0.1);
 	}
 
-	.repo-label {
-		display: block;
-		font-size: 0.9rem;
-		font-weight: 600;
-		color: #f0f0f0;
-		margin-bottom: 0.5rem;
+	.dropzone.disabled {
+		opacity: 0.5;
+		pointer-events: none;
 	}
 
-	.repo-input {
-		width: 100%;
-		padding: 0.75rem;
-		border-radius: 0.5rem;
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		background-color: rgba(0, 0, 0, 0.3);
-		color: #f0f0f0;
-		font-size: 1rem;
+	.link-form {
+		display: flex;
+		gap: 0.5rem;
 	}
 
-	.repo-input:focus {
-		outline: none;
-		border-color: #7f7bff;
-		box-shadow: 0 0 0 2px rgba(127, 123, 255, 0.3);
+	.link-form input {
+		flex: 1;
+		min-width: 0;
 	}
 
-	.repo-help {
-		font-size: 0.8rem;
-		color: rgba(255, 255, 255, 0.6);
+	.message {
 		margin-top: 0.5rem;
-		margin-bottom: 0;
-	}
-
-	.guidelines {
-		margin-top: 2rem;
-		background: rgba(0, 0, 0, 0.2);
-		border-radius: 0.75rem;
-		padding: 1.25rem;
-		border: 1px solid rgba(255, 255, 255, 0.05);
-	}
-
-	.guidelines h3 {
 		font-size: 0.9rem;
-		margin-bottom: 1rem;
-		color: #f0f0f0;
-		font-weight: 600;
+		color: #36c399;
 	}
 
-	.guidelines ul {
-		list-style: none;
-		padding: 0;
-		margin: 0;
+	.message.error {
+		color: #ff9a9a;
 	}
 
-	.guidelines li {
-		position: relative;
-		padding-left: 1.25rem;
-		margin-bottom: 0.5rem;
-		font-size: 0.85rem;
-		color: rgba(255, 255, 255, 0.7);
+	.footnote {
+		font-size: 13px;
+		color: var(--text-muted);
 	}
 
-	.guidelines li::before {
-		content: '•';
-		position: absolute;
-		left: 0;
-		color: #4df2ff;
-		font-weight: bold;
+	.footnote a {
+		text-decoration: underline;
 	}
 
 	@media (max-width: 480px) {
-		.guidelines {
-			padding: 1rem;
-		}
-
-		.guidelines li {
-			font-size: 0.8rem;
+		.link-form {
+			flex-direction: column;
 		}
 	}
 </style>

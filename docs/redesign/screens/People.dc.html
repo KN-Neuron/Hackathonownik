@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>People and teams</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0f1322}
+.app{display:flex;flex-wrap:wrap;min-height:1300px;font-family:Onest,system-ui,sans-serif;color:#e8eaf2;background:radial-gradient(circle at 75% 0%,#1b2140,#0f1322 40%)}
+.side{flex:1 1 260px;max-width:260px;padding:24px 16px;display:flex;flex-direction:column;gap:24px;background:#0c1020;border-right:1px solid rgba(255,255,255,.07)}
+.brand{font-weight:800;font-size:18px;letter-spacing:-.01em;line-height:1.2;color:#fff;text-decoration:none;padding:0 8px}
+.brand span{background:linear-gradient(90deg,#7f7bff,#4df2ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.who{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)}
+.chip{display:inline-flex;align-items:center;align-self:flex-start;height:24px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:600}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:10px;color:#9aa3b8;text-decoration:none;font-size:14px;font-weight:500}
+.nav a:hover{background:rgba(255,255,255,.05);color:#fff}
+.nav a.on{background:rgba(127,123,255,.16);color:#fff;box-shadow:inset 0 0 0 1px rgba(127,123,255,.35)}
+.nav svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sfoot{margin-top:auto;padding:0 8px;font-size:12px;color:#7d869b}
+.main{flex:999 1 560px;min-width:0;padding:40px 48px;display:flex;flex-direction:column;gap:24px}
+.card{background:#151a2c;border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;padding:12px 20px;font-size:13px;color:#9aa3b8;font-weight:600;border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap}
+td{padding:14px 20px;border-top:1px solid rgba(255,255,255,.06);color:#d6dbe8;font-variant-numeric:tabular-nums}
+.tag{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 12px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#e8eaf2;font:600 13px Onest,system-ui,sans-serif;cursor:pointer}
+.in{width:100%;max-width:420px;height:44px;padding:0 14px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:#0f1322;color:#fff;font:400 15px Onest,system-ui,sans-serif}
+.in::placeholder{color:#7d869b}
+.ok{color:#36c399;font-weight:700}.no{color:#ff9a9a;font-weight:700}
+a:focus-visible,button:focus-visible{outline:2px solid #4df2ff;outline-offset:2px}
+</style>
+</helmet>
+<div class="app">
+  <aside class="side">
+    <a class="brand" href="Main.dc.html">Heroes Of The Brain <span>2026</span></a>
+    <div class="who"><span style="font-weight:600;font-size:14px;color:#fff">Organizer</span><span class="chip" style="background:rgba(255,107,107,.16);color:#ff9a9a">Admin</span></div>
+    <nav class="nav" aria-label="Main">
+      <a href="Dashboard.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20V10M12 20V4M18 20v-7"/></svg>Admin Dashboard</a>
+      <a href="Rate.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"/></svg>All ratings</a>
+      <a class="on" href="People.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/></svg>People and teams</a>
+      <a href="Import.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Import CSV</a>
+      <a href="Present.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M10 9l4 2-4 2z"/><path d="M8 20h8"/></svg>Presenter mode</a>
+    </nav>
+    <div class="sfoot">© 2026 KN Neuron</div>
+  </aside>
+  <main class="main">
+    <header style="display:flex;flex-direction:column;gap:8px">
+      <h1 style="margin:0;font-size:32px;font-weight:800;letter-spacing:-.02em;color:#fff">People and teams</h1>
+      <p style="margin:0;color:#9aa3b8;font-size:15px">Accounts, team sizes and who submitted what. Jurors' private notes stay private.</p>
+    </header>
+    <div style="display:flex;flex-wrap:wrap;gap:12px 32px;font-size:15px;color:#9aa3b8"><span><b style="color:#fff;font-size:22px">241</b> participants</span><span><b style="color:#fff;font-size:22px">62</b> teams</span><span><b style="color:#fff;font-size:22px">15</b> jurors</span><span><b style="color:#fff;font-size:22px">4</b> admins</span></div>
+    <div style="padding:14px 18px;border-radius:12px;background:rgba(247,166,84,.1);border:1px solid rgba(247,166,84,.4);font-size:14px;color:#ffe2bf"><b style="color:#fff">3 things to look at:</b> 2 teams have no category, 1 team has 5 members (limit is 4).</div>
+    <label for="q" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Search</label>
+    <input class="in" id="q" type="search" placeholder="Search names, e-mails, teams">
+
+    <section style="display:flex;flex-direction:column;gap:12px">
+      <h2 style="margin:0;font-size:20px;color:#fff">Teams (62)</h2>
+      <div class="card" style="overflow-x:auto"><table>
+        <thead><tr><th>Team</th><th>Category</th><th>Members</th><th>PDF</th><th>Repo</th><th>Video</th><th>Last change</th><th></th></tr></thead>
+        <tbody>
+          <tr><td style="color:#fff;font-weight:600">Synapse</td><td><span class="tag" style="background:rgba(54,195,153,.16);color:#36c399">Adaptive Systems</span></td><td>4</td><td class="ok" aria-label="submitted">✓</td><td class="ok" aria-label="submitted">✓</td><td class="ok" aria-label="submitted">✓</td><td>14 Nov, 18:42</td><td><button class="btn" type="button">Move</button></td></tr>
+          <tr><td style="color:#fff;font-weight:600">NeuroPilot</td><td><span class="tag" style="background:rgba(54,195,153,.16);color:#36c399">Adaptive Systems</span></td><td>3</td><td class="ok" aria-label="submitted">✓</td><td class="ok" aria-label="submitted">✓</td><td class="ok" aria-label="submitted">✓</td><td>14 Nov, 20:03</td><td><button class="btn" type="button">Move</button></td></tr>
+          <tr><td style="color:#fff;font-weight:600">AdaptiveMind</td><td><span class="tag" style="background:rgba(54,195,153,.16);color:#36c399">Adaptive Systems</span></td><td>4</td><td class="ok" aria-label="submitted">✓</td><td class="ok" aria-label="submitted">✓</td><td class="no" aria-label="missing">✗</td><td>15 Nov, 09:12</td><td><button class="btn" type="button">Move</button></td></tr>
+          <tr><td style="color:#fff;font-weight:600">Hand Wave</td><td><span class="tag" style="background:rgba(77,242,255,.14);color:#4df2ff">Hands-free</span></td><td>5</td><td class="ok" aria-label="submitted">✓</td><td class="no" aria-label="missing">✗</td><td class="no" aria-label="missing">✗</td><td>14 Nov, 11:30</td><td><button class="btn" type="button">Move</button></td></tr>
+          <tr><td style="color:#fff;font-weight:600">Unassigned</td><td><span class="tag" style="background:rgba(247,166,84,.16);color:#f7a654">No category</span></td><td>2</td><td class="no" aria-label="missing">✗</td><td class="no" aria-label="missing">✗</td><td class="no" aria-label="missing">✗</td><td>none</td><td><button class="btn" type="button">Move</button></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between"><h2 style="margin:0;font-size:20px;color:#fff">Accounts (260)</h2><div style="display:flex;gap:6px"><button class="btn" type="button" style="background:rgba(127,123,255,.25);border-color:transparent">All</button><button class="btn" type="button">Participants</button><button class="btn" type="button">Jury</button><button class="btn" type="button">Admins</button></div></div>
+      <div class="card" style="overflow-x:auto"><table>
+        <thead><tr><th>Name</th><th>E-mail</th><th>Role</th><th>Team</th><th>Jury categories</th><th></th></tr></thead>
+        <tbody>
+          <tr><td style="color:#fff;font-weight:600">Dr. Anna Nowak</td><td>a.nowak@pwr.edu.pl</td><td><span class="tag" style="background:rgba(77,242,255,.14);color:#4df2ff">Jury</span></td><td>none</td><td>Adaptive, Hands-free</td><td><button class="btn" type="button">Reset password</button></td></tr>
+          <tr><td style="color:#fff;font-weight:600">Ola K.</td><td>ola.k@student.pwr.edu.pl</td><td><span class="tag" style="background:rgba(127,123,255,.18);color:#c3c1ff">Participant</span></td><td>Synapse</td><td>none</td><td><button class="btn" type="button">Reset password</button></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1300}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

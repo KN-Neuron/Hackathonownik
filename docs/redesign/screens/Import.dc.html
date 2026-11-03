@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Import participants</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0f1322}
+.app{display:flex;flex-wrap:wrap;min-height:1200px;font-family:Onest,system-ui,sans-serif;color:#e8eaf2;background:radial-gradient(circle at 75% 0%,#1b2140,#0f1322 40%)}
+.side{flex:1 1 260px;max-width:260px;padding:24px 16px;display:flex;flex-direction:column;gap:24px;background:#0c1020;border-right:1px solid rgba(255,255,255,.07)}
+.brand{font-weight:800;font-size:18px;letter-spacing:-.01em;line-height:1.2;color:#fff;text-decoration:none;padding:0 8px}
+.brand span{background:linear-gradient(90deg,#7f7bff,#4df2ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.who{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)}
+.chip{display:inline-flex;align-items:center;align-self:flex-start;height:24px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:600}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:10px;color:#9aa3b8;text-decoration:none;font-size:14px;font-weight:500}
+.nav a:hover{background:rgba(255,255,255,.05);color:#fff}
+.nav a.on{background:rgba(127,123,255,.16);color:#fff;box-shadow:inset 0 0 0 1px rgba(127,123,255,.35)}
+.nav svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sfoot{margin-top:auto;padding:0 8px;font-size:12px;color:#7d869b}
+.main{flex:999 1 560px;min-width:0;padding:40px 48px;display:flex;flex-direction:column;gap:24px;max-width:960px}
+.card{background:#151a2c;border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;padding:12px 20px;font-size:13px;color:#9aa3b8;font-weight:600;border-bottom:1px solid rgba(255,255,255,.08)}
+td{padding:12px 20px;border-top:1px solid rgba(255,255,255,.06);color:#d6dbe8}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 20px;border-radius:10px;border:1px solid transparent;font:600 14px Onest,system-ui,sans-serif;cursor:pointer}
+.btn-p{background:#8b87ff;color:#0f1322}
+.btn-g{background:transparent;color:#e8eaf2;border-color:rgba(255,255,255,.2)}
+a:focus-visible,button:focus-visible{outline:2px solid #4df2ff;outline-offset:2px}
+</style>
+</helmet>
+<div class="app">
+  <aside class="side">
+    <a class="brand" href="Main.dc.html">Heroes Of The Brain <span>2026</span></a>
+    <div class="who"><span style="font-weight:600;font-size:14px;color:#fff">Organizer</span><span class="chip" style="background:rgba(255,107,107,.16);color:#ff9a9a">Admin</span></div>
+    <nav class="nav" aria-label="Main">
+      <a href="Dashboard.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20V10M12 20V4M18 20v-7"/></svg>Admin Dashboard</a>
+      <a href="People.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/></svg>People and teams</a>
+      <a class="on" href="Import.dc.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Import CSV</a>
+    </nav>
+    <div class="sfoot">© 2026 KN Neuron</div>
+  </aside>
+  <main class="main">
+    <header style="display:flex;flex-direction:column;gap:8px">
+      <h1 style="margin:0;font-size:32px;font-weight:800;letter-spacing:-.02em;color:#fff">Import participants</h1>
+      <p style="margin:0;color:#9aa3b8;font-size:15px;line-height:1.6">Upload a CSV with the columns <b style="color:#fff">name, email, team, category</b>. Excel exports with Polish headers and semicolons work. The file is checked first, nothing is created until you confirm.</p>
+    </header>
+
+    <section class="card" style="padding:24px;display:flex;flex-direction:column;gap:16px">
+      <pre style="margin:0;padding:14px 16px;border-radius:10px;background:#0f1322;color:#b4bccd;font:13px/1.6 ui-monospace,Menlo,monospace;overflow-x:auto">name,email,team,category
+Ola K.,ola.k@student.pwr.edu.pl,Synapse,adaptive
+Marek W.,marek.w@student.pwr.edu.pl,Synapse,adaptive</pre>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+        <label for="f" class="btn btn-g" style="cursor:pointer">Choose CSV file</label>
+        <input id="f" type="file" accept=".csv" style="position:absolute;opacity:0;width:1px;height:1px">
+        <span style="font-size:14px;color:#9aa3b8">participants-final.csv · 241 rows</span>
+        <button class="btn btn-p" type="button" style="margin-left:auto">Check the file</button>
+      </div>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:16px">
+      <h2 style="margin:0;font-size:22px;color:#fff">Check</h2>
+      <div style="padding:14px 18px;border-radius:12px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.4);font-size:14px;color:#ffd0d0;line-height:1.6"><b style="color:#fff">2 errors, fix them in the file and upload again.</b><br>Row 57: "ola.k@student" is not a valid e-mail.<br>Row 143: team "Hand Wave" appears in two categories.</div>
+      <p style="margin:0;font-size:15px;color:#d6dbe8"><b style="color:#fff">239</b> accounts and <b style="color:#fff">61</b> new teams will be created.</p>
+      <div style="padding:14px 18px;border-radius:12px;background:rgba(247,166,84,.1);border:1px solid rgba(247,166,84,.4);font-size:14px;color:#ffe2bf;line-height:1.6"><b style="color:#fff">Look at these (not blocking):</b> team "Neuron Lab" has 2 members (usual size is 3–4).</div>
+      <div class="card" style="overflow-x:auto"><table>
+        <thead><tr><th>New team</th><th>Category</th><th>People</th></tr></thead>
+        <tbody>
+          <tr><td style="color:#fff;font-weight:600">Synapse</td><td>Adaptive Systems</td><td>4</td></tr>
+          <tr><td style="color:#fff;font-weight:600">NeuroPilot</td><td>Adaptive Systems</td><td>3</td></tr>
+          <tr><td style="color:#fff;font-weight:600">Neuron Lab</td><td>Neurogaming</td><td>2</td></tr>
+        </tbody>
+      </table></div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px"><button class="btn btn-p" type="button" disabled style="background:#2a3050;color:#7d869b;cursor:not-allowed">Create 239 accounts</button><span style="align-self:center;font-size:13px;color:#9aa3b8">Needs the admin action password. Unlock decisions on the dashboard first.</span></div>
+    </section>
+
+    <section class="card" style="padding:24px;display:flex;flex-direction:column;gap:12px;border-color:rgba(54,195,153,.4)">
+      <h2 style="margin:0;font-size:20px;color:#fff">Done: 239 accounts and 61 teams created</h2>
+      <p style="margin:0;font-size:14px;color:#b4bccd;line-height:1.6"><b style="color:#fff">Download the logins now.</b> The passwords are shown only here and can't be read again.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap"><button class="btn btn-p" type="button">Download logins (CSV)</button><a class="btn btn-g" href="Dashboard.dc.html" style="text-decoration:none">Back to the dashboard</a></div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

@@ -1,7 +1,8 @@
 import { randomBytes, createCipheriv, createDecipheriv } from 'node:crypto';
 import type { RequestEvent } from '@sveltejs/kit';
+import { newSessionId } from './sessions';
 
-const IV_LENGTH = 16; // For AES-256-CBC
+const IV_LENGTH = 12; // For AES-256-GCM
 
 /**
  * Get encryption key from environment variable
@@ -14,7 +15,7 @@ function getEncryptionKey(): Buffer {
 	if (!key) {
 		throw new Error(
 			'COOKIE_ENCRYPTION_KEY is not defined in environment variables. ' +
-			'Generate one with: openssl rand -base64 32'
+				'Generate one with: openssl rand -base64 32'
 		);
 	}
 
@@ -41,8 +42,10 @@ function getEncryptionKey(): Buffer {
 	// If neither works, throw error
 	throw new Error(
 		'COOKIE_ENCRYPTION_KEY must be a 32-byte (256-bit) key encoded as base64 or hex. ' +
-		'Current key length: ' + (key.length) + ' characters. ' +
-		'Generate a proper key with: openssl rand -base64 32'
+			'Current key length: ' +
+			key.length +
+			' characters. ' +
+			'Generate a proper key with: openssl rand -base64 32'
 	);
 }
 
@@ -50,15 +53,15 @@ export class SecureCookieHandler {
 	private static readonly COOKIE_NAME = 'secure_auth_session';
 	private static readonly ENCRYPTION_KEY = getEncryptionKey();
 
-	// Encrypt and store PocketBase session data
+	// Encrypt and store PocketBase session data (AES-256-GCM: a changed cookie is rejected)
 	static encryptSession(sessionData: any): string {
 		const iv = randomBytes(IV_LENGTH);
-		const cipher = createCipheriv('aes-256-cbc', this.ENCRYPTION_KEY, iv);
-		
-		let encrypted = cipher.update(JSON.stringify(sessionData), 'utf8', 'hex');
-		encrypted += cipher.final('hex');
-		
-		return iv.toString('hex') + ':' + encrypted;
+		const cipher = createCipheriv('aes-256-gcm', this.ENCRYPTION_KEY, iv);
+		const encrypted = Buffer.concat([
+			cipher.update(JSON.stringify(sessionData), 'utf8'),
+			cipher.final()
+		]);
+		return [iv, cipher.getAuthTag(), encrypted].map((b) => b.toString('base64url')).join('.');
 	}
 
 	// Decrypt and retrieve PocketBase session data
@@ -66,28 +69,34 @@ export class SecureCookieHandler {
 		if (!encryptedSession) return null;
 
 		try {
-			const [ivHex, encryptedHex] = encryptedSession.split(':');
-			if (!ivHex || !encryptedHex) return null;
-
-			const iv = Buffer.from(ivHex, 'hex');
-			const decipher = createDecipheriv('aes-256-cbc', this.ENCRYPTION_KEY, iv);
-			
-			let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
-			decrypted += decipher.final('utf8');
-			
-			return JSON.parse(decrypted);
-		} catch (error) {
-			console.error('Error decrypting session:', error);
+			const [iv, tag, encrypted] = encryptedSession
+				.split('.')
+				.map((part) => Buffer.from(part, 'base64url'));
+			if (!iv || !tag || !encrypted || iv.length !== IV_LENGTH || tag.length !== 16) return null;
+			const decipher = createDecipheriv('aes-256-gcm', this.ENCRYPTION_KEY, iv);
+			decipher.setAuthTag(tag);
+			const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+			return JSON.parse(decrypted.toString('utf8'));
+		} catch {
+			// Tampered, truncated or from before the switch: treated as logged out
 			return null;
 		}
 	}
 
 	// Set encrypted session cookie
-	static setSessionCookie(event: RequestEvent, sessionData: any, maxAge: number = 7 * 24 * 60 * 60): void {
+	static setSessionCookie(
+		event: RequestEvent,
+		sessionData: any,
+		maxAge: number = 7 * 24 * 60 * 60
+	): void {
 		if (!sessionData) return;
 
-		const encryptedSession = this.encryptSession(sessionData);
-		
+		// Every session has its own id, so logging out can end exactly this one
+		const encryptedSession = this.encryptSession({
+			...sessionData,
+			sid: sessionData.sid || newSessionId()
+		});
+
 		event.cookies.set(this.COOKIE_NAME, encryptedSession, {
 			path: '/',
 			httpOnly: true,

@@ -331,8 +331,8 @@
 	}
 
 	.dropzone {
-		border: 2px dashed rgba(127, 123, 255, 0.5);
-		border-radius: 0.75rem;
+		border: 2px dashed rgba(139, 135, 255, 0.5);
+		border-radius: var(--radius-card);
 		padding: 2.5rem 1.5rem;
 		text-align: center;
 		cursor: pointer;
@@ -343,8 +343,8 @@
 
 	.dropzone:hover,
 	.dropzone:focus {
-		border-color: #7f7bff;
-		background: rgba(127, 123, 255, 0.05);
+		border-color: #8b87ff;
+		background: rgba(139, 135, 255, 0.05);
 	}
 
 	.dropzone.dragging {
@@ -355,19 +355,19 @@
 
 	.dropzone svg {
 		margin: 0 auto 1rem;
-		color: #7f7bff;
+		color: #8b87ff;
 	}
 
 	.dropzone-text {
 		font-size: 1rem;
 		font-weight: 500;
-		color: #f0f0f0;
+		color: #fff;
 		margin-bottom: 0.5rem;
 	}
 
 	.dropzone-subtext {
 		font-size: 0.85rem;
-		color: rgba(255, 255, 255, 0.5);
+		color: var(--text-muted);
 	}
 
 	.files-list {
@@ -376,7 +376,7 @@
 
 	.files-list h3 {
 		font-size: 0.9rem;
-		color: #f0f0f0;
+		color: #fff;
 		margin-bottom: 0.75rem;
 		font-weight: 600;
 	}
@@ -387,9 +387,9 @@
 		justify-content: space-between;
 		padding: 0.75rem 1rem;
 		background: rgba(0, 0, 0, 0.3);
-		border-radius: 0.5rem;
+		border-radius: var(--radius-control);
 		margin-bottom: 0.5rem;
-		border: 1px solid rgba(255, 255, 255, 0.1);
+		border: 1px solid var(--line);
 	}
 
 	.file-info {
@@ -413,7 +413,7 @@
 
 	.file-name {
 		font-size: 0.9rem;
-		color: #f0f0f0;
+		color: #fff;
 		font-weight: 500;
 		white-space: nowrap;
 		overflow: hidden;
@@ -422,7 +422,7 @@
 
 	.file-size {
 		font-size: 0.75rem;
-		color: rgba(255, 255, 255, 0.5);
+		color: var(--text-muted);
 	}
 
 	.remove-btn {
@@ -445,10 +445,10 @@
 		width: 100%;
 		margin-top: 1rem;
 		padding: 0.75rem;
-		background: linear-gradient(to right, #4df2ff, #7f7bff);
+		background: var(--action);
 		color: #0f1322;
 		font-weight: 600;
-		border-radius: 0.5rem;
+		border-radius: var(--radius-control);
 		border: none;
 		cursor: pointer;
 		transition: all 0.2s ease;
@@ -456,12 +456,9 @@
 		align-items: center;
 		justify-content: center;
 		gap: 0.5rem;
-		box-shadow: 0 2px 10px rgba(127, 123, 255, 0.3);
 	}
 
 	.upload-btn:hover:not(:disabled) {
-		transform: translateY(-1px);
-		box-shadow: 0 4px 15px rgba(127, 123, 255, 0.4);
 	}
 
 	.upload-btn:disabled {
@@ -495,14 +492,14 @@
 
 	.progress-fill {
 		height: 100%;
-		background: linear-gradient(to right, #4df2ff, #7f7bff);
+		background: var(--action);
 		transition: width 0.3s ease;
 	}
 
 	.upload-message {
 		margin-top: 0.75rem;
 		padding: 0.75rem;
-		border-radius: 0.5rem;
+		border-radius: var(--radius-control);
 		font-size: 0.9rem;
 		text-align: center;
 	}

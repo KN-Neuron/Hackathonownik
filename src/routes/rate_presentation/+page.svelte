@@ -1,109 +1,321 @@
 <script lang="ts">
 	import TeamSection from '$lib/components/TeamSection.svelte';
+	import CategoryTabs from '$lib/components/CategoryTabs.svelte';
+	import { invalidateAll } from '$app/navigation';
+	import { matchesTeam } from '$lib/utils/teamSearch';
 	import { onMount } from 'svelte';
 
-	export let data;
-	let { teams, currentJuryConfirmed } = data;
+	let { data } = $props();
+	let teams = $derived(data.teams);
 
-	let showConfirmationModal = false;
-	let allTeamsRated = false;
-	let juryConfirmed = currentJuryConfirmed; // Initialize with the server value
-	let showTopConfirmationButton = false;
+	let showConfirmationModal = $state(false);
+	let confirmationError = $state('');
+	let filter = $state<'all' | 'todo' | 'done'>('all');
+	let search = $state('');
 
-	// Check if all teams have been rated by the current jury
-	$: {
-		const ratedTeams = teams.filter((team) => team.isRatedByCurrentJury);
-		allTeamsRated = ratedTeams.length > 0 && ratedTeams.length === teams.length;
-
-		// If all teams are rated but jury hasn't confirmed, show top button
-		if (allTeamsRated && !juryConfirmed) {
-			showTopConfirmationButton = true;
-		}
-	}
-
-	async function fetchConfirmationStatus() {
-		try {
-			const response = await fetch('/api/jury/confirm-grading');
-			const result = await response.json();
-			juryConfirmed = result.confirmed;
-
-			// If jury has confirmed, hide the top button
-			if (juryConfirmed) {
-				showTopConfirmationButton = false;
-			}
-		} catch (error) {
-			console.error('Error fetching confirmation status:', error);
-		}
-	}
-
-	async function handleConfirmation(confirmed: boolean) {
-		try {
-			await fetch('/api/jury/confirm-grading', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ confirmed })
-			});
-
-			juryConfirmed = confirmed;
-			showConfirmationModal = false;
-			showTopConfirmationButton = false; // Hide the button after confirmation
-		} catch (error) {
-			console.error('Error updating confirmation:', error);
-		}
-	}
-
-	async function openConfirmationModal() {
-		// Always open the confirmation modal when button is clicked
-		showConfirmationModal = true;
-	}
+	// "Now on stage": polled from the organizers' presenter mode
+	type OnStage = {
+		teamId: string;
+		teamName: string;
+		order: number | null;
+		startedAt: string | null;
+		durationSec: number;
+	};
+	let onStage = $state<OnStage | null>(null);
+	let clockOffset = 0;
+	let followStage = $state(false);
+	let now = $state(Date.now());
 
 	onMount(() => {
-		// Server already provides initial confirmation status, but we keep the fetch for real-time updates
-		fetchConfirmationStatus();
+		let stopped = false;
+		// Background tabs skip the periodic polls; the first load and coming back always ask
+		async function poll(force = false) {
+			if (!data.category || (document.hidden && !force)) return;
+			try {
+				const res = await fetch(`/api/stage?category=${encodeURIComponent(data.category)}`);
+				if (!res.ok) return;
+				const body = await res.json();
+				if (stopped) return;
+				clockOffset = new Date(body.serverTime).getTime() - Date.now();
+				onStage = body.onStage;
+			} catch {
+				// Offline for a moment: keep the last state
+			}
+		}
+		poll(true);
+		const pollTimer = setInterval(() => poll(), 3000);
+		const onVisible = () => !document.hidden && poll(true);
+		document.addEventListener('visibilitychange', onVisible);
+		const tick = setInterval(() => (now = Date.now()), 1000);
+		return () => {
+			stopped = true;
+			document.removeEventListener('visibilitychange', onVisible);
+			clearInterval(pollTimer);
+			clearInterval(tick);
+		};
 	});
+
+	let stageRemaining = $derived(
+		onStage?.startedAt
+			? onStage.durationSec * 1000 - (now + clockOffset - new Date(onStage.startedAt).getTime())
+			: null
+	);
+	const formatTime = (ms: number) => {
+		const total = Math.ceil(Math.abs(ms) / 1000);
+		return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+	};
+	let onStageTeam = $derived(teams.find((t) => t.id === onStage?.teamId));
+
+	// "rated/total" per category, ✓ once confirmed
+	let badges = $derived(
+		Object.fromEntries(
+			Object.entries(
+				data.progress as Record<string, { rated: number; total: number; confirmed: boolean }>
+			).map(([key, p]) => [key, p.confirmed ? `✓ ${p.rated}/${p.total}` : `${p.rated}/${p.total}`])
+		)
+	);
+
+	let ratedCount = $derived(teams.filter((team) => team.isRatedByCurrentJury).length);
+	let allTeamsRated = $derived(teams.length > 0 && ratedCount === teams.length);
+	let progressPercent = $derived(teams.length ? Math.round((ratedCount / teams.length) * 100) : 0);
+	let visibleTeams = $derived(
+		(filter === 'todo'
+			? teams.filter((team) => !team.isRatedByCurrentJury)
+			: filter === 'done'
+				? teams.filter((team) => team.isRatedByCurrentJury)
+				: teams
+		).filter((team) =>
+			followStage && onStage
+				? team.id === onStage.teamId
+				: matchesTeam(search, team.name, team.order)
+		)
+	);
+
+	async function handleConfirmation(confirmed: boolean) {
+		confirmationError = '';
+		try {
+			const response = await fetch('/api/jury/confirm-grading', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ category: data.category, confirmed })
+			});
+			const result = await response.json().catch(() => ({}));
+			if (!response.ok || result.success === false) {
+				confirmationError = result.message || 'Could not update the confirmation.';
+				return;
+			}
+			showConfirmationModal = false;
+			await invalidateAll();
+		} catch (error) {
+			console.error('Error updating confirmation:', error);
+			confirmationError = 'Could not update the confirmation.';
+		}
+	}
 </script>
 
-<!-- Top confirmation section -->
-{#if showTopConfirmationButton}
-	<div class="confirmation-top-section">
-		<div class="confirmation-banner">
-			<h3>You've rated all teams!</h3>
-			<p>Remember to confirm your ratings so they become visible to participants.</p>
-			<button class="btn btn-confirm" on:click={openConfirmationModal}> Confirm My Ratings </button>
-		</div>
+{#if !data.category}
+	<div class="alert alert-info">
+		You are not assigned to any category yet. Ask the organizers to assign you.
 	</div>
-{:else if juryConfirmed}
-	<div class="confirmation-top-section confirmed">
-		<div class="confirmation-banner confirmed">
-			<h3>All Ratings Confirmed</h3>
-			<p>Your ratings have been confirmed and are visible to participants.</p>
-		</div>
-	</div>
-{/if}
+{:else}
+	<CategoryTabs keys={data.categories} selected={data.category} {badges} />
 
-<!-- Confirmation Modal -->
-{#if showConfirmationModal}
-	<div class="modal-overlay">
-		<div class="modal-content">
-			<h3>Confirm Your Ratings</h3>
-			<p>You have rated all teams. Do you confirm these ratings as final?</p>
-			<div class="modal-buttons">
-				<button class="btn btn-primary" on:click={() => handleConfirmation(true)}>
-					Yes, Confirm
-				</button>
-				<button class="btn btn-secondary" on:click={() => handleConfirmation(false)}>
-					No, Not Yet
+	{#if onStage}
+		<div class="on-stage" role="status">
+			<span class="live-dot" aria-hidden="true"></span>
+			<span>
+				Now on stage:
+				<b>{onStage.order ? `#${onStage.order} ` : ''}{onStage.teamName}</b>
+				{#if stageRemaining !== null}
+					· <span class:overtime={stageRemaining <= 0}>
+						{stageRemaining > 0
+							? `${formatTime(stageRemaining)} left`
+							: `${formatTime(stageRemaining)} over time`}
+					</span>
+				{:else}
+					· timer not started
+				{/if}
+				{#if onStageTeam?.isRatedByCurrentJury}· <span class="rated">you rated it</span>{/if}
+			</span>
+			{#if onStageTeam}
+				<label class="label cursor-pointer gap-2 ml-auto">
+					<input
+						type="checkbox"
+						class="toggle toggle-sm toggle-warning"
+						bind:checked={followStage}
+					/>
+					<span class="label-text">Follow the stage</span>
+				</label>
+			{/if}
+		</div>
+	{/if}
+
+	<div class="stage-banner" class:final={data.stage === 'final'}>
+		{#if data.stage === 'final'}
+			<b>Final</b>
+			<span>
+				Rate the finalists' stage presentations. You can also adjust your earlier scores.
+			</span>
+		{:else}
+			<b>Preliminary round</b>
+			<span>
+				Rate every team from its presentation (PDF) and demo video. The best teams go to the final.
+			</span>
+		{/if}
+	</div>
+
+	<div class="jury-progress">
+		<div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+			<span class="font-semibold">You rated {ratedCount} of {teams.length} teams</span>
+			<div class="join">
+				<button
+					class="btn btn-sm join-item"
+					class:btn-active={filter === 'all'}
+					onclick={() => (filter = 'all')}>All ({teams.length})</button
+				>
+				<button
+					class="btn btn-sm join-item"
+					class:btn-active={filter === 'todo'}
+					onclick={() => (filter = 'todo')}>Not rated ({teams.length - ratedCount})</button
+				>
+				<button
+					class="btn btn-sm join-item"
+					class:btn-active={filter === 'done'}
+					onclick={() => (filter = 'done')}>Rated ({ratedCount})</button
+				>
+			</div>
+		</div>
+		<progress class="progress progress-success w-full" value={progressPercent} max="100"></progress>
+		<input
+			type="search"
+			class="input input-bordered input-sm w-full mt-3"
+			placeholder="Find a team: name or number, e.g. 7"
+			bind:value={search}
+			aria-label="Find a team"
+		/>
+		{#if search && visibleTeams.length === 0}
+			<p class="text-sm text-base-content/60 mt-2">No team matches “{search}”.</p>
+		{/if}
+	</div>
+
+	{#if data.published}
+		<div class="confirmation-top-section confirmed">
+			<div class="confirmation-banner confirmed">
+				<h3>Results of this category are published</h3>
+				<p>Ratings are locked and can no longer be changed.</p>
+			</div>
+		</div>
+	{:else if data.confirmed}
+		<div class="confirmation-top-section confirmed">
+			<div class="confirmation-banner confirmed">
+				<h3>Your ratings are confirmed</h3>
+				<p>
+					Organizers will publish this category once all of its jurors confirm. Changing any rating
+					withdraws your confirmation.
+				</p>
+			</div>
+		</div>
+	{:else if allTeamsRated}
+		<div class="confirmation-top-section">
+			<div class="confirmation-banner">
+				<h3>You've rated all teams!</h3>
+				<p>Confirm your ratings as final so the organizers can publish the results.</p>
+				<button class="btn btn-confirm" onclick={() => (showConfirmationModal = true)}>
+					Confirm My Ratings
 				</button>
 			</div>
 		</div>
-	</div>
+	{/if}
+
+	<!-- Confirmation Modal -->
+	{#if showConfirmationModal}
+		<div class="modal-overlay">
+			<div class="modal-content">
+				<h3>Confirm Your Ratings</h3>
+				<p>You have rated all teams. Do you confirm these ratings as final?</p>
+				{#if confirmationError}
+					<p class="text-error">{confirmationError}</p>
+				{/if}
+				<div class="modal-buttons">
+					<button class="btn btn-primary" onclick={() => handleConfirmation(true)}>
+						Yes, Confirm
+					</button>
+					<button class="btn btn-secondary" onclick={() => (showConfirmationModal = false)}>
+						Not Yet
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<TeamSection teams={visibleTeams} locked={data.published} />
 {/if}
 
-<TeamSection {teams} />
-
 <style>
+	.on-stage {
+		position: sticky;
+		top: 0.5rem;
+		z-index: 20;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.6rem;
+		margin-bottom: 1rem;
+		padding: 0.75rem 1rem;
+		border-radius: var(--radius-card);
+		background: #2a2113;
+		border: 1px solid rgba(247, 166, 84, 0.45);
+		color: #fff;
+	}
+
+	.live-dot {
+		width: 0.65rem;
+		height: 0.65rem;
+		border-radius: 9999px;
+		background: #ff9a9a;
+		animation: pulse 1.2s ease-in-out infinite;
+	}
+
+	@keyframes pulse {
+		50% {
+			opacity: 0.3;
+		}
+	}
+
+	.overtime {
+		color: #ff9a9a;
+		font-weight: 700;
+	}
+
+	.rated {
+		color: #36c399;
+	}
+
+	.stage-banner {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		align-items: baseline;
+		margin-bottom: 1rem;
+		padding: 0.75rem 1rem;
+		border-radius: var(--radius-card);
+		background: rgba(139, 135, 255, 0.1);
+		border: 1px solid rgba(139, 135, 255, 0.4);
+	}
+
+	.stage-banner.final {
+		background: rgba(247, 166, 84, 0.1);
+		border-color: rgba(247, 166, 84, 0.45);
+	}
+
+	.jury-progress {
+		margin-bottom: 1rem;
+		padding: 1rem;
+		border-radius: var(--radius-card);
+		background: var(--surface);
+		border: 1px solid var(--line);
+	}
+
 	.modal-overlay {
 		position: fixed;
 		top: 0;
@@ -118,26 +330,25 @@
 	}
 
 	.modal-content {
-		background: #1e1f22;
+		background: var(--surface);
 		color: white;
 		padding: 1.5rem;
-		border-radius: 8px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+		border-radius: var(--radius-card);
 		text-align: center;
 		min-width: 300px;
-		border: 1px solid #2c2e33;
+		border: 1px solid var(--line);
 	}
 
 	.modal-content h3 {
 		margin-top: 0;
 		margin-bottom: 1rem;
 		font-size: 1.25rem;
-		color: #f0f0f0;
+		color: #fff;
 	}
 
 	.modal-content p {
 		margin-bottom: 1.5rem;
-		color: #aaa;
+		color: var(--text-muted);
 	}
 
 	.modal-buttons {
@@ -147,30 +358,31 @@
 	}
 
 	.btn {
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		border: none;
+		min-height: 44px;
+		padding: 0 1rem;
+		border-radius: var(--radius-control);
+		border: 1px solid transparent;
 		cursor: pointer;
-		font-weight: 500;
-		transition: all 0.2s ease;
+		font-weight: 600;
 	}
 
 	.btn-primary {
-		background-color: #3b82f6;
-		color: white;
+		background-color: var(--action);
+		color: var(--action-content);
 	}
 
 	.btn-primary:hover {
-		background-color: #2563eb;
+		background-color: var(--action-hover);
 	}
 
 	.btn-secondary {
-		background-color: #6b7280;
-		color: white;
+		background-color: transparent;
+		border-color: rgba(255, 255, 255, 0.2);
+		color: var(--text);
 	}
 
 	.btn-secondary:hover {
-		background-color: #565966;
+		background-color: rgba(255, 255, 255, 0.06);
 	}
 
 	.confirmation-top-section {
@@ -178,21 +390,21 @@
 		top: 0;
 		z-index: 100;
 		padding: 1rem;
-		background-color: #1e1f22;
-		border-bottom: 1px solid #2c2e33;
+		background-color: var(--sidebar-bg);
+		border-bottom: 1px solid var(--line);
 	}
 
 	.confirmation-top-section.confirmed {
-		background-color: #1a2d1f;
+		background-color: #10231d;
 	}
 
 	.confirmation-banner {
 		max-width: 800px;
 		margin: 0 auto;
 		padding: 0.75rem;
-		background-color: #36623d;
-		border-radius: 0.5rem;
-		border: 1px solid #36c399;
+		background-color: rgba(54, 195, 153, 0.1);
+		border-radius: var(--radius-control);
+		border: 1px solid rgba(54, 195, 153, 0.4);
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -201,8 +413,8 @@
 	}
 
 	.confirmation-banner.confirmed {
-		background-color: #2d5a27;
-		border-color: #4ade80;
+		background-color: rgba(54, 195, 153, 0.14);
+		border-color: rgba(54, 195, 153, 0.5);
 	}
 
 	.confirmation-banner h3 {
@@ -227,17 +439,17 @@
 	}
 
 	.btn-confirm {
-		background-color: #36c399;
-		color: white;
-		padding: 0.5rem 1.5rem;
-		border-radius: 6px;
+		background-color: var(--success);
+		color: #062a1f;
+		min-height: 44px;
+		padding: 0 1.5rem;
+		border-radius: var(--radius-control);
 		border: none;
 		cursor: pointer;
-		font-weight: 500;
-		transition: all 0.2s ease;
+		font-weight: 600;
 	}
 
 	.btn-confirm:hover {
-		background-color: #2d9e7c;
+		background-color: #4cd1ab;
 	}
 </style>

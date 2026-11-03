@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { afterNavigate } from '$app/navigation';
 	import { Badge } from '$lib/components/ui';
+
+	// On phones the menu is collapsed behind a button, so the page content starts right away
+	let menuOpen = $state(false);
+	afterNavigate(() => (menuOpen = false));
 
 	let user = $derived($page.data.user);
 	let teamCategory = $derived($page.data.teamCategory);
@@ -26,19 +31,25 @@
 		if (user.admin || user.role === 'admin') {
 			links.push(
 				{ href: '/admin/dashboard', label: 'Admin Dashboard' },
+				{ href: '/admin/ratings', label: 'All ratings' },
+				{ href: '/admin/people', label: 'People and teams' },
+				{ href: '/present', label: 'Presenter mode' },
+				{ href: '/admin/audit', label: 'Audit log' },
 				{ href: '/presentations', label: 'View Presentations' },
 				{ href: '/ranking', label: 'Rankings' }
 			);
 		} else if (user.role === 'jury') {
 			links.push(
 				{ href: '/presentations', label: 'View Presentations' },
-				{ href: '/rate_presentation', label: 'Rate Presentations' },
-				{ href: '/ranking', label: 'Rankings' }
+				{ href: '/rate_presentation', label: 'Rate Presentations' }
 			);
+			if ($page.data.rankingVisible) {
+				links.push({ href: '/ranking', label: 'Rankings' });
+			}
 		} else if (user.role === 'participant' || user.team) {
-			links.push({ href: '/upload', label: 'Upload Presentation' });
-			links.push({ href: '/my-submission', label: 'My Submissions' });
-			if ($page.data.allJuriesConfirmed && $page.data.allAdminsConfirmed) {
+			links.push({ href: '/upload', label: 'Submit Project' });
+			links.push({ href: '/my-submission', label: 'My Submission' });
+			if ($page.data.rankingVisible) {
 				links.push({ href: '/ranking', label: 'Rankings' });
 			}
 		}
@@ -54,15 +65,30 @@
 
 	const eventConfig = $page.data.eventConfig;
 	const category = $derived(eventConfig.categories.find((c) => c.key === teamCategory));
+	// A juror can judge several categories
+	const juryCategories = $derived(
+		user?.role === 'jury' && Array.isArray(user.jury_categories)
+			? eventConfig.categories.filter((c: { key: string }) => user.jury_categories.includes(c.key))
+			: []
+	);
 </script>
 
 <nav class="navbar">
 	<div class="container">
 		<div class="brand">
 			<a href="/">{$page.data.eventConfig.name} {$page.data.eventConfig.year}</a>
+			<button
+				type="button"
+				class="menu-toggle"
+				aria-expanded={menuOpen}
+				aria-controls="main-menu"
+				onclick={() => (menuOpen = !menuOpen)}
+			>
+				{menuOpen ? 'Close' : 'Menu'}
+			</button>
 		</div>
 
-		<ul class="nav-links">
+		<ul class="nav-links" id="main-menu" class:open={menuOpen}>
 			{#each navLinks as link}
 				<li>
 					<a href={link.href} class:active={isActive(link.href)}>
@@ -73,11 +99,15 @@
 		</ul>
 
 		{#if user}
-			<div class="user-info">
+			<div class="user-info" class:open={menuOpen}>
 				<span class="user-name">{user.name || user.email}</span>
 				<div class="user-badges">
 					<Badge
-						variant={user.admin || user.role === 'admin' ? 'admin' : user.role === 'jury' ? 'jury' : 'default'}
+						variant={user.admin || user.role === 'admin'
+							? 'admin'
+							: user.role === 'jury'
+								? 'jury'
+								: 'default'}
 						class="user-role"
 					>
 						{user.admin || user.role === 'admin'
@@ -88,12 +118,20 @@
 					</Badge>
 					{#if isParticipant && teamCategory && category}
 						<Badge
-							style="background: color-mix(in srgb, {category.color} 20%, transparent); color: {category.color}; border: 1px solid color-mix(in srgb, {category.color} 30%, transparent);"
+							style="background: color-mix(in srgb, {category.color} 16%, transparent); color: {category.color};"
 							class="team-challenge"
 						>
 							{category.name}
 						</Badge>
 					{/if}
+					{#each juryCategories as juryCategory (juryCategory.key)}
+						<Badge
+							style="background: color-mix(in srgb, {juryCategory.color} 16%, transparent); color: {juryCategory.color};"
+							class="team-challenge"
+						>
+							{juryCategory.name}
+						</Badge>
+					{/each}
 				</div>
 			</div>
 		{/if}
@@ -102,13 +140,12 @@
 
 <style>
 	.navbar {
-		background-color: rgba(20, 21, 24, 0.95);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* var(--border-default) */
+		background-color: var(--sidebar-bg);
+		border-bottom: 1px solid var(--line);
 		padding: 0.75rem 0;
 		position: sticky;
 		top: 0;
 		z-index: 1000;
-		backdrop-filter: blur(10px);
 	}
 
 	.container {
@@ -124,13 +161,13 @@
 	.brand a {
 		font-size: 1.25rem;
 		font-weight: 700;
-		color: #7f7bff; /* var(--brand-purple) */
+		color: #fff;
 		text-decoration: none;
 		transition: color 0.2s;
 	}
 
 	.brand a:hover {
-		color: #4df2ff; /* var(--brand-blue) */
+		color: var(--action-hover);
 	}
 
 	.nav-links {
@@ -149,7 +186,7 @@
 	.nav-links a {
 		display: block;
 		padding: 0.5rem 1rem;
-		color: rgba(255, 255, 255, 0.7); /* var(--text-secondary) */
+		color: var(--text-muted);
 		text-decoration: none;
 		border-radius: 0.5rem;
 		transition: all 0.2s;
@@ -158,13 +195,13 @@
 
 	.nav-links a:hover {
 		color: #f0f0f0; /* var(--text-primary) */
-		background-color: rgba(127, 123, 255, 0.1);
+		background-color: rgba(255, 255, 255, 0.05);
 	}
 
 	.nav-links a.active {
-		color: #f0f0f0; /* var(--text-primary) */
-		background: linear-gradient(to right, rgba(127, 123, 255, 0.2), rgba(77, 242, 255, 0.2));
-		border-bottom: 2px solid #7f7bff; /* var(--brand-purple) */
+		color: #fff;
+		background: rgba(139, 135, 255, 0.16);
+		box-shadow: inset 0 0 0 1px rgba(139, 135, 255, 0.35);
 	}
 
 	.user-info {
@@ -196,15 +233,49 @@
 		border-radius: 0.25rem;
 		font-size: 0.7rem;
 		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.3px;
+	}
+
+	.menu-toggle {
+		display: none;
 	}
 
 	@media (max-width: 768px) {
 		.container {
 			flex-direction: column;
-			gap: 1rem;
+			gap: 0.5rem;
 			align-items: stretch;
+		}
+
+		.brand {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1rem;
+		}
+
+		.menu-toggle {
+			display: inline-flex;
+			align-items: center;
+			min-height: 44px;
+			padding: 0 1rem;
+			border-radius: 0.5rem;
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			background: rgba(139, 135, 255, 0.16);
+			color: #fff;
+			font-weight: 600;
+		}
+
+		.nav-links,
+		.user-info {
+			display: none;
+		}
+
+		.nav-links.open {
+			display: flex;
+		}
+
+		.user-info.open {
+			display: flex;
 		}
 
 		.nav-links {
@@ -212,10 +283,16 @@
 			gap: 0.25rem;
 		}
 
+		.nav-links a {
+			display: flex;
+			align-items: center;
+			min-height: 44px;
+		}
+
 		.user-info {
 			justify-content: center;
 			padding-top: 0.5rem;
-			border-top: 1px solid rgba(255, 255, 255, 0.1); /* var(--border-default) */
+			border-top: 1px solid var(--line);
 			flex-wrap: wrap;
 		}
 

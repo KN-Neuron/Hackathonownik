@@ -503,7 +503,7 @@
 
 	.selected-files {
 		padding: 0.5rem 0.75rem;
-		border-radius: 0.5rem;
+		border-radius: var(--radius-control);
 		background-color: color-mix(in srgb, currentColor 6%, transparent);
 	}
 
@@ -513,7 +513,7 @@
 		aspect-ratio: 0.707;
 		background: var(--fallback-b1, #1f2937);
 		border: 1px solid var(--fallback-b3, #374151);
-		border-radius: 0.75rem;
+		border-radius: var(--radius-card);
 		padding: 0.35rem;
 		display: flex;
 		align-items: center;
@@ -550,7 +550,6 @@
 		align-items: center;
 		justify-content: center;
 		background: rgba(0,0,0,0.25);
-		backdrop-filter: blur(1px);
 	}
 
 	.nav-arrow {
@@ -616,7 +615,7 @@
 		color: #bbb;
 		background: #222;
 		border: 1px solid #444;
-		border-radius: 0.75rem;
+		border-radius: var(--radius-card);
 	}
 
 	.nav-arrow.fs { position: fixed; }
@@ -655,9 +654,7 @@
 		font-size: 0.7rem;
 		padding: 0.35rem 0.7rem;
 		border-radius: 999px;
-		letter-spacing: 0.5px;
 		font-weight: 500;
-		backdrop-filter: blur(3px);
 	}
 
 	@media (max-width: 900px) {

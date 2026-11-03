@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Design tokens</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0f1322}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 20px;border-radius:10px;border:1px solid transparent;font:600 14px Onest,system-ui,sans-serif;cursor:pointer}
+.btn-p{background:#8b87ff;color:#0f1322}
+.btn-g{background:transparent;color:#e8eaf2;border-color:rgba(255,255,255,.2)}
+.btn-w{background:#f7a654;color:#1c1200}
+.tag{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:600}
+.sw{display:flex;flex-direction:column;gap:8px;flex:1 1 120px}
+.sw i{display:block;height:64px;border-radius:12px;border:1px solid rgba(255,255,255,.1)}
+.sw b{font-size:14px;color:#fff}.sw span{font-size:13px;color:#9aa3b8}
+h2{margin:0 0 16px;font-size:20px;color:#fff}
+.in{height:48px;padding:0 14px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:#0f1322;color:#fff;font:400 15px Onest,system-ui,sans-serif;width:280px}
+</style>
+</helmet>
+<div style="min-height:900px;padding:56px 64px;font-family:Onest,system-ui,sans-serif;color:#e8eaf2;background:radial-gradient(circle at 75% 0%,#1b2140,#0f1322 45%);display:flex;flex-direction:column;gap:48px">
+  <header style="max-width:720px;display:flex;flex-direction:column;gap:10px">
+    <h1 style="margin:0;font-size:44px;font-weight:800;letter-spacing:-.03em;color:#fff">Design tokens</h1>
+    <p style="margin:0;font-size:16px;line-height:1.6;color:#b4bccd">Same dark navy, violet and cyan as the current app, with one violet for actions, amber for warnings only, and text that passes contrast.</p>
+  </header>
+
+  <section>
+    <h2>Color</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:16px">
+      <div class="sw"><i style="background:#0f1322"></i><b>Base</b><span>#0f1322</span></div>
+      <div class="sw"><i style="background:#0c1020"></i><b>Sidebar</b><span>#0c1020</span></div>
+      <div class="sw"><i style="background:#151a2c"></i><b>Surface</b><span>#151a2c</span></div>
+      <div class="sw"><i style="background:#8b87ff"></i><b>Action</b><span>#8b87ff, dark text</span></div>
+      <div class="sw"><i style="background:#4df2ff"></i><b>Link, focus</b><span>#4df2ff</span></div>
+      <div class="sw"><i style="background:#36c399"></i><b>Done, good</b><span>#36c399</span></div>
+      <div class="sw"><i style="background:#f7a654"></i><b>Needs attention</b><span>#f7a654</span></div>
+      <div class="sw"><i style="background:#ff6b6b"></i><b>Error, admin</b><span>#ff6b6b</span></div>
+    </div>
+    <p style="margin:16px 0 0;font-size:14px;color:#9aa3b8;max-width:760px;line-height:1.6">Category colors still come from app_config.yaml: #36c399, #4df2ff, #f7a654, #f472b6, #a78bfa. They mark the category name and tab only.</p>
+  </section>
+
+  <section>
+    <h2>Type: Onest</h2>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="font-size:64px;font-weight:800;letter-spacing:-.04em;line-height:1;color:#fff">Heroes Of The Brain</div>
+      <div style="font-size:32px;font-weight:800;letter-spacing:-.02em;color:#fff">Page title, 32 / 800</div>
+      <div style="font-size:20px;font-weight:700;color:#fff">Section title, 20 / 700</div>
+      <div style="font-size:15px;color:#d6dbe8">Body text, 15 / 400. Numbers use tabular figures: 22.67 · 18.00 · 05:00</div>
+      <div style="font-size:13px;color:#9aa3b8">Secondary, 13 / 400, #9aa3b8 (7:1 on surface)</div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-wrap:wrap;gap:48px">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <h2 style="margin:0">Buttons</h2>
+      <div style="display:flex;flex-wrap:wrap;gap:12px"><button class="btn btn-p" type="button">Save rating</button><button class="btn btn-g" type="button">Change</button><button class="btn btn-w" type="button">Show on stage</button></div>
+      <span style="font-size:13px;color:#9aa3b8">44 px high. One violet action per view.</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <h2 style="margin:0">Status</h2>
+      <div style="display:flex;flex-wrap:wrap;gap:8px"><span class="tag" style="background:rgba(54,195,153,.16);color:#36c399">Complete</span><span class="tag" style="background:rgba(247,166,84,.16);color:#f7a654">Not rated</span><span class="tag" style="background:rgba(255,107,107,.16);color:#ff9a9a">Missing</span><span class="tag" style="background:rgba(255,255,255,.08);color:#9aa3b8">Replaced</span></div>
+      <span style="font-size:13px;color:#9aa3b8">Always a word, never color alone.</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <h2 style="margin:0">Input</h2>
+      <label for="t" style="font-size:13px;font-weight:600;color:#c9cfdd">Repository link</label>
+      <input class="in" id="t" placeholder="github.com/your-team/project">
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

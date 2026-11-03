@@ -1,276 +1,607 @@
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
+import { appConfig, getCategory, requiredFor } from '$lib/server/appConfig';
+import { getAdminClient } from '$lib/server/adminClient';
+import {
+	getRatedPairs,
+	getRatingProgress,
+	getResultsState,
+	invalidateRatings,
+	setCategoryPublished,
+	setCategoryStage,
+	setTieWinner,
+	setPresentationOrder,
+	inPresentationOrder,
+	stageOf
+} from '$lib/server/results';
+import { getCategoryRanking } from '$lib/server/ranking';
+import { getViews } from '$lib/server/views';
+import { setCategoryConfirmed } from '$lib/server/confirmations';
+import { getTeamSubmissions, invalidateSubmissions } from '$lib/server/submissions';
 import type { Actions, PageServerLoad } from './$types';
-import { InputValidator } from '$lib/server/security';
+import { checkinStatus } from '$lib/utils/checkin';
+import { generatePassword } from '$lib/server/passwords';
+import { guardSensitive, unlockStatus } from '$lib/server/adminGuard';
+import { audit } from '$lib/server/audit';
 
-export const load: PageServerLoad = async ({ locals }) => {
-	// Tylko admini
+export const load: PageServerLoad = async (event) => {
+	const { locals, url } = event;
 	try {
 		locals.security.isAdmin();
-	} catch (e) {
+	} catch {
 		throw error(403, 'Admin access required');
 	}
 
-	// Rate limit dla admin actions (limity zdefiniowane w konfiguracji rate limitera)
 	locals.security.checkRateLimit('api');
 
+	const categories = appConfig.event.categories.map((c) => c.key);
+	const requested = url.searchParams.get('category');
+	const category = requested && categories.includes(requested) ? requested : categories[0];
+
 	try {
-		// Pobierz wszystkie dane dla admin panelu z osobnymi blokami try-catch
-		// to uniknięcia problemów z jednym nieudanym zapytaniem
-		const [
-			usersResult,
-			teamsResult,
-			presentationsResult,
-			ratingsResult
-		] = await Promise.allSettled([
-			locals.pb.collection('users').getFullList(),
-			locals.pb.collection('teams').getFullList(),
-			locals.pb.collection('presentations').getFullList({ expand: 'team' }),
-			locals.pb.collection('ratings').getFullList({ expand: 'jury,presentation' })
+		const pb = await getAdminClient();
+		const [teams, juries, progress, resultsState, submissions, members] = await Promise.all([
+			pb.collection('teams').getFullList({ fields: 'id,name,category', sort: 'name' }),
+			pb.collection('users').getFullList({
+				filter: 'role = "jury"',
+				fields: 'id,name,email,jury_categories,confirmed_categories',
+				sort: 'name'
+			}),
+			getRatingProgress(),
+			getResultsState(),
+			getTeamSubmissions(),
+			pb.collection('users').getFullList({ filter: 'team != ""', fields: 'team' })
+		]);
+		const teamSize = new Map<string, number>();
+		for (const m of members) teamSize.set(m.team, (teamSize.get(m.team) ?? 0) + 1);
+
+		// Every registered team of the selected category, also those that submitted nothing yet
+		const submissionByTeam = new Map(submissions.map((s) => [s.teamId, s]));
+		const submissionOverview = teams
+			.filter((team) => team.category === category)
+			.map((team) => {
+				const submission = submissionByTeam.get(team.id) ?? null;
+				return {
+					teamId: team.id,
+					teamName: team.name,
+					presentation: Boolean(submission?.presentation),
+					repo: Boolean(submission?.repo),
+					video: Boolean(submission?.video),
+					missing: submission ? submission.missing : requiredFor(category),
+					lastUpdated: submission?.lastUpdated ?? null,
+					// Rules §4: 3–4 people per team
+					members: teamSize.get(team.id) ?? 0,
+					checkin: checkinStatus(appConfig.event.checkin_deadline, submission?.firstSubmittedAt)
+				};
+			})
+			.sort((a, b) => b.missing.length - a.missing.length || a.teamName.localeCompare(b.teamName));
+
+		// Check-in: teams that uploaded anything before the check-in deadline
+		const checkedIn = (teamIds: string[]) =>
+			teamIds.filter(
+				(id) =>
+					checkinStatus(
+						appConfig.event.checkin_deadline,
+						submissionByTeam.get(id)?.firstSubmittedAt
+					) === 'done'
+			).length;
+		const checkin = appConfig.event.checkin_deadline
+			? {
+					deadline: appConfig.event.checkin_deadline,
+					total: teams.length,
+					done: checkedIn(teams.map((t) => t.id)),
+					perCategory: Object.fromEntries(
+						categories.map((key) => [
+							key,
+							{
+								done: checkedIn(teams.filter((t) => t.category === key).map((t) => t.id)),
+								total: teams.filter((t) => t.category === key).length
+							}
+						])
+					)
+				}
+			: null;
+
+		// Per-category counters for the tabs and the overview
+		const summary = Object.fromEntries(
+			categories.map((key) => [
+				key,
+				{
+					teams: teams.filter((t) => t.category === key).length,
+					jurors: progress[key]?.juries.length ?? 0,
+					ready: progress[key]?.readyToPublish ?? false,
+					published: resultsState.publishedCategories.includes(key)
+				}
+			])
+		);
+
+		// Live ranking of the selected category (preliminary or final, by its stage)
+		const categoryTeamIds = submissions.filter((s) => s.category === category).map((s) => s.teamId);
+		const [ranking, views, ratedPairs] = await Promise.all([
+			getCategoryRanking(category),
+			getViews(categoryTeamIds).catch((e) => {
+				console.error('Error loading jury views:', e);
+				return [];
+			}),
+			getRatedPairs(category)
 		]);
 
-		// Sprawdź wyniki i zwróć błędy jeśli są krytyczne
-		const users = usersResult.status === 'fulfilled' ? usersResult.value : [];
-		const teams = teamsResult.status === 'fulfilled' ? teamsResult.value : [];
-		const presentations = presentationsResult.status === 'fulfilled' ? presentationsResult.value : [];
-		const ratings = ratingsResult.status === 'fulfilled' ? ratingsResult.value : [];
-
-		// Jeśli wszystkie krytyczne dane są puste, to może być problem
-		if (users.length === 0 && (usersResult as PromiseRejectedResult).status === 'rejected') {
-			console.error('Error fetching users:', (usersResult as PromiseRejectedResult).reason);
-			throw error(500, 'Could not load user data');
-		}
-
 		return {
-			users,
-			teams,
-			presentations,
-			ratings,
-			user: locals.user,
+			unlock: unlockStatus(event),
+			categories,
+			category,
+			summary,
+			stage: stageOf(resultsState, category),
+			// Teams that submitted something, in the current presentation order
+			// In the final only the finalists present, numbered like the jury sees them
+			presentationOrder: inPresentationOrder(
+				submissions.filter(
+					(s) =>
+						s.category === category &&
+						(stageOf(resultsState, category) !== 'final' ||
+							(resultsState.finalists[category] ?? []).includes(s.teamId))
+				),
+				resultsState.orders[category],
+				(s) => s.teamId,
+				(s) => s.teamName
+			).map((s) => ({
+				teamId: s.teamId,
+				teamName: s.teamName,
+				finalist: (resultsState.finalists[category] ?? []).includes(s.teamId)
+			})),
+			finalists: resultsState.finalists[category] ?? [],
+			finalistsLimit: appConfig.event.finalists_per_category,
+			ranking,
+			// "jury:team" for every juror who already rated a team in the current stage
+			rated: [...ratedPairs],
+			// Which juror opened which material, per team (team → jury → items)
+			views: views.reduce<Record<string, Record<string, string[]>>>((acc, v) => {
+				((acc[v.team] ??= {})[v.jury] ??= []).push(v.item);
+				return acc;
+			}, {}),
+			progress: progress[category],
+			published: resultsState.publishedCategories.includes(category),
+			publishedAt: resultsState.publishedAt[category] ?? null,
+			submissionOverview,
+			checkin,
+			required: requiredFor(category),
+			juries: juries.map((j) => ({
+				id: j.id,
+				name: j.name || j.email,
+				email: j.email,
+				categories: Array.isArray(j.jury_categories) ? j.jury_categories : []
+			})),
+			// Teams without a valid category are listed so they can be fixed
+			uncategorizedTeams: teams
+				.filter((t) => !categories.includes(t.category))
+				.map((t) => ({ id: t.id, name: t.name })),
+			teams: teams.map((t) => ({ id: t.id, name: t.name, category: t.category })),
 			csrfToken: locals.csrfToken
 		};
 	} catch (e: any) {
 		console.error('Error loading admin data:', e?.message || e);
-		throw error(500, `Could not load admin data: ${e?.message || 'Unknown error'}`);
+		throw error(500, 'Could not load admin data');
 	}
 };
 
+/** Names of the given categories whose results are already published. */
+async function publishedAmong(keys: string[]): Promise<string[]> {
+	const { publishedCategories } = await getResultsState();
+	return keys.filter((k) => publishedCategories.includes(k)).map((k) => getCategory(k)?.name ?? k);
+}
+
+const validCategory = (value: FormDataEntryValue | null) =>
+	typeof value === 'string' && getCategory(value) ? value : null;
+
 export const actions: Actions = {
-	// Delete presentation (tylko admin)
-	deletePresentation: async ({ locals, request }) => {
-		try {
-			locals.security.isAdmin().validateCSRF();
-		} catch (e: any) {
-			return {
-				success: false,
-				message: e.body?.message || 'Unauthorized'
-			};
-		}
-
+	publishCategory: async (event) => {
+		const { locals, request } = event;
 		const formData = await request.formData();
-		const presentationId = formData.get('presentation_id') as string;
-		const csrfToken = formData.get('csrf_token') as string;
+		const denied = await guardSensitive(event, formData, 'publishCategory');
+		if (denied) return denied;
 
-		// Validate CSRF
-		if (!locals.csrfToken || locals.csrfToken !== csrfToken) {
-			return {
+		const category = validCategory(formData.get('category'));
+		if (!category) return fail(400, { success: false, message: 'Unknown category' });
+
+		// Publishing early would leak a provisional ranking, so it needs an explicit override
+		const force = formData.get('force') === 'true';
+		const [progress, state] = await Promise.all([
+			getRatingProgress().then((p) => p[category]),
+			getResultsState()
+		]);
+		if (stageOf(state, category) !== 'final' && !force) {
+			return fail(400, {
 				success: false,
-				message: 'Invalid security token'
-			};
-		}
-
-		if (!presentationId) {
-			return {
-				success: false,
-				message: 'Missing presentation ID'
-			};
-		}
-
-		// Sanitize ID
-		const sanitizedId = InputValidator.sanitizeSql(presentationId.trim());
-
-		try {
-			await locals.pb.collection('presentations').delete(sanitizedId);
-			return {
-				success: true,
-				message: 'Presentation deleted successfully'
-			};
-		} catch (e) {
-			console.error('Error deleting presentation:', e);
-			return {
-				success: false,
-				message: 'Could not delete presentation'
-			};
-		}
-	},
-
-	updateConfirmedRating: async ({ locals, request }) => {
-		try {
-			locals.security.isAdmin().validateCSRF();
-		} catch (e: any) {
-			return {
-				success: false,
-				message: e.body?.message || 'Unauthorized'
-			};
-		}
-
-		const formData = await request.formData();
-		const userId = formData.get('user_id') as string;
-		const confirmedRating = formData.get('confirmed_rating') as string;
-		const csrfToken = formData.get('csrf_token') as string;
-
-		if (!locals.csrfToken || locals.csrfToken !== csrfToken) {
-			return { success: false, message: 'Invalid security token' };
-		}
-
-		if (!userId) {
-			return { success: false, message: 'Missing user ID' };
-		}
-
-		if (confirmedRating !== 'true' && confirmedRating !== 'false') {
-			return { success: false, message: 'Invalid confirmed_rating value' };
-		}
-
-		try {
-			await locals.pb.collection('users').update(userId, {
-				confirmedRating: confirmedRating === 'true'
+				message: 'Pick the finalists and finish the final before publishing.'
 			});
-
-			return {
-				success: true,
-				message: 'Confirmation status updated successfully'
-			};
-		} catch (e) {
-			console.error('Error updating confirmedRating:', e);
-			return {
-				success: false,
-				message: 'Could not update confirmation status'
-			};
 		}
-	},
-
-	updateUserRole: async ({ locals, request }) => {
-		try {
-			locals.security.isAdmin().validateCSRF();
-		} catch (e: any) {
-			return {
+		if (!progress?.readyToPublish && !force) {
+			return fail(400, {
 				success: false,
-				message: e.body?.message || 'Unauthorized'
-			};
-		}
-
-		const formData = await request.formData();
-		const userId = formData.get('user_id') as string;
-		const newRole = formData.get('role') as string;
-		const csrfToken = formData.get('csrf_token') as string;
-
-		// Validate CSRF
-		if (!locals.csrfToken || locals.csrfToken !== csrfToken) {
-			return {
-				success: false,
-				message: 'Invalid security token'
-			};
-		}
-
-		// Input validation
-		if (!userId || !newRole) {
-			return {
-				success: false,
-				message: 'Missing required fields'
-			};
-		}
-
-		// Validate role (tylko dozwolone wartości)
-		const allowedRoles = ['participant', 'jury', 'admin'];
-		if (!allowedRoles.includes(newRole)) {
-			return {
-				success: false,
-				message: 'Invalid role'
-			};
-		}
-
-		// Nie pozwól adminowi zmienić własnej roli
-		if (userId === locals.user?.id) {
-			return {
-				success: false,
-				message: 'Cannot change your own role'
-			};
-		}
-
-		try {
-			await locals.pb.collection('users').update(userId, {
-				role: newRole,
-				admin: newRole === 'admin'
+				message: 'Not every juror of this category has rated all finalists and confirmed.'
 			});
-
-			return {
-				success: true,
-				message: 'User role updated successfully'
-			};
-		} catch (e) {
-			console.error('Error updating user role:', e);
-			return {
+		}
+		// Rules §8: a tie for first place is decided by a jury vote before the results go out
+		if (!force && (await getCategoryRanking(category)).tie.length > 0) {
+			return fail(400, {
 				success: false,
-				message: 'Could not update user role'
-			};
+				message: 'There is a tie for first place: record the winner of the jury vote first.'
+			});
+		}
+
+		try {
+			await setCategoryPublished(category, true);
+			await audit(event, 'publishCategory', { category, forced: force });
+			return { success: true, message: `${getCategory(category)!.name}: results published` };
+		} catch (e) {
+			console.error('Error publishing results:', e);
+			return fail(500, { success: false, message: 'Could not publish results' });
 		}
 	},
 
-	// Bulk delete ratings (do czyszczenia spamu)
-	bulkDeleteRatings: async ({ locals, request }) => {
-		try {
-			locals.security.isAdmin().validateCSRF();
-		} catch (e: any) {
-			return {
-				success: false,
-				message: e.body?.message || 'Unauthorized'
-			};
-		}
-
+	unpublishCategory: async (event) => {
+		const { locals, request } = event;
 		const formData = await request.formData();
-		const ratingIds = formData.getAll('rating_ids[]') as string[];
-		const csrfToken = formData.get('csrf_token') as string;
+		const denied = await guardSensitive(event, formData, 'unpublishCategory');
+		if (denied) return denied;
 
-		// Validate CSRF
-		if (!locals.csrfToken || locals.csrfToken !== csrfToken) {
-			return {
-				success: false,
-				message: 'Invalid security token'
-			};
+		const category = validCategory(formData.get('category'));
+		if (!category) return fail(400, { success: false, message: 'Unknown category' });
+
+		try {
+			await setCategoryPublished(category, false);
+			await audit(event, 'unpublishCategory', { category });
+			return { success: true, message: `${getCategory(category)!.name}: results hidden again` };
+		} catch (e) {
+			console.error('Error unpublishing results:', e);
+			return fail(500, { success: false, message: 'Could not hide results' });
+		}
+	},
+
+	// Rules §8: after the preliminary round the jury picks at most N teams for the final
+	startFinal: async (event) => {
+		const { locals, request } = event;
+		const formData = await request.formData();
+		const denied = await guardSensitive(event, formData, 'startFinal');
+		if (denied) return denied;
+
+		const category = validCategory(formData.get('category'));
+		if (!category) return fail(400, { success: false, message: 'Unknown category' });
+
+		const submitted = new Set(
+			(await getTeamSubmissions({ categories: [category] })).map((s) => s.teamId)
+		);
+		const finalists = [...new Set(formData.getAll('finalists').map(String))].filter((id) =>
+			submitted.has(id)
+		);
+		const limit = appConfig.event.finalists_per_category;
+		if (finalists.length === 0) {
+			return fail(400, { success: false, message: 'Select at least one finalist.' });
+		}
+		if (finalists.length > limit) {
+			return fail(400, { success: false, message: `At most ${limit} teams can reach the final.` });
 		}
 
-		if (!ratingIds || ratingIds.length === 0) {
-			return {
+		const force = formData.get('force') === 'true';
+		const progress = (await getRatingProgress())[category];
+		if (!progress?.readyToPublish && !force) {
+			return fail(400, {
 				success: false,
-				message: 'No ratings selected'
-			};
-		}
-
-		// Limit bulk operations
-		if (ratingIds.length > 100) {
-			return {
-				success: false,
-				message: 'Cannot delete more than 100 ratings at once'
-			};
+				message: 'Not every juror has finished and confirmed the preliminary round.'
+			});
 		}
 
 		try {
-			// Delete w batch (bezpieczniejsze niż pojedyncze requesty)
-			const deletePromises = ratingIds.map((id) =>
-				locals.pb.collection('ratings').delete(InputValidator.sanitizeSql(id.trim()))
+			await setCategoryStage(category, 'final', finalists);
+			await audit(event, 'startFinal', { category, finalists, forced: force });
+			// Every juror confirms again once the final is rated
+			await Promise.all(
+				(progress?.juries ?? []).map((j) => setCategoryConfirmed(j.id, category, false))
 			);
+			return {
+				success: true,
+				message: `${getCategory(category)!.name}: final started with ${finalists.length} teams`
+			};
+		} catch (e) {
+			console.error('Error starting the final:', e);
+			return fail(500, { success: false, message: 'Could not start the final' });
+		}
+	},
 
-			await Promise.all(deletePromises);
+	backToPreliminary: async (event) => {
+		const { locals, request } = event;
+		const formData = await request.formData();
+		const denied = await guardSensitive(event, formData, 'backToPreliminary');
+		if (denied) return denied;
+
+		const category = validCategory(formData.get('category'));
+		if (!category) return fail(400, { success: false, message: 'Unknown category' });
+		if ((await getResultsState()).publishedCategories.includes(category)) {
+			return fail(409, { success: false, message: 'Unpublish the category first.' });
+		}
+
+		try {
+			await setCategoryStage(category, 'preliminary');
+			await audit(event, 'backToPreliminary', { category });
+			return {
+				success: true,
+				message: `${getCategory(category)!.name}: back to the preliminary round`
+			};
+		} catch (e) {
+			console.error('Error going back to the preliminary round:', e);
+			return fail(500, { success: false, message: 'Could not change the stage' });
+		}
+	},
+
+	setOrder: async (event) => {
+		const { locals, request } = event;
+		const formData = await request.formData();
+		const denied = await guardSensitive(event, formData, 'setOrder');
+		if (denied) return denied;
+
+		const category = validCategory(formData.get('category'));
+		if (!category) return fail(400, { success: false, message: 'Unknown category' });
+
+		const submitted = new Set(
+			(await getTeamSubmissions({ categories: [category] })).map((s) => s.teamId)
+		);
+		const order = [...new Set(formData.getAll('order').map(String))].filter((id) =>
+			submitted.has(id)
+		);
+
+		try {
+			await setPresentationOrder(category, order);
+			await audit(event, 'setOrder', { category, teams: order.length });
+			return { success: true, message: `${getCategory(category)!.name}: presentation order saved` };
+		} catch (e) {
+			console.error('Error saving the order:', e);
+			return fail(500, { success: false, message: 'Could not save the order' });
+		}
+	},
+
+	// Rules §8: a tie is decided by a jury vote, the organizers record the winner
+	setTieWinner: async (event) => {
+		const { locals, request } = event;
+		const formData = await request.formData();
+		const denied = await guardSensitive(event, formData, 'setTieWinner');
+		if (denied) return denied;
+
+		const category = validCategory(formData.get('category'));
+		const teamId = formData.get('team_id');
+		if (!category || typeof teamId !== 'string') {
+			return fail(400, { success: false, message: 'Missing category or team' });
+		}
+
+		// Only one of the teams currently tied for first place can win the vote (empty clears it)
+		if (teamId) {
+			const ranking = await getCategoryRanking(category);
+			const tied = [...ranking.tie, ...ranking.rankings.filter((r) => r.wonTieBreak)];
+			if (!tied.some((t) => t.teamId === teamId)) {
+				return fail(400, { success: false, message: 'That team is not tied for first place.' });
+			}
+		}
+
+		try {
+			await setTieWinner(category, teamId || null);
+			await audit(event, 'setTieWinner', { category, teamId: teamId || null });
+			return { success: true, message: teamId ? 'Tie-break winner saved' : 'Tie-break cleared' };
+		} catch (e) {
+			console.error('Error saving the tie-break:', e);
+			return fail(500, { success: false, message: 'Could not save the tie-break' });
+		}
+	},
+
+	// Organizers may confirm on a juror's behalf (e.g. a juror had to leave)
+	confirmForJury: async (event) => {
+		const { locals, request } = event;
+		const formData = await request.formData();
+		const denied = await guardSensitive(event, formData, 'confirmForJury');
+		if (denied) return denied;
+
+		const category = validCategory(formData.get('category'));
+		const juryId = formData.get('jury_id');
+		if (!category || typeof juryId !== 'string') {
+			return fail(400, { success: false, message: 'Missing juror or category' });
+		}
+
+		// Same rules as a juror confirming for themselves
+		const state = await getResultsState();
+		if (state.publishedCategories.includes(category)) {
+			return fail(409, { success: false, message: 'Results of this category are published.' });
+		}
+		const progress = (await getRatingProgress())[category];
+		const juror = progress?.juries.find((j) => j.id === juryId);
+		if (!juror) {
+			return fail(400, { success: false, message: 'This juror is not assigned to the category.' });
+		}
+		if (juror.ratedTeams < progress.totalTeams) {
+			return fail(400, {
+				success: false,
+				message: `${juror.name} rated ${juror.ratedTeams} of ${progress.totalTeams} teams.`
+			});
+		}
+
+		try {
+			await setCategoryConfirmed(juryId, category, true);
+			await audit(event, 'confirmForJury', { category, juryId });
+			return { success: true, message: 'Ratings confirmed' };
+		} catch (e) {
+			console.error('Error confirming for juror:', e);
+			return fail(500, { success: false, message: 'Could not confirm ratings' });
+		}
+	},
+
+	setJuryCategories: async (event) => {
+		const { locals, request } = event;
+		const formData = await request.formData();
+		const denied = await guardSensitive(event, formData, 'setJuryCategories');
+		if (denied) return denied;
+
+		const juryId = formData.get('jury_id');
+		if (typeof juryId !== 'string') {
+			return fail(400, { success: false, message: 'Missing juror' });
+		}
+		const categories = formData.getAll('categories').map(validCategory).filter(Boolean);
+
+		try {
+			const pb = await getAdminClient();
+			const jury = await pb.collection('users').getOne(juryId, { fields: 'role,jury_categories' });
+			if (jury.role !== 'jury') {
+				return fail(400, { success: false, message: 'Only jury members can be assigned' });
+			}
+			const before: string[] = Array.isArray(jury.jury_categories) ? jury.jury_categories : [];
+			const touched = [
+				...categories.filter((c) => !before.includes(c as string)),
+				...before.filter((c) => !categories.includes(c))
+			] as string[];
+			const locked = await publishedAmong(touched);
+			if (locked.length) {
+				return fail(409, {
+					success: false,
+					message: `Results of ${locked.join(', ')} are published; unpublish before changing its jury.`
+				});
+			}
+			await pb.collection('users').update(juryId, { jury_categories: categories });
+			await audit(event, 'setJuryCategories', { juryId, before, after: categories });
+			invalidateRatings();
+			return { success: true, message: 'Juror categories saved' };
+		} catch (e) {
+			console.error('Error assigning categories:', e);
+			return fail(500, { success: false, message: 'Could not save categories' });
+		}
+	},
+
+	// New jury accounts: organizers hand the generated password over to the juror
+	addJury: async (event) => {
+		const { locals, request } = event;
+		const formData = await request.formData();
+		const denied = await guardSensitive(event, formData, 'addJury');
+		if (denied) return denied;
+
+		const name = String(formData.get('name') ?? '').trim();
+		const email = String(formData.get('email') ?? '')
+			.trim()
+			.toLowerCase();
+		const categories = formData.getAll('categories').map(validCategory).filter(Boolean);
+		if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+			return fail(400, { success: false, message: "Enter the juror's name and a valid e-mail." });
+		}
+
+		const locked = await publishedAmong(categories as string[]);
+		if (locked.length) {
+			return fail(409, {
+				success: false,
+				message: `Results of ${locked.join(', ')} are published; unpublish before changing its jury.`
+			});
+		}
+
+		const password = generatePassword();
+		try {
+			const pb = await getAdminClient();
+			await pb.collection('users').create({
+				name,
+				email,
+				role: 'jury',
+				jury_categories: categories,
+				password,
+				passwordConfirm: password,
+				verified: true
+			});
+			invalidateRatings();
+			await audit(event, 'addJury', { name, email, categories });
+			return {
+				success: true,
+				message: `Juror ${name} added`,
+				credentials: { email, password }
+			};
+		} catch (e: any) {
+			const taken = e?.response?.data?.email;
+			console.error('Error adding juror:', e);
+			return fail(taken ? 409 : 500, {
+				success: false,
+				message: taken ? 'An account with this e-mail already exists.' : 'Could not add the juror'
+			});
+		}
+	},
+
+	resetJuryPassword: async (event) => {
+		const { locals, request } = event;
+		const formData = await request.formData();
+		const denied = await guardSensitive(event, formData, 'resetJuryPassword');
+		if (denied) return denied;
+
+		const juryId = formData.get('jury_id');
+		if (typeof juryId !== 'string') return fail(400, { success: false, message: 'Missing juror' });
+
+		const password = generatePassword();
+		try {
+			const pb = await getAdminClient();
+			const jury = await pb.collection('users').getOne(juryId, { fields: 'role,email,name' });
+			if (jury.role !== 'jury') {
+				return fail(400, { success: false, message: 'Only jury passwords can be reset here' });
+			}
+			await pb.collection('users').update(juryId, { password, passwordConfirm: password });
+			await audit(event, 'resetJuryPassword', { juryId, email: jury.email });
+			return {
+				success: true,
+				message: `New password for ${jury.name || jury.email}`,
+				credentials: { email: jury.email, password }
+			};
+		} catch (e) {
+			console.error('Error resetting password:', e);
+			return fail(500, { success: false, message: 'Could not reset the password' });
+		}
+	},
+
+	setTeamCategory: async (event) => {
+		const { locals, request } = event;
+		const formData = await request.formData();
+		const denied = await guardSensitive(event, formData, 'setTeamCategory');
+		if (denied) return denied;
+
+		const teamId = formData.get('team_id');
+		const category = validCategory(formData.get('category'));
+		if (typeof teamId !== 'string' || !category) {
+			return fail(400, { success: false, message: 'Missing team or category' });
+		}
+
+		try {
+			const pb = await getAdminClient();
+			const team = await pb.collection('teams').getOne(teamId, { fields: 'category,name' });
+			if (team.category === category) {
+				return { success: true, message: 'Nothing changed' };
+			}
+
+			const published = (await getResultsState()).publishedCategories;
+			if (published.includes(team.category) || published.includes(category)) {
+				return fail(409, {
+					success: false,
+					message: 'Unpublish both categories before moving a team between them.'
+				});
+			}
+
+			// Ratings used the old category's criteria and jurors, so they can't be carried over
+			const ratings = await pb.collection('ratings').getFullList({
+				filter: pb.filter('team = {:team}', { team: teamId }),
+				fields: 'id'
+			});
+			await Promise.all(ratings.map((r) => pb.collection('ratings').delete(r.id)));
+			await pb.collection('teams').update(teamId, { category });
+			await audit(event, 'setTeamCategory', {
+				teamId,
+				team: team.name,
+				from: team.category,
+				to: category,
+				ratingsRemoved: ratings.length
+			});
+			invalidateSubmissions();
 
 			return {
 				success: true,
-				message: `Successfully deleted ${ratingIds.length} ratings`
+				message: `${team.name} moved to ${getCategory(category)!.name}${ratings.length ? `, ${ratings.length} rating(s) removed` : ''}`
 			};
 		} catch (e) {
-			console.error('Error bulk deleting ratings:', e);
-			return {
-				success: false,
-				message: 'Could not delete ratings'
-			};
+			console.error('Error moving team:', e);
+			return fail(500, { success: false, message: 'Could not move the team' });
 		}
 	}
 };

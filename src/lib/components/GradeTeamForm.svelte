@@ -1,19 +1,42 @@
+<script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
+	import type { RatingCriterion } from '$lib/types';
 
-	export let teamId: string;
-	const eventConfig = $page.data.eventConfig;
+	let {
+		teamId,
+		teamName,
+		criteria,
+		onsaved,
+		notes = $bindable(''),
+		notesStatus = 'idle',
+		onnotesinput,
+		onnotesblur
+	}: {
+		teamId: string;
+		teamName: string;
+		criteria: RatingCriterion[];
+		onsaved?: () => void;
+		// Private notes, shared with the team card and autosaved by it
+		notes?: string;
+		notesStatus?: 'idle' | 'saving' | 'saved' | 'error';
+		onnotesinput?: () => void;
+		onnotesblur?: () => void;
+	} = $props();
 
-	// Dynamic scores based on criteria
-	let scores = $state(
-		Object.fromEntries(eventConfig.rating_criteria.map((c) => [c.key, Math.floor(c.maxScore / 2)]))
+	// One slider per criterion of the team's category
+	let scores = $state<Record<string, number>>(
+		Object.fromEntries(criteria.map((c) => [c.key, Math.floor(c.maxScore / 2)]))
 	);
 
 	let comments = $state('');
 	let error = $state('');
-	let existingRating = $state(null);
+	let existingRating = $state<{
+		id: string;
+		scores?: Record<string, number>;
+		comments?: string;
+	} | null>(null);
 	let loading = $state(true);
 
 	// Scale constants
@@ -23,9 +46,7 @@
 	const totalScore = $derived(
 		Object.values(scores).reduce((acc, curr) => acc + (Number(curr) || 0), 0)
 	);
-	const maxTotalScore = $derived(
-		eventConfig.rating_criteria.reduce((acc, curr) => acc + curr.maxScore, 0)
-	);
+	const maxTotalScore = $derived(criteria.reduce((acc, curr) => acc + curr.maxScore, 0));
 
 	onMount(async () => {
 		try {
@@ -36,12 +57,13 @@
 			if (data.found) {
 				existingRating = data.rating;
 				// Load existing scores
-				eventConfig.rating_criteria.forEach((criterion) => {
-					if (existingRating[criterion.key] !== undefined) {
-						scores[criterion.key] = existingRating[criterion.key];
+				criteria.forEach((criterion) => {
+					const saved = existingRating?.scores?.[criterion.key];
+					if (typeof saved === 'number') {
+						scores[criterion.key] = saved;
 					}
 				});
-				comments = existingRating.comments ?? '';
+				comments = existingRating?.comments ?? '';
 			}
 		} catch (err) {
 			console.error('Error checking existing rating:', err);
@@ -54,10 +76,16 @@
 <form
 	method="POST"
 	use:enhance={() => {
+		error = '';
 		return async ({ result }) => {
 			if (result.type === 'success' || result.type === 'redirect') {
+				// Refresh the team list in place, keeping the scroll position
 				await invalidateAll();
-				window.location.reload();
+				onsaved?.();
+			} else if (result.type === 'failure') {
+				error = (result.data?.error as string) || 'Could not save the rating.';
+			} else if (result.type === 'error') {
+				error = result.error?.message || 'Could not save the rating.';
 			}
 		};
 	}}
@@ -69,28 +97,12 @@
 			<p>Loading rating data...</p>
 		</div>
 	{:else}
-		<h2 class="text-2xl font-bold mb-3">Project Grading</h2>
+		<h2 class="text-2xl font-bold mb-3">Rate {teamName}</h2>
 		<p class="text-gray-400 mb-6">Please grade this project based on the criteria below</p>
 
-		<div class="form-section">
-			<label class="form-control">
-				<div class="label">
-					<span class="label-text">Project ID</span>
-				</div>
+		<input type="hidden" name="teamId" value={teamId} />
 
-				<input
-					class="input input-bordered w-full"
-					id="teamId"
-					name="teamId"
-					type="text"
-					value={teamId}
-					readonly
-					required
-				/>
-			</label>
-		</div>
-
-		{#each eventConfig.rating_criteria as criterion}
+		{#each criteria as criterion (criterion.key)}
 			<div class="form-section">
 				<div class="label">
 					<span class="label-text font-bold">{criterion.name}</span>
@@ -106,7 +118,7 @@
 					min={minScore}
 					max={criterion.maxScore}
 					step="1"
-					class="range range-primary"
+					class="slider"
 					bind:value={scores[criterion.key]}
 					name={criterion.key}
 				/>
@@ -119,17 +131,43 @@
 			</div>
 		{/each}
 
+		<!-- Private notes: only this juror sees them, saved automatically -->
+		<div class="form-section">
+			<div class="label flex-col items-start">
+				<span class="label-text">
+					My private notes
+					<span class="text-xs text-base-content/50 ml-1">
+						{#if notesStatus === 'saving'}Saving…{:else if notesStatus === 'saved'}Saved{:else if notesStatus === 'error'}Not
+							saved – check your connection{/if}
+					</span>
+				</span>
+				<span class="label-text-alt text-base-content/60 whitespace-normal">
+					Only you can see these. Saved automatically, also when you don't submit the rating.
+				</span>
+			</div>
+			<textarea
+				class="textarea textarea-bordered w-full h-24"
+				bind:value={notes}
+				oninput={onnotesinput}
+				onblur={onnotesblur}
+				placeholder="Questions to ask, strengths, doubts..."
+			></textarea>
+		</div>
+
 		<!-- Comments Section -->
 		<div class="form-section">
-			<div class="label">
-				<span class="label-text">Comments (Optional)</span>
+			<div class="label flex-col items-start">
+				<span class="label-text">Feedback for the team (optional)</span>
+				<span class="label-text-alt text-base-content/60 whitespace-normal">
+					Shared with this team only (without your name), after the organizers publish the results.
+				</span>
 			</div>
 			<textarea
 				class="textarea textarea-bordered w-full h-24"
 				id="comments"
 				name="comments"
 				bind:value={comments}
-				placeholder="Additional comments about the project..."
+				placeholder="What was good, what could be improved..."
 			></textarea>
 		</div>
 
@@ -176,10 +214,10 @@
 		width: 100%;
 		margin: 0 auto;
 		padding: 1.5rem;
-		background-color: #1e1f22;
-		border-radius: 8px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-		color: #f0f0f0;
+		background-color: var(--surface);
+		border-radius: var(--radius-card);
+		border: 1px solid var(--line);
+		color: #fff;
 	}
 
 	.divider {
@@ -196,9 +234,9 @@
 		top: 50%;
 		left: 50%;
 		transform: translate(-50%, -50%);
-		background-color: #1e1f22;
+		background-color: var(--surface);
 		padding: 0 1rem;
-		color: #ccc;
+		color: var(--text-muted);
 		font-size: 0.9rem;
 	}
 
@@ -214,53 +252,64 @@
 	}
 
 	.label-text {
-		color: #f0f0f0;
+		color: #fff;
 		font-size: 0.95rem;
 	}
 
 	.label-text-alt {
-		color: #a3a3a3;
+		color: var(--text-muted);
 		font-size: 0.85rem;
 	}
 
-	.range {
+	/* 44px touch area, thin track, big thumb */
+	.slider {
 		width: 100%;
-		height: 8px;
+		height: 44px;
+		min-height: 44px;
 		-webkit-appearance: none;
 		appearance: none;
-		background-color: rgba(255, 255, 255, 0.1);
-		border-radius: 4px;
+		background: transparent;
 		outline: none;
+		margin: 0;
+		cursor: pointer;
 	}
 
-	.range::-webkit-slider-thumb {
+	.slider::-webkit-slider-runnable-track {
+		height: 8px;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.14);
+	}
+
+	.slider::-moz-range-track {
+		height: 8px;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.14);
+	}
+
+	.slider::-webkit-slider-thumb {
 		-webkit-appearance: none;
 		appearance: none;
-		width: 18px;
-		height: 18px;
+		width: 28px;
+		height: 28px;
+		margin-top: -10px;
 		border-radius: 50%;
-		background: #3b82f6;
+		background: var(--action);
+		border: 3px solid var(--base-100);
 		cursor: pointer;
-		transition: all 0.2s ease;
 	}
 
-	.range::-moz-range-thumb {
-		width: 18px;
-		height: 18px;
+	.slider::-moz-range-thumb {
+		width: 22px;
+		height: 22px;
 		border-radius: 50%;
-		background: #3b82f6;
+		background: var(--action);
+		border: 3px solid var(--base-100);
 		cursor: pointer;
-		transition: all 0.2s ease;
 	}
 
-	.range::-webkit-slider-thumb:hover {
-		transform: scale(1.15);
-		box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
-	}
-
-	.range::-moz-range-thumb:hover {
-		transform: scale(1.15);
-		box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+	.slider:focus-visible::-webkit-slider-thumb {
+		outline: 2px solid var(--focus);
+		outline-offset: 2px;
 	}
 
 	.score-summary {
@@ -268,17 +317,15 @@
 	}
 
 	.btn-primary {
-		background-color: #3b82f6;
-		color: white;
-		font-weight: 500;
+		background-color: #8b87ff;
+		color: #0f1322;
+		font-weight: 600;
 		padding: 0.75rem;
 		transition: all 0.2s ease;
 	}
 
 	.btn-primary:hover {
-		background-color: #2563eb;
-		transform: translateY(-1px);
-		box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+		background-color: #a19eff;
 	}
 
 	.loading-container {
@@ -287,14 +334,14 @@
 		align-items: center;
 		justify-content: center;
 		padding: 2rem 0;
-		color: #a3a3a3;
+		color: var(--text-muted);
 	}
 
 	.loading-spinner {
 		width: 40px;
 		height: 40px;
 		border: 4px solid rgba(59, 130, 246, 0.2);
-		border-top-color: #3b82f6;
+		border-top-color: #8b87ff;
 		border-radius: 50%;
 		animation: spin 1s linear infinite;
 		margin-bottom: 1rem;
@@ -326,7 +373,7 @@
 			font-size: 0.8rem;
 		}
 
-		.range {
+		.slider {
 			width: 100%;
 		}
 

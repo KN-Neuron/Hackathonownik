@@ -1,548 +1,269 @@
 <script lang="ts">
-        import HeaderText from '$lib/components/HeaderText.svelte';
-        import { IconNames } from '$lib/utils/utils';
-        import { page } from '$app/stores';
+	import HeaderText from '$lib/components/HeaderText.svelte';
+	import SubmissionChecklist from '$lib/components/SubmissionChecklist.svelte';
+	import { IconNames } from '$lib/utils/utils';
+	import { SUBMISSION_ITEM_LABELS } from '$lib/types';
 
-        let { data } = $props();
-        const submission = data.submission;
-        const eventConfig = $page.data.eventConfig;
+	let { data } = $props();
+	let submission = $derived(data.submission);
+	const eventConfig = data.eventConfig;
 
+	let icon = IconNames.Presentation;
+	let text = 'My Submission';
 
-        let icon = IconNames.Presentation;
-        let text = 'My Submission';
+	let category = $derived(eventConfig.categories.find((c) => c.key === data.teamCategory));
 
-        const category = submission
-                ? eventConfig.categories.find((c) => c.key === submission.category)
-                : null;
-
-        function formatDate(dateStr) {
-                if (!dateStr) return 'N/A';
-                return new Date(dateStr).toLocaleString();
-        }
-
+	function formatDate(dateStr: string) {
+		return new Date(dateStr).toLocaleString();
+	}
 </script>
 
 <div class="page-container">
-        <HeaderText {icon} {text} />
+	<HeaderText {icon} {text} />
 
-        {#if submission}
-                <div class="submission-card">
-                        <div class="card-header">
-                                <div class="header-content">
-                                        <h2 class="team-name">{submission.teamName}</h2>
-                                        <div class="badges">
-                                                <span class="id-badge">ID: {submission.teamId}</span>
-                                                {#if category}
-                                                        <span
-                                                                class="category-badge"
-                                                                style="background: color-mix(in srgb, {category.color} 20%, transparent); color: {category.color}; border: 1px solid color-mix(in srgb, {category.color} 30%, transparent);"
-                                                        >
-                                                                {category.name}
-                                                        </span>
-                                                {/if}
-                                        </div>
-                                </div>
-                                <div class="status-badge">
-                                        <span class="status-dot"></span>
-                                        Submitted
-                                </div>
-                        </div>
+	{#if data.error}
+		<div class="alert alert-error flex flex-wrap justify-between">
+			<span>{data.error}</span>
+			<a href={data.contactUrl} target="_blank" rel="noopener noreferrer" class="btn btn-sm">
+				Contact the organizers
+			</a>
+		</div>
+	{:else}
+		{#if data.teamName}
+			<div class="team-header">
+				<h2 class="team-name">{data.teamName}</h2>
+				{#if category}
+					<span
+						class="category-badge"
+						style="background: color-mix(in srgb, {category.color} 16%, transparent); color: {category.color};"
+					>
+						{category.name}
+					</span>
+				{/if}
+				{#if submission}
+					<span class="last-updated">Last change: {formatDate(submission.lastUpdated)}</span>
+				{/if}
+			</div>
+		{/if}
 
-                        <div class="card-body">
-                                <div class="info-grid">
-                                        <div class="info-item">
-                                                <span class="label">Submission Date</span>
-                                                <span class="value">{formatDate(submission.created)}</span>
-                                        </div>
-                                        <div class="info-item">
-                                                <span class="label">Last Updated</span>
-                                                <span class="value">{formatDate(submission.updated)}</span>
-                                        </div>
-                                </div>
+		{#if data.members.length > 0}
+			<p class="members">
+				<span class="members-label">Team members:</span>
+				{data.members.join(', ')}
+				<span class="members-help">
+					Someone missing or in the wrong team?
+					<a href={data.contactUrl} target="_blank" rel="noopener noreferrer" class="link"
+						>Tell the organizers</a
+					>.
+				</span>
+			</p>
+		{/if}
 
+		{#if data.inFinal && !data.published}
+			<div class="final-banner">
+				<h3>Your team is in the final!</h3>
+				<p>Prepare your presentation on stage – it is rated in the final as well.</p>
+			</div>
+		{/if}
 
-                                <div class="divider"></div>
+		{#if data.feedback}
+			<div class="feedback-section">
+				{#if data.place}
+					<p class="place">
+						Your team placed <b>#{data.place}</b>
+						{data.inFinal ? 'in the final' : ''}.
+					</p>
+				{:else if data.published}
+					<p class="place">Your team did not reach the final this time.</p>
+				{/if}
+				<h3>Jury feedback</h3>
+				{#if data.feedback.length > 0}
+					<ul>
+						{#each data.feedback as text, i (i)}
+							<li>{text}</li>
+						{/each}
+					</ul>
+				{:else}
+					<p class="history-help">The jury didn't leave written feedback for your team.</p>
+				{/if}
+				<a href="/ranking" class="btn btn-sm btn-outline mt-2">See the ranking</a>
+				<p class="history-help">
+					Appeals: within 24 hours of the results, by e-mail to
+					<a class="link" href="mailto:heroesofthebrain@pwr.edu.pl">heroesofthebrain@pwr.edu.pl</a>
+					(rules §12).
+				</p>
+			</div>
+		{/if}
 
-                                <div class="links-section">
-                                        <h3 class="section-title">Project Links</h3>
-                                        <div class="links-grid">
-                                                <a
-                                                        href={submission.repo_link}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        class="link-card repo"
-                                                        class:disabled={!submission.repo_link}
-                                                >
-                                                        <div class="link-icon">
-                                                                <svg
-                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                        width="24"
-                                                                        height="24"
-                                                                        viewBox="0 0 24 24"
-                                                                        fill="none"
-                                                                        stroke="currentColor"
+		<SubmissionChecklist {submission} required={data.required} />
 
-                                                                        stroke-width="2"
-                                                                >
-                                                                        <path
-                                                                                d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
-                                                                        ></path>
-                                                                </svg>
-                                                        </div>
-                                                        <div class="link-info">
-                                                                <span class="link-title">Repository</span>
-                                                                <span class="link-url"
+		{#if submission}
+			<div class="history-section">
+				<h3>Change history</h3>
+				<p class="history-help">
+					Every save of your team is listed here. The jury sees the newest version of each item.
+				</p>
+				<div class="overflow-x-auto bg-base-200 rounded-lg border border-base-content/10">
+					<table class="table w-full">
+						<thead>
+							<tr>
+								<th>Date</th>
+								<th>Submitted by</th>
+								<th>What was added</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each submission.history as entry (entry.recordId)}
+								<tr>
+									<td>{formatDate(entry.at)}</td>
+									<td>{entry.submittedBy ?? 'unknown'}</td>
+									<td>
+										<div class="flex flex-wrap gap-1">
+											{#each entry.items as item (item)}
+												{@const current = submission[item]?.recordId === entry.recordId}
+												<span
+													class="badge badge-sm {current ? 'badge-success' : 'badge-ghost'}"
+													title={current
+														? 'Currently visible to the jury'
+														: 'Replaced by a newer version'}
+												>
+													{SUBMISSION_ITEM_LABELS[item]}
+												</span>
+											{/each}
+										</div>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+				<p class="history-help">
+					<span class="badge badge-success badge-xs"></span> currently visible to the jury
+					<span class="badge badge-ghost badge-xs ml-3"></span> replaced by a newer version
+				</p>
+			</div>
+		{/if}
 
-                                                                        >{submission.repo_link || 'No repository link provided'}</span
-                                                                >
-                                                        </div>
-                                                        {#if submission.repo_link}
-                                                                <div class="link-arrow">→</div>
-                                                        {/if}
-                                                </a>
-
-
-                                                <a
-                                                        href={submission.video_link}
-
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        class="link-card video"
-                                                        class:disabled={!submission.video_link}
-                                                >
-                                                        <div class="link-icon">
-                                                                <svg
-                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                        width="24"
-
-                                                                        height="24"
-                                                                        viewBox="0 0 24 24"
-                                                                        fill="none"
-                                                                        stroke="currentColor"
-                                                                        stroke-width="2"
-                                                                >
-                                                                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                                                                </svg>
-                                                        </div>
-                                                        <div class="link-info">
-                                                                <span class="link-title">Video Demo</span>
-                                                                <span class="link-url">{submission.video_link || 'No video link provided'}</span>
-                                                        </div>
-                                                        {#if submission.video_link}
-                                                                <div class="link-arrow">→</div>
-                                                        {/if}
-                                                </a>
-                                        </div>
-                                </div>
-
-                                <div class="divider"></div>
-
-                                <div class="presentation-section">
-
-                                        <h3 class="section-title">Presentation File</h3>
-                                        <div class="file-card">
-                                                <div class="file-icon">
-                                                        <svg
-                                                                xmlns="http://www.w3.org/2000/svg"
-                                                                width="32"
-                                                                height="32"
-                                                                viewBox="0 0 24 24"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                stroke-width="2"
-                                                        >
-                                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                                                <polyline points="14 2 14 8 20 8"></polyline>
-                                                                <line x1="16" y1="13" x2="8" y2="13"></line>
-                                                                <line x1="16" y1="17" x2="8" y2="17"></line>
-                                                                <polyline points="10 9 9 9 8 9"></polyline>
-                                                        </svg>
-                                                </div>
-                                                <div class="file-info">
-                                                        <span class="file-name">presentation.pdf</span>
-                                                        <span class="file-type">PDF Document</span>
-                                                </div>
-                                                <div class="file-actions">
-                                                        <a href={submission.presentationUrl} target="_blank" class="btn btn-primary btn-sm">
-                                                                View
-                                                        </a>
-                                                        <a
-                                                                href={submission.presentationUrl}
-                                                                download
-                                                                class="btn btn-outline btn-sm"
-                                                        >
-                                                                Download
-                                                        </a>
-                                                </div>
-                                        </div>
-                                </div>
-                        </div>
-                </div>
-
-        {#if submission.allPresentations.length > 1}
-            <div class="history-section mt-8">
-                <h3 class="text-xl font-bold mb-4">Submission History</h3>
-                <div class="overflow-x-auto bg-base-200 rounded-lg border border-base-content/10">
-                    <table class="table w-full">
-                        <thead>
-                            <tr>
-                                <th>Version</th>
-                                <th>Date</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {#each submission.allPresentations as pres, i}
-
-                                <tr class={i === 0 ? 'bg-base-300/50' : ''}>
-                                    <td class="font-mono text-sm">v{submission.allPresentations.length - i}</td>
-                                    <td>{formatDate(pres.created)}</td>
-                                    <td>
-                                        {#if i === 0}
-                                            <span class="badge badge-success badge-sm">Current</span>
-                                        {:else}
-
-                                            <span class="badge badge-ghost badge-sm">Archived</span>
-                                        {/if}
-                                    </td>
-                                </tr>
-
-                            {/each}
-
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        {/if}
-
-        <div class="actions mt-8 flex justify-end">
-            <a href="/upload" class="btn btn-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
-                Upload New Version
-            </a>
-        </div>
-
-        {:else if data.error}
-                <div class="alert alert-error">
-                        <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="stroke-current shrink-0 h-6 w-6"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                ><path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                /></svg
-                        >
-                        <span>{data.error}</span>
-                </div>
-        <div class="mt-4 flex justify-center">
-            <a href="/upload" class="btn btn-primary">Go to Upload</a>
-        </div>
-        {:else}
-                <div class="empty-state">
-                        <div class="empty-icon">
-                                <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="64"
-
-                                        height="64"
-
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="1"
-                                >
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                        <polyline points="14 2 14 8 20 8"></polyline>
-                                        <line x1="12" y1="18" x2="12" y2="12"></line>
-                                        <line x1="9" y1="15" x2="15" y2="15"></line>
-                                </svg>
-                        </div>
-                        <h2>No Submission Found</h2>
-                        <p>You haven't submitted a presentation yet.</p>
-                        <a href="/upload" class="btn btn-primary mt-4">Upload Presentation</a>
-                </div>
-        {/if}
+		<div class="actions">
+			<a href="/upload" class="btn btn-primary">
+				{submission ? 'Add or change items' : 'Submit your project'}
+			</a>
+		</div>
+	{/if}
 </div>
 
 <style>
-        .page-container {
-                max-width: 900px;
-                margin: 0 auto;
-                padding: 1.5rem;
-        }
+	.page-container {
+		max-width: 900px;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+	}
 
-        .submission-card {
-                background-color: #1e1f22;
-                border-radius: 12px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
+	.team-header {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem;
+	}
 
-                overflow: hidden;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        }
+	.team-name {
+		font-size: 24px;
+		font-weight: 800;
+		letter-spacing: -0.01em;
+		color: #fff;
+		margin: 0;
+	}
 
-        .card-header {
-                padding: 1.5rem;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-start;
-                background: rgba(255, 255, 255, 0.02);
+	.category-badge {
+		display: inline-flex;
+		align-items: center;
+		height: 24px;
+		padding: 0 10px;
+		border-radius: 999px;
+		font-size: 12px;
+		font-weight: 600;
+	}
 
-        }
+	.last-updated {
+		margin-left: auto;
+		font-size: 0.85rem;
+		color: var(--text-muted);
+	}
 
-        .team-name {
-                font-size: 1.5rem;
-                font-weight: 700;
-                color: #f0f0f0;
-                margin: 0 0 0.5rem 0;
+	.members {
+		margin: -0.75rem 0 0;
+		font-size: 0.9rem;
+	}
 
-        }
+	.members-label {
+		font-weight: 600;
+	}
 
-        .badges {
-                display: flex;
-                gap: 0.5rem;
-                align-items: center;
-        }
+	.members-help {
+		display: block;
+		font-size: 0.8rem;
+		color: var(--text-muted);
+	}
 
-        .id-badge {
-                font-size: 0.75rem;
-                background: rgba(255, 255, 255, 0.1);
-                color: rgba(255, 255, 255, 0.7);
-                padding: 0.2rem 0.5rem;
-                border-radius: 4px;
+	.history-section h3 {
+		font-size: 1.25rem;
+		font-weight: 700;
+		margin-bottom: 0.25rem;
+	}
 
-                font-family: monospace;
-        }
+	.history-help {
+		font-size: 0.8rem;
+		color: var(--text-muted);
+		margin: 0.5rem 0;
+	}
 
-        .category-badge {
-                font-size: 0.75rem;
-                font-weight: 600;
-                padding: 0.2rem 0.6rem;
-                border-radius: 4px;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-        }
+	.final-banner {
+		padding: 1.25rem;
+		border-radius: var(--radius-card);
+		background: rgba(247, 166, 84, 0.1);
+		border: 1px solid rgba(247, 166, 84, 0.45);
+	}
 
-        .status-badge {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                font-size: 0.875rem;
-                color: #36c399;
-                background: rgba(54, 195, 153, 0.1);
-                padding: 0.35rem 0.75rem;
-                border-radius: 20px;
-                border: 1px solid rgba(54, 195, 153, 0.2);
-        }
+	.final-banner h3 {
+		font-size: 1.25rem;
+		font-weight: 700;
+	}
 
-        .status-dot {
-                width: 8px;
-                height: 8px;
-                background-color: #36c399;
-                border-radius: 50%;
-                box-shadow: 0 0 0 2px rgba(54, 195, 153, 0.2);
-        }
+	.place {
+		font-size: 1.1rem;
+		margin-bottom: 0.75rem;
+	}
 
-        .card-body {
-                padding: 1.5rem;
-        }
+	.feedback-section {
+		padding: 1.25rem;
+		border-radius: var(--radius-card);
+		background: rgba(54, 195, 153, 0.08);
+		border: 1px solid rgba(54, 195, 153, 0.3);
+	}
 
-        .info-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 1.5rem;
-        }
+	.feedback-section h3 {
+		font-size: 1.25rem;
+		font-weight: 700;
+		margin-bottom: 0.75rem;
+	}
 
+	.feedback-section ul {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
 
-        .info-item {
-                display: flex;
-                flex-direction: column;
+	.feedback-section li {
+		white-space: pre-line;
+		padding: 0.75rem;
+		border-radius: var(--radius-control);
+		background: rgba(0, 0, 0, 0.2);
+	}
 
-                gap: 0.25rem;
-        }
-
-        .label {
-                font-size: 0.875rem;
-                color: rgba(255, 255, 255, 0.5);
-        }
-
-        .value {
-                font-size: 1rem;
-                color: #f0f0f0;
-                font-weight: 500;
-        }
-
-        .divider {
-                height: 1px;
-                background-color: rgba(255, 255, 255, 0.1);
-                margin: 1.5rem 0;
-        }
-
-        .section-title {
-                font-size: 1rem;
-                font-weight: 600;
-                color: rgba(255, 255, 255, 0.8);
-                margin-bottom: 1rem;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-        }
-
-
-        .links-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                gap: 1rem;
-
-        }
-
-
-        .link-card {
-
-                display: flex;
-                align-items: center;
-                padding: 1rem;
-                background: rgba(0, 0, 0, 0.2);
-                border: 1px solid rgba(255, 255, 255, 0.05);
-                border-radius: 8px;
-                text-decoration: none;
-                transition: all 0.2s ease;
-        }
-
-        .link-card:not(.disabled):hover {
-                background: rgba(255, 255, 255, 0.05);
-                border-color: rgba(255, 255, 255, 0.1);
-                transform: translateY(-2px);
-        }
-
-        .link-card.disabled {
-                opacity: 0.5;
-                cursor: not-allowed;
-        }
-
-        .link-card.repo .link-icon {
-                color: #6e5494;
-        }
-
-        .link-card.video .link-icon {
-                color: #ff0000;
-        }
-
-        .link-info {
-                flex: 1;
-                margin: 0 1rem;
-                overflow: hidden;
-        }
-
-        .link-title {
-                display: block;
-                font-weight: 600;
-                color: #f0f0f0;
-                font-size: 0.9rem;
-        }
-
-        .link-url {
-                display: block;
-                font-size: 0.8rem;
-                color: rgba(255, 255, 255, 0.5);
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-        }
-
-        .link-arrow {
-                color: rgba(255, 255, 255, 0.3);
-                font-weight: bold;
-        }
-
-        .file-card {
-                display: flex;
-                align-items: center;
-                padding: 1rem;
-                background: rgba(59, 130, 246, 0.1);
-                border: 1px solid rgba(59, 130, 246, 0.2);
-                border-radius: 8px;
-        }
-
-        .file-icon {
-                color: #3b82f6;
-                margin-right: 1rem;
-        }
-
-        .file-info {
-                flex: 1;
-        }
-
-        .file-name {
-                display: block;
-                font-weight: 600;
-                color: #f0f0f0;
-        }
-
-        .file-type {
-                font-size: 0.8rem;
-                color: rgba(255, 255, 255, 0.6);
-        }
-
-        .file-actions {
-                display: flex;
-                gap: 0.5rem;
-        }
-
-        .empty-state {
-                text-align: center;
-                padding: 4rem 2rem;
-                background-color: #1e1f22;
-                border-radius: 12px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .empty-icon {
-                color: rgba(255, 255, 255, 0.2);
-                margin-bottom: 1.5rem;
-        }
-
-        .empty-state h2 {
-                font-size: 1.5rem;
-                font-weight: 700;
-                margin-bottom: 0.5rem;
-                color: #f0f0f0;
-        }
-
-        .empty-state p {
-                color: rgba(255, 255, 255, 0.6);
-        }
-
-        @media (max-width: 640px) {
-                .card-header {
-                        flex-direction: column;
-                        gap: 1rem;
-                }
-
-                .status-badge {
-                        align-self: flex-start;
-                }
-
-                .file-card {
-                        flex-direction: column;
-                        align-items: flex-start;
-                        gap: 1rem;
-                }
-
-                .file-actions {
-                        width: 100%;
-                }
-
-                .file-actions .btn {
-                        flex: 1;
-
-                }
-        }
+	.actions {
+		display: flex;
+		justify-content: flex-end;
+	}
 </style>
