@@ -71,7 +71,7 @@ appConfig.event.finalists_per_category = Number(appConfig.event.finalists_per_ca
 appConfig.event.presentation_deadline ||= appConfig.event.deadline;
 appConfig.event.final_presentation_deadline ||= appConfig.event.deadline;
 appConfig.event.stage_presentation_minutes =
-	Number(appConfig.event.stage_presentation_minutes) || 5;
+	Number(appConfig.event.stage_presentation_minutes) || 4;
 
 // Fill every category with the defaults it doesn't override
 appConfig.event.categories = (appConfig.event.categories ?? []).map((category) => ({
