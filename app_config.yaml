@@ -31,7 +31,7 @@ event:
   final_presentation_deadline: "2026-11-15T14:00:00+01:00"
 
   # Length of a stage presentation, for the timer in the presenter mode
-  stage_presentation_minutes: 5
+  stage_presentation_minutes: 4
 
   # Submission requirements (default for categories that don't set their own)
   # required: which items a team must provide for its submission to count as complete.

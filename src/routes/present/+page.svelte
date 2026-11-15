@@ -27,6 +27,8 @@
 	);
 
 	// Timer: counts down from the stage time, then shows the overtime
+	// Recomputed on every load, so it tracks the server clock after each invalidateAll
+	let clockOffset = $derived(data.serverTime - Date.now());
 	let now = $state(Date.now());
 	onMount(() => {
 		const tick = setInterval(() => (now = Date.now()), 250);
@@ -34,7 +36,7 @@
 	});
 	let remaining = $derived(
 		onStageHere && data.onStage?.startedAt
-			? data.onStage.durationSec * 1000 - (now - new Date(data.onStage.startedAt).getTime())
+			? data.onStage.durationSec * 1000 - (now + clockOffset - new Date(data.onStage.startedAt).getTime())
 			: data.minutes * 60_000
 	);
 	let running = $derived(Boolean(onStageHere && data.onStage?.startedAt));

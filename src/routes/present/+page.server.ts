@@ -38,6 +38,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		stage,
 		teams,
 		onStage: state.onStage[category] ?? null,
-		minutes: appConfig.event.stage_presentation_minutes
+		minutes: appConfig.event.stage_presentation_minutes,
+		// Lets the timer run without trusting the stage laptop's clock
+		serverTime: Date.now()
 	};
 };
