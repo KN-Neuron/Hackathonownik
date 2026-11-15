@@ -65,7 +65,8 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 			break;
 		case 'start':
 			if (!current) return json({ error: 'Nobody is on stage' }, { status: 409 });
-			await setOnStage(category, { ...current, startedAt: new Date().toISOString() });
+			// Fresh duration, so a config change applies to a team already on stage
+			await setOnStage(category, { ...current, startedAt: new Date().toISOString(), durationSec });
 			break;
 		case 'reset':
 			if (!current) return json({ error: 'Nobody is on stage' }, { status: 409 });
